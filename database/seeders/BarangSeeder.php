@@ -15,16 +15,22 @@ class BarangSeeder extends Seeder
     {
         DB::table('barangs')->insert([
             [
-                'nama' => 'Bebek Super',
+                'name' => 'Bebek Super',
                 'kategori_id' => 1, // Assuming this ID exists in the kategoris table
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'nama' => 'Horn Deluxe',
+                'name' => 'Horn Deluxe',
                 'kategori_id' => 2, // Assuming this ID exists in the kategoris table
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'nama' => 'Arab Premium',
+                'name' => 'Arab Premium',
                 'kategori_id' => 3, // Assuming this ID exists in the kategoris table
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
         ]);
     }

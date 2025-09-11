@@ -15,16 +15,22 @@ class KategoriSeeder extends Seeder
     {
         DB::table('kategoris')->insert([
             [
-                'nama' => 'Penjualan Bebek',
+                'name' => 'Penjualan Bebek',
                 'deskripsi' => 'Kategori untuk barang penjualan bebek.',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'nama' => 'Penjualan Horn',
+                'name' => 'Penjualan Horn',
                 'deskripsi' => 'Kategori untuk barang penjualan horn.',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'nama' => 'Penjualan Arab',
+                'name' => 'Penjualan Arab',
                 'deskripsi' => 'Kategori untuk barang penjualan Arab.',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
         ]);
     }

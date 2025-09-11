@@ -20,17 +20,11 @@ new class extends Component {
     #[Rule('required|email')]
     public string $email = '';
 
-    #[Rule('required|digits_between:10,13|regex:/^[0-9]+$/')]
-    public string $no_hp = '';
-
     #[Rule('sometimes')]
     public ?int $role_id = null;
 
     #[Rule('nullable|image|max:1024')]
     public $photo;
-
-    #[Rule('sometimes')]
-    public ?string $bio = null;
 
     public function with(): array
     {
@@ -90,10 +84,6 @@ new class extends Component {
                     <img src="{{ $user->avatar ?? '/empty-user.jpg' }}" class="h-40 rounded-lg" />
                 </x-file>
                 <x-input label="Name" wire:model="name" />
-                <x-input label="Email" wire:model="email" />
-                <x-input label="No Telepon" wire:model="no_hp" type="text"
-                    oninput="this.value = this.value.replace(/\D/g, '')" />
-                <x-select label="Roles" wire:model="role_id" :options="$roles" placeholder="Pilih peran pengguna" />
             </div>
         </div>
 
@@ -105,7 +95,8 @@ new class extends Component {
                 <x-header title="Details" subtitle="More about the user" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                <x-editor wire:model="bio" label="Bio" />
+                <x-input label="Email" wire:model="email" />
+                <x-select label="Roles" wire:model="role_id" :options="$roles" placeholder="Pilih peran pengguna" />
             </div>
         </div>
 

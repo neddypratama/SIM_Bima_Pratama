@@ -15,12 +15,16 @@ class RoleSeeder extends Seeder
     {
         DB::table('roles')->insert([
             [
-                'nama' => 'Admin',
+                'name' => 'Admin',
                 'deskripsi' => 'Administrator with full access',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'nama' => 'User',
+                'name' => 'User',
                 'deskripsi' => 'Regular user with limited access',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
         ]);
     }

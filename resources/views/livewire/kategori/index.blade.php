@@ -1,98 +1,194 @@
 <?php
 
 use App\Models\Kategori;
-use Illuminate\Support\Collection;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
+use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\Rule;
 
 new class extends Component {
     use Toast;
     use WithPagination;
-
     public string $search = '';
 
     public bool $drawer = false;
 
-    public array $sortBy = ['column' => 'name', 'direction' => 'asc'];
+    public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
 
+    public int $filter = 0;
+
+    public $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
+
+    public int $perPage = 10; // Default jumlah data per halaman
+
+    public bool $editModal = false; // Untuk menampilkan modal
+
+    public ?Kategori $editingKategori = null; // Menyimpan data Kategori yang sedang diedit
+
+    public string $editingName = '';
+    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama Kategori
+
+    public bool $createModal = false; // Untuk menampilkan modal create
+
+    public string $newKategoriName = '';
+    public string $newKategoriDeskripsi = ''; // Untuk menyimpan input nama Kategori baru
+
+    // Clear filters
+    public function clear(): void
+    {
+        $this->reset();
+        $this->resetPage();
+        $this->success('Filters cleared.', position: 'toast-top');
+    }
+
+    // Delete action
+    public function delete($id): void
+    {
+        $kategori = Kategori::findOrFail($id);
+        $kategori->delete();
+        $this->warning("Kategori $kategori->name akan dihapus", position: 'toast-top');
+    }
+
+    public function create(): void
+    {
+        $this->newKategoriName = ''; // Reset input sebelum membuka modal
+        $this->newKategoriDeskripsi = '';
+        $this->createModal = true;
+    }
+
+    public function saveCreate(): void
+    {
+        $this->validate([
+            'newKategoriName' => 'required|string|max:255',
+            'newKategoriDeskripsi' => 'nullable',
+        ]);
+
+        Kategori::create(['name' => $this->newKategoriName, 'deskripsi' => $this->newKategoriDeskripsi]);
+
+        $this->createModal = false;
+        $this->success('Kategori created successfully.', position: 'toast-top');
+    }
+
+    public function edit($id): void
+    {
+        $this->editingKategori = Kategori::find($id);
+
+        if ($this->editingKategori) {
+            $this->editingName = $this->editingKategori->name;
+            $this->editingDeskripsi = $this->editingKategori->deskripsi;
+            $this->editModal = true; // Tampilkan modal
+        }
+    }
+
+    public function saveEdit(): void
+    {
+        if ($this->editingKategori) {
+            $this->editingKategori->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
+            $this->editModal = false;
+            $this->success('Kategori updated successfully.', position: 'toast-top');
+        }
+    }
+
+    // Table headers
+    public function headers(): array
+    {
+        return [
+            ['key' => 'id', 'label' => '#'],
+            ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'],
+            ['key' => 'deskripsi', 'label' => 'Deskripsi', 'class' => 'w-100'],
+            ['key' => 'barangs_count', 'label' => 'Barang'], // Gunakan `users_count`
+            ['key' => 'created_at', 'label' => 'Tanggal dibuat', 'class' => 'w-30'],
+        ];
+    }
+
+    public function Kategoris(): LengthAwarePaginator
+    {
+        return Kategori::query()
+            ->withCount('barangs') // Menghitung jumlah users di setiap Kategori
+            ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
+            ->orderBy(...array_values($this->sortBy))
+            ->paginate($this->perPage);
+    }
+
+    public function with(): array
+    {
+        return [
+            'kategoris' => $this->kategoris(),
+            'headers' => $this->headers(),
+            'perPage' => $this->perPage,
+            'pages' => $this->page,
+        ];
+    }
+
+    // Reset pagination when any component property changes
     public function updated($property): void
     {
         if (!is_array($property) && $property != '') {
             $this->resetPage();
         }
     }
+};
 
-    public function clear(): void
-    {
-        $this->reset();
-        $this->resetPage();
-        $this->success('Filters cleared.', position: 'toast-bottom');
-    }
-
-    // Delete action
-    public function delete($id): void
-    {
-        Kategori::find($id)->delete();
-        $this->warning("Will delete #$id", 'It is fake.', position: 'toast-bottom');
-    }
-
-    // Table headers
-    public function headers(): array
-    {
-        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], ['key' => 'keterangan', 'label' => 'Keterangan', 'sortable' => false]];
-    }
-
-    public function kategori(): LengthAwarePaginator
-    {
-        return Kategori::query()->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->orderBy(...array_values($this->sortBy))->paginate(5);
-    }
-
-    public function with(): array
-    {
-
-        return [
-            'kategori' => $this->kategori(),
-            'headers' => $this->headers(),
-        ];
-    }
-}; ?>
+?>
 
 <div>
     <!-- HEADER -->
-    <x-header title="Kategori Surat" separator progress-indicator>
-        <x-slot:middle class="!justify-end">
-            <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
-        </x-slot:middle>
+    <x-header title="Kategoris" separator progress-indicator>
         <x-slot:actions>
-            {{-- <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"/> --}}
-            <x-button label="Create" link="/kategori/create" responsive icon="o-plus" class="btn-primary" />
+            <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
-    <!-- TABLE  -->
-    <x-card shadow>
-        <x-table :headers="$headers" :rows="$kategori" :sort-by="$sortBy" with-pagination
-            link="kategori/{id}/edit?name={name}">
-            @scope('actions', $kategori)
-                <x-button icon="o-trash" wire:click="delete({{ $kategori['id'] }})" wire:confirm="Are you sure?" spinner
-                    class="btn-ghost btn-sm text-error" />
+    <!-- FILTERS -->
+    <div class="grid grid-cols-1 md:grid-cols-8 gap-4  items-end mb-4">
+        <div class="md:col-span-1">
+            <x-select label="Show entries" :options="$pages" wire:model.live="perPage" class="w-15" />
+        </div>
+        <div class="md:col-span-7">
+            <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass"
+                class="" />
+        </div>
+        <!-- Dropdown untuk jumlah data per halaman -->
+    </div>
+
+    <!-- TABLE wire:poll.5s="users"  -->
+    <x-card>
+        <x-table :headers="$headers" :rows="$kategoris" :sort-by="$sortBy" with-pagination
+            @row-click="$wire.edit($event.detail.id)">
+            @scope('cell_barangs_count', $kategori)
+                <span>{{ $kategori->barangs_count }}</span>
+            @endscope
+            @scope('actions', $kategoris)
+                <x-button icon="o-trash" wire:click="delete({{ $kategoris['id'] }})"
+                    wire:confirm="Yakin ingin menghapus {{ $kategoris['name'] }}?" spinner
+                    class="btn-ghost btn-sm text-red-500" />
             @endscope
         </x-table>
     </x-card>
 
-    {{-- <!-- FILTER DRAWER -->
-    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="lg:w-1/3">
-        <x-input placeholder="Search..." wire:model.live.debounce="search" icon="o-magnifying-glass"
-            @keydown.enter="$wire.drawer = false" />
-        <x-select placeholer="Country" wire:model.live="country_id" :options="$countries" icon="o-flag"
-            placeholder-value="0" />
+    <x-modal wire:model="createModal" title="Create Kategori">
+        <div class="grid gap-4">
+            <x-input label="Kategori Name" wire:model.live="newKategoriName" />
+            <x-textarea label="Kategori Deskripsi" wire:model.live="newKategoriDeskripsi" placeholder="Here ..." />
+        </div>
 
         <x-slot:actions>
-            <x-button label="Reset" icon="o-x-mark" wire:click="clear" spinner />
-            <x-button label="Done" icon="o-check" class="btn-primary" @click="$wire.drawer = false" />
+            <x-button label="Cancel" icon="o-x-mark" @click="$wire.createModal=false" />
+            <x-button label="Create" icon="o-check" class="btn-primary" wire:click="saveCreate" />
         </x-slot:actions>
-    </x-drawer> --}}
+    </x-modal>
+
+    <x-modal wire:model="editModal" title="Edit Kategori">
+        <div class="grid gap-4">
+            <x-input label="Kategori Name" wire:model.live="editingName" />
+            <x-textarea label="Kategori Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
+        </div>
+
+        <x-slot:actions>
+            <x-button label="Cancel" icon="o-x-mark" @click="$wire.editModal=false" />
+            <x-button label="Save" icon="o-check" class="btn-primary" wire:click="saveEdit" />
+        </x-slot:actions>
+    </x-modal>
 </div>

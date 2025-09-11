@@ -49,22 +49,12 @@ new class extends Component {
     // Table headers
     public function headers(): array
     {
-        return [
-            ['key' => 'avatar', 'label' => '', 'class' => 'w-1'], 
-            ['key' => 'id', 'label' => '#', 'class' => 'w-1'], 
-            ['key' => 'role_name', 'label' => 'Role'], 
-            ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], 
-            ['key' => 'email', 'label' => 'E-mail', 'sortable' => false]];
+        return [['key' => 'avatar', 'label' => '', 'class' => 'w-1'], ['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'role_name', 'label' => 'Role'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], ['key' => 'email', 'label' => 'E-mail', 'sortable' => false]];
     }
 
     public function users(): LengthAwarePaginator
     {
-        return User::query()
-        ->withAggregate('role', 'name')
-        ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
-        ->when($this->role_id, fn(Builder $q) => $q->where('role_id', $this->role_id))
-        ->orderBy(...array_values($this->sortBy))
-        ->paginate($this->perPage);
+        return User::query()->withAggregate('role', 'name')->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->role_id, fn(Builder $q) => $q->where('role_id', $this->role_id))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
     }
 
     public function with(): array
@@ -110,11 +100,15 @@ new class extends Component {
     <!-- FILTERS -->
     <div class="grid grid-cols-1 md:grid-cols-8 gap-4  items-end mb-4">
         <div class="md:col-span-1">
-            <x-select label="Show entries" :options="$pages" wire:model.live="perPage" class="w-15" />
+            <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
         </div>
-        <div class="md:col-span-7">
+        <div class="md:col-span-6">
             <x-input placeholder="Name..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass"
                 class="" />
+        </div>
+        <div class="md:col-span-1">
+            <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"
+                badge="{{ $this->filter }}" badge-classes="badge-primary" />
         </div>
         <!-- Dropdown untuk jumlah data per halaman -->
     </div>
