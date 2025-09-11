@@ -46,8 +46,11 @@
                     <x-menu-separator />
                 @endif
 
-                <x-menu-item title="Hello" icon="o-sparkles" link="/" />
-                
+                <x-menu-item title="Users" icon="o-sparkles" link="/users" />
+                <x-menu-item title="Roles" icon="o-sparkles" link="/roles" />
+                <x-menu-item title="Kategoris" icon="o-sparkles" link="/kategoris" />
+                <x-menu-item title="Barangs" icon="o-sparkles" link="/barangs" />
+
                 <x-menu-sub title="Settings" icon="o-cog-6-tooth">
                     <x-menu-item title="Wifi" icon="o-wifi" link="####" />
                     <x-menu-item title="Archives" icon="o-archive-box" link="####" />

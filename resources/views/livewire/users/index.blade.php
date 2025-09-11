@@ -54,7 +54,6 @@ new class extends Component {
             ['key' => 'id', 'label' => '#', 'class' => 'w-1'], 
             ['key' => 'role_name', 'label' => 'Role'], 
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], 
-            ['key' => 'no_hp', 'label' => 'No Telepon', 'sortable' => false],
             ['key' => 'email', 'label' => 'E-mail', 'sortable' => false]];
     }
 
