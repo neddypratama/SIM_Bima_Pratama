@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('karyawans', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->text('alamat')->nullable();
             $table->timestamps();
         });
     }
