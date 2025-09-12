@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Kategori;
+use App\Models\JenisBarang;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,15 +25,15 @@ new class extends Component {
 
     public bool $editModal = false; // Untuk menampilkan modal
 
-    public ?Kategori $editingKategori = null; // Menyimpan data Kategori yang sedang diedit
+    public ?JenisBarang $editingJenisBarang = null; // Menyimpan data JenisBarang yang sedang diedit
 
     public string $editingName = '';
-    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama Kategori
+    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama JenisBarang
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
-    public string $newKategoriName = '';
-    public string $newKategoriDeskripsi = ''; // Untuk menyimpan input nama Kategori baru
+    public string $newJenisBarangName = '';
+    public string $newJenisBarangDeskripsi = ''; // Untuk menyimpan input nama JenisBarang baru
 
     // Clear filters
     public function clear(): void
@@ -46,48 +46,48 @@ new class extends Component {
     // Delete action
     public function delete($id): void
     {
-        $kategori = Kategori::findOrFail($id);
-        $kategori->delete();
-        $this->warning("Kategori $kategori->name akan dihapus", position: 'toast-top');
+        $jenisbarang = JenisBarang::findOrFail($id);
+        $jenisbarang->delete();
+        $this->warning("Jenis Barang $jenisbarang->name berhasil dihapus", position: 'toast-top');
     }
 
     public function create(): void
     {
-        $this->newKategoriName = ''; // Reset input sebelum membuka modal
-        $this->newKategoriDeskripsi = '';
+        $this->newJenisBarangName = ''; // Reset input sebelum membuka modal
+        $this->newJenisBarangDeskripsi = '';
         $this->createModal = true;
     }
 
     public function saveCreate(): void
     {
         $this->validate([
-            'newKategoriName' => 'required|string|max:255',
-            'newKategoriDeskripsi' => 'nullable',
+            'newJenisBarangName' => 'required|string|max:255',
+            'newJenisBarangDeskripsi' => 'nullable',
         ]);
 
-        Kategori::create(['name' => $this->newKategoriName, 'deskripsi' => $this->newKategoriDeskripsi]);
+        JenisBarang::create(['name' => $this->newJenisBarangName, 'deskripsi' => $this->newJenisBarangDeskripsi]);
 
         $this->createModal = false;
-        $this->success('Kategori created successfully.', position: 'toast-top');
+        $this->success('JenisBarang created successfully.', position: 'toast-top');
     }
 
     public function edit($id): void
     {
-        $this->editingKategori = Kategori::find($id);
+        $this->editingJenisBarang = JenisBarang::find($id);
 
-        if ($this->editingKategori) {
-            $this->editingName = $this->editingKategori->name;
-            $this->editingDeskripsi = $this->editingKategori->deskripsi;
+        if ($this->editingJenisBarang) {
+            $this->editingName = $this->editingJenisBarang->name;
+            $this->editingDeskripsi = $this->editingJenisBarang->deskripsi;
             $this->editModal = true; // Tampilkan modal
         }
     }
 
     public function saveEdit(): void
     {
-        if ($this->editingKategori) {
-            $this->editingKategori->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
+        if ($this->editingJenisBarang) {
+            $this->editingJenisBarang->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
             $this->editModal = false;
-            $this->success('Kategori updated successfully.', position: 'toast-top');
+            $this->success('JenisBarang updated successfully.', position: 'toast-top');
         }
     }
 
@@ -103,10 +103,10 @@ new class extends Component {
         ];
     }
 
-    public function Kategoris(): LengthAwarePaginator
+    public function jenisbarangs(): LengthAwarePaginator
     {
-        return Kategori::query()
-            ->withCount('barangs') // Menghitung jumlah users di setiap Kategori
+        return JenisBarang::query()
+            ->withCount('barangs') // Menghitung jumlah users di setiap JenisBarang
             ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
@@ -115,7 +115,7 @@ new class extends Component {
     public function with(): array
     {
         return [
-            'kategoris' => $this->kategoris(),
+            'jenisbarangs' => $this->jenisbarangs(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -135,7 +135,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Kategoris" separator progress-indicator>
+    <x-header title="Jenis Barangs" separator progress-indicator>
         <x-slot:actions>
             <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
@@ -155,23 +155,23 @@ new class extends Component {
 
     <!-- TABLE wire:poll.5s="users"  -->
     <x-card>
-        <x-table :headers="$headers" :rows="$kategoris" :sort-by="$sortBy" with-pagination
+        <x-table :headers="$headers" :rows="$jenisbarangs" :sort-by="$sortBy" with-pagination
             @row-click="$wire.edit($event.detail.id)">
-            @scope('cell_barangs_count', $kategori)
-                <span>{{ $kategori->barangs_count }}</span>
+            @scope('cell_barangs_count', $jenisbarang)
+                <span>{{ $jenisbarang->barangs_count }}</span>
             @endscope
-            @scope('actions', $kategoris)
-                <x-button icon="o-trash" wire:click="delete({{ $kategoris['id'] }})"
-                    wire:confirm="Yakin ingin menghapus {{ $kategoris['name'] }}?" spinner
+            @scope('actions', $jenisbarangs)
+                <x-button icon="o-trash" wire:click="delete({{ $jenisbarangs['id'] }})"
+                    wire:confirm="Yakin ingin menghapus {{ $jenisbarangs['name'] }}?" spinner
                     class="btn-ghost btn-sm text-red-500" />
             @endscope
         </x-table>
     </x-card>
 
-    <x-modal wire:model="createModal" title="Create Kategori">
+    <x-modal wire:model="createModal" title="Create JenisBarang">
         <div class="grid gap-4">
-            <x-input label="Kategori Name" wire:model.live="newKategoriName" />
-            <x-textarea label="Kategori Deskripsi" wire:model.live="newKategoriDeskripsi" placeholder="Here ..." />
+            <x-input label="JenisBarang Name" wire:model.live="newJenisBarangName" />
+            <x-textarea label="JenisBarang Deskripsi" wire:model.live="newJenisBarangDeskripsi" placeholder="Here ..." />
         </div>
 
         <x-slot:actions>
@@ -180,10 +180,10 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 
-    <x-modal wire:model="editModal" title="Edit Kategori">
+    <x-modal wire:model="editModal" title="Edit JenisBarang">
         <div class="grid gap-4">
-            <x-input label="Kategori Name" wire:model.live="editingName" />
-            <x-textarea label="Kategori Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
+            <x-input label="JenisBarang Name" wire:model.live="editingName" />
+            <x-textarea label="JenisBarang Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
         </div>
 
         <x-slot:actions>

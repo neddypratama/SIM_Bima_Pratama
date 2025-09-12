@@ -10,11 +10,18 @@ class Barang extends Model
 
     protected $fillable = [
         'name',
-        'kategori_id',
+        'jenis_id',
+        'satuan_id',
+        'stok'
     ];
 
-    public function kategori()
+    public function jenis()
     {
-        return $this->belongsTo(Kategori::class, 'kategori_id');
+        return $this->belongsTo(JenisBarang::class, 'jenis_id');
+    }
+
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'satuan_id');
     }
 }

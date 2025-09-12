@@ -6,14 +6,14 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class KategoriSeeder extends Seeder
+class JenisBarangSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        DB::table('kategoris')->insert([
+        DB::table('jenis_barangs')->insert([
             [
                 'name' => 'Penjualan Bebek',
                 'deskripsi' => 'Kategori untuk barang penjualan bebek.',

@@ -16,19 +16,25 @@ class BarangSeeder extends Seeder
         DB::table('barangs')->insert([
             [
                 'name' => 'Bebek Super',
-                'kategori_id' => 1, // Assuming this ID exists in the kategoris table
+                'jenis_id' => 1,
+                'satuan_id' => 1,
+                'stok' => 10,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'name' => 'Horn Deluxe',
-                'kategori_id' => 2, // Assuming this ID exists in the kategoris table
+                'jenis_id' => 2,
+                'satuan_id' => 1,
+                'stok' => 10,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'name' => 'Arab Premium',
-                'kategori_id' => 3, // Assuming this ID exists in the kategoris table
+                'jenis_id' => 3,
+                'satuan_id' => 1,
+                'stok' => 10,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

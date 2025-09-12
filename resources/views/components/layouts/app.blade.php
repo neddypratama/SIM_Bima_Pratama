@@ -48,7 +48,7 @@
 
                 <x-menu-item title="Users" icon="o-sparkles" link="/users" />
                 <x-menu-item title="Roles" icon="o-sparkles" link="/roles" />
-                <x-menu-item title="Kategoris" icon="o-sparkles" link="/kategoris" />
+                <x-menu-item title="Jenis Barangs" icon="o-sparkles" link="/jenisbarangs" />
                 <x-menu-item title="Barangs" icon="o-sparkles" link="/barangs" />
 
                 <x-menu-sub title="Settings" icon="o-cog-6-tooth">

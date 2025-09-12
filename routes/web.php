@@ -1,16 +1,34 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
+use PhpParser\Node\Expr\Cast\Void_;
 
-Volt::route('/', 'index');
-Volt::route('/users', 'users.index');
-Volt::route('/users/create', 'users.create');
-Volt::route('/users/{user}/edit', 'users.edit');
+Route::middleware('guest')->group(function () {
+    Volt::route('/login', 'auth/login')->name('login');
+});
 
-Volt::route('/barangs', 'barangs.index');
-Volt::route('/barangs/create', 'barangs.create');
-Volt::route('/barangs/{barang}/edit', 'barangs.edit');
+// Define the logout
+Route::get('/logout', function () {
+    auth()->logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+ 
+    return redirect('/');
+});
 
-Volt::route('/kategori', 'kategori.index');
+Route::middleware('auth')->group(function() {
+    Volt::route('/', 'index');
+    Volt::route('/users', 'users.index');
+    Volt::route('/users/create', 'users.create');
+    Volt::route('/users/{user}/edit', 'users.edit');
 
-Volt::route('/roles', 'roles.index');
+    Volt::route('/barangs', 'barangs.index');
+    Volt::route('/barangs/create', 'barangs.create');
+    Volt::route('/barangs/{barang}/edit', 'barangs.edit');
+
+    Volt::route('/jenisbarangs', 'jenisbarangs.index');
+
+    Volt::route('/roles', 'roles.index');
+});
+
