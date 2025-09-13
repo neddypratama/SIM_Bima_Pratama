@@ -10,6 +10,7 @@ class Satuan extends Model
 
     protected $fillable = [
         'name',
+        'deskripsi',
     ];
 
     public function barangs()

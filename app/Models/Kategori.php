@@ -12,4 +12,8 @@ class Kategori extends Model
         'name',
         'deskripsi',
     ];
+    public function transaksis()
+    {
+        return $this->hasMany(Transaksi::class, 'kategori_id');
+    }
 }

@@ -11,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transaksi_masuks', function (Blueprint $table) {
+        Schema::create('transaksis', function (Blueprint $table) {
             $table->id();
+            $table->string('invoice')->unique();
+            $table->date('tanggal');
+            $table->string('name');
+            $table->foreignId('user_id')->constrained('users');
+            $table->integer('total')->default(0);
             $table->timestamps();
         });
     }
@@ -22,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transaksi_masuks');
+        Schema::dropIfExists('transaksis');
     }
 };

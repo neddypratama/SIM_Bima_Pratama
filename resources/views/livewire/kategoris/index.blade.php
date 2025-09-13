@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Role;
+use App\Models\Kategori;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,10 +16,7 @@ new class extends Component {
     public bool $drawer = false;
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
-
-    // Create a public property.
-    // public int $country_id = 0;
-
+    
     public int $filter = 0;
 
     public $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
@@ -28,15 +25,15 @@ new class extends Component {
 
     public bool $editModal = false; // Untuk menampilkan modal
 
-    public ?Role $editingRole = null; // Menyimpan data role yang sedang diedit
+    public ?Kategori $editingKategori = null; // Menyimpan data Kategori yang sedang diedit
 
     public string $editingName = '';
-    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama role
+    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama Kategori
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
-    public string $newRoleName = '';
-    public string $newRoleDeskripsi = ''; // Untuk menyimpan input nama role baru
+    public string $newKategoriName = '';
+    public string $newKategoriDeskripsi = ''; // Untuk menyimpan input nama Kategori baru
 
     // Clear filters
     public function clear(): void
@@ -49,52 +46,52 @@ new class extends Component {
     // Delete action
     public function delete($id): void
     {
-        $kategori = Role::findOrFail($id);
+        $kategori = Kategori::findOrFail($id);
         $kategori->delete();
-        $this->warning("Role $kategori->name akan dihapus", position: 'toast-top');
+        $this->warning("Kategori $kategori->name akan dihapus", position: 'toast-top');
     }
 
     public function create(): void
     {
-        $this->newRoleName = ''; // Reset input sebelum membuka modal
-        $this->newRoleDeskripsi = '';
+        $this->newKategoriName = ''; // Reset input sebelum membuka modal
+        $this->newKategoriDeskripsi = '';
         $this->createModal = true;
     }
 
     public function saveCreate(): void
     {
         $this->validate([
-            'newRoleName' => 'required|string|max:255',
-            'newRoleDeskripsi' => 'nullable',
+            'newKategoriName' => 'required|string|max:255',
+            'newKategoriDeskripsi' => 'nullable',
         ]);
 
-        Role::create(['name' => $this->newRoleName, 'deskripsi' => $this->newRoleDeskripsi]);
+        Kategori::create(['name' => $this->newKategoriName, 'deskripsi' => $this->newKategoriDeskripsi]);
 
         $this->createModal = false;
-        $this->success('Role created successfully.', position: 'toast-top');
+        $this->success('Kategori created successfully.', position: 'toast-top');
     }
 
     public function edit($id): void
     {
-        $this->editingRole = Role::find($id);
+        $this->editingKategori = Kategori::find($id);
 
-        if ($this->editingRole) {
-            $this->validate([
-                'editingName' => 'required|string|max:255',
-                'editingDeskripsi' => 'nullable',
-            ]);
-            $this->editingName = $this->editingRole->name;
-            $this->editingDeskripsi = $this->editingRole->deskripsi;
+        if ($this->editingKategori) {
+            $this->editingName = $this->editingKategori->name;
+            $this->editingDeskripsi = $this->editingKategori->deskripsi;
             $this->editModal = true; // Tampilkan modal
         }
     }
 
     public function saveEdit(): void
     {
-        if ($this->editingRole) {
-            $this->editingRole->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
+        if ($this->editingKategori) {
+            $this->validate([
+                'editingName' => 'required|string|max:255',
+                'editingDeskripsi' => 'nullable',
+            ]);
+            $this->editingKategori->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
             $this->editModal = false;
-            $this->success('Role updated successfully.', position: 'toast-top');
+            $this->success('Kategori updated successfully.', position: 'toast-top');
         }
     }
 
@@ -105,15 +102,15 @@ new class extends Component {
             ['key' => 'id', 'label' => '#'],
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'],
             ['key' => 'deskripsi', 'label' => 'Deskripsi', 'class' => 'w-100'],
-            ['key' => 'users_count', 'label' => 'User', 'class' => 'w-64'], // Gunakan `users_count`
+            ['key' => 'transaksis_count', 'label' => 'Transaksi', 'class' => 'w-64'], // Gunakan `Transaksis_count`
             ['key' => 'created_at', 'label' => 'Tanggal dibuat', 'class' => 'w-30'],
         ];
     }
 
-    public function roles(): LengthAwarePaginator
+    public function kategoris(): LengthAwarePaginator
     {
-        return Role::query()
-            ->withCount('users') // Menghitung jumlah users di setiap role
+        return Kategori::query()
+            ->withCount('transaksis') // Menghitung jumlah users di setiap Kategori
             ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
@@ -121,15 +118,8 @@ new class extends Component {
 
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 2) {
-            if (!$this->search == null) {
-                $this->filter = 1;
-            } else {
-                $this->filter = 0;
-            }
-        }
         return [
-            'roles' => $this->roles(),
+            'kategoris' => $this->kategoris(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -149,7 +139,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Roles" separator progress-indicator>
+    <x-header title="Kategoris" separator progress-indicator>
         <x-slot:actions>
             <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
@@ -169,23 +159,23 @@ new class extends Component {
 
     <!-- TABLE wire:poll.5s="users"  -->
     <x-card>
-        <x-table :headers="$headers" :rows="$roles" :sort-by="$sortBy" with-pagination
+        <x-table :headers="$headers" :rows="$kategoris" :sort-by="$sortBy" with-pagination
             @row-click="$wire.edit($event.detail.id)">
-            @scope('cell_users_count', $role)
-                <span>{{ $role->users_count }}</span>
+            @scope('cell_kategori_count', $kategori)
+                <span>{{ $kategori->transaksis_count }}</span>
             @endscope
-            @scope('actions', $roles)
-                <x-button icon="o-trash" wire:click="delete({{ $roles['id'] }})"
-                    wire:confirm="Yakin ingin menghapus {{ $roles['name'] }}?" spinner
+            @scope('actions', $kategoris)
+                <x-button icon="o-trash" wire:click="delete({{ $kategoris['id'] }})"
+                    wire:confirm="Yakin ingin menghapus {{ $kategoris['name'] }}?" spinner
                     class="btn-ghost btn-sm text-red-500" />
             @endscope
         </x-table>
     </x-card>
 
-    <x-modal wire:model="createModal" title="Create Role">
+    <x-modal wire:model="createModal" title="Create Kategori">
         <div class="grid gap-4">
-            <x-input label="Role Name" wire:model.live="newRoleName" />
-            <x-textarea label="Role Deskripsi" wire:model.live="newRoleDeskripsi" placeholder="Here ..." />
+            <x-input label="Kategori Name" wire:model.live="newKategoriName" />
+            <x-textarea label="Kategori Deskripsi" wire:model.live="newKategoriDeskripsi" placeholder="Here ..." />
         </div>
 
         <x-slot:actions>
@@ -194,10 +184,10 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 
-    <x-modal wire:model="editModal" title="Edit Role">
+    <x-modal wire:model="editModal" title="Edit Kategori">
         <div class="grid gap-4">
-            <x-input label="Role Name" wire:model.live="editingName" />
-            <x-textarea label="Role Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
+            <x-input label="Kategori Name" wire:model.live="editingName" />
+            <x-textarea label="Kategori Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
         </div>
 
         <x-slot:actions>

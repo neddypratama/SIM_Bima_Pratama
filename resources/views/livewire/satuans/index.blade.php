@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Role;
+use App\Models\Satuan;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,15 +28,15 @@ new class extends Component {
 
     public bool $editModal = false; // Untuk menampilkan modal
 
-    public ?Role $editingRole = null; // Menyimpan data role yang sedang diedit
+    public ?Satuan $editingSatuan = null; // Menyimpan data Satuan yang sedang diedit
 
     public string $editingName = '';
-    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama role
+    public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama Satuan
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
-    public string $newRoleName = '';
-    public string $newRoleDeskripsi = ''; // Untuk menyimpan input nama role baru
+    public string $newSatuanName = '';
+    public string $newSatuanDeskripsi = ''; // Untuk menyimpan input nama Satuan baru
 
     // Clear filters
     public function clear(): void
@@ -49,52 +49,52 @@ new class extends Component {
     // Delete action
     public function delete($id): void
     {
-        $kategori = Role::findOrFail($id);
+        $kategori = Satuan::findOrFail($id);
         $kategori->delete();
-        $this->warning("Role $kategori->name akan dihapus", position: 'toast-top');
+        $this->warning("Satuan $kategori->name akan dihapus", position: 'toast-top');
     }
 
     public function create(): void
     {
-        $this->newRoleName = ''; // Reset input sebelum membuka modal
-        $this->newRoleDeskripsi = '';
+        $this->newSatuanName = ''; // Reset input sebelum membuka modal
+        $this->newSatuanDeskripsi = '';
         $this->createModal = true;
     }
 
     public function saveCreate(): void
     {
         $this->validate([
-            'newRoleName' => 'required|string|max:255',
-            'newRoleDeskripsi' => 'nullable',
+            'newSatuanName' => 'required|string|max:255',
+            'newSatuanDeskripsi' => 'nullable',
         ]);
 
-        Role::create(['name' => $this->newRoleName, 'deskripsi' => $this->newRoleDeskripsi]);
+        Satuan::create(['name' => $this->newSatuanName, 'deskripsi' => $this->newSatuanDeskripsi]);
 
         $this->createModal = false;
-        $this->success('Role created successfully.', position: 'toast-top');
+        $this->success('Satuan created successfully.', position: 'toast-top');
     }
 
     public function edit($id): void
     {
-        $this->editingRole = Role::find($id);
+        $this->editingSatuan = Satuan::find($id);
 
-        if ($this->editingRole) {
-            $this->validate([
-                'editingName' => 'required|string|max:255',
-                'editingDeskripsi' => 'nullable',
-            ]);
-            $this->editingName = $this->editingRole->name;
-            $this->editingDeskripsi = $this->editingRole->deskripsi;
+        if ($this->editingSatuan) {
+            $this->editingName = $this->editingSatuan->name;
+            $this->editingDeskripsi = $this->editingSatuan->deskripsi;
             $this->editModal = true; // Tampilkan modal
         }
     }
 
     public function saveEdit(): void
     {
-        if ($this->editingRole) {
-            $this->editingRole->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
+        if ($this->editingSatuan) {
+            $this->validate([
+                'editingName' => 'required|string|max:255',
+                'editingDeskripsi' => 'nullable',
+            ]);
+            $this->editingSatuan->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
             $this->editModal = false;
-            $this->success('Role updated successfully.', position: 'toast-top');
+            $this->success('Satuan updated successfully.', position: 'toast-top');
         }
     }
 
@@ -105,15 +105,15 @@ new class extends Component {
             ['key' => 'id', 'label' => '#'],
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'],
             ['key' => 'deskripsi', 'label' => 'Deskripsi', 'class' => 'w-100'],
-            ['key' => 'users_count', 'label' => 'User', 'class' => 'w-64'], // Gunakan `users_count`
+            ['key' => 'barangs_count', 'label' => 'Barang', 'class' => 'w-64'], // Gunakan `barangs_count`
             ['key' => 'created_at', 'label' => 'Tanggal dibuat', 'class' => 'w-30'],
         ];
     }
 
-    public function roles(): LengthAwarePaginator
+    public function satuans(): LengthAwarePaginator
     {
-        return Role::query()
-            ->withCount('users') // Menghitung jumlah users di setiap role
+        return Satuan::query()
+            ->withCount('barangs') // Menghitung jumlah users di setiap Satuan
             ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
@@ -121,15 +121,8 @@ new class extends Component {
 
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 2) {
-            if (!$this->search == null) {
-                $this->filter = 1;
-            } else {
-                $this->filter = 0;
-            }
-        }
         return [
-            'roles' => $this->roles(),
+            'satuans' => $this->satuans(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -149,7 +142,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Roles" separator progress-indicator>
+    <x-header title="Satuans" separator progress-indicator>
         <x-slot:actions>
             <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
@@ -169,23 +162,23 @@ new class extends Component {
 
     <!-- TABLE wire:poll.5s="users"  -->
     <x-card>
-        <x-table :headers="$headers" :rows="$roles" :sort-by="$sortBy" with-pagination
+        <x-table :headers="$headers" :rows="$satuans" :sort-by="$sortBy" with-pagination
             @row-click="$wire.edit($event.detail.id)">
-            @scope('cell_users_count', $role)
-                <span>{{ $role->users_count }}</span>
+            @scope('cell_satuan_count', $satuan)
+                <span>{{ $satuan->satuan_count }}</span>
             @endscope
-            @scope('actions', $roles)
-                <x-button icon="o-trash" wire:click="delete({{ $roles['id'] }})"
-                    wire:confirm="Yakin ingin menghapus {{ $roles['name'] }}?" spinner
+            @scope('actions', $satuans)
+                <x-button icon="o-trash" wire:click="delete({{ $satuans['id'] }})"
+                    wire:confirm="Yakin ingin menghapus {{ $satuans['name'] }}?" spinner
                     class="btn-ghost btn-sm text-red-500" />
             @endscope
         </x-table>
     </x-card>
 
-    <x-modal wire:model="createModal" title="Create Role">
+    <x-modal wire:model="createModal" title="Create Satuan">
         <div class="grid gap-4">
-            <x-input label="Role Name" wire:model.live="newRoleName" />
-            <x-textarea label="Role Deskripsi" wire:model.live="newRoleDeskripsi" placeholder="Here ..." />
+            <x-input label="Satuan Name" wire:model.live="newSatuanName" />
+            <x-textarea label="Satuan Deskripsi" wire:model.live="newSatuanDeskripsi" placeholder="Here ..." />
         </div>
 
         <x-slot:actions>
@@ -194,10 +187,10 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 
-    <x-modal wire:model="editModal" title="Edit Role">
+    <x-modal wire:model="editModal" title="Edit Satuan">
         <div class="grid gap-4">
-            <x-input label="Role Name" wire:model.live="editingName" />
-            <x-textarea label="Role Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
+            <x-input label="Satuan Name" wire:model.live="editingName" />
+            <x-textarea label="Satuan Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
         </div>
 
         <x-slot:actions>

@@ -76,6 +76,10 @@ new class extends Component {
         $this->editingJenisBarang = JenisBarang::find($id);
 
         if ($this->editingJenisBarang) {
+            $this->validate([
+                'editingName' => 'required|string|max:255',
+                'editingDeskripsi' => 'nullable',
+            ]);
             $this->editingName = $this->editingJenisBarang->name;
             $this->editingDeskripsi = $this->editingJenisBarang->deskripsi;
             $this->editModal = true; // Tampilkan modal

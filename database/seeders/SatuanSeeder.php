@@ -16,11 +16,13 @@ class SatuanSeeder extends Seeder
         DB::table('satuans')->insert([
             [
                 'name' => 'Kilogram',
+                'deskripsi' => '10 butir sama dengan 1 kilogram',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'name' => 'Liter',
+                'deskripsi' => '1 liter sama dengan 1000 mililiter',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
