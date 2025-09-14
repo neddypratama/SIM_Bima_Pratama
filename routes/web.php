@@ -50,6 +50,10 @@ Route::middleware('auth')->group(function() {
     Volt::route('/pakan/create', 'pakan.create');
     Volt::route('/pakan/{pakan}/edit', 'pakan.edit');
 
+    Volt::route('/obat', 'obat.index');
+    Volt::route('/obat/create', 'obat.create');
+    Volt::route('/obat/{obat}/edit', 'obat.edit');
+
     Volt::route('/lainnya', 'lainnya.index');
     Volt::route('/lainnya/create', 'lainnya.create');
     Volt::route('/lainnya/{lainnya}/edit', 'lainnya.edit');
