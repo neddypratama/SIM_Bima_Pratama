@@ -17,6 +17,7 @@ return new class extends Migration
             $table->date('tanggal');
             $table->string('name');
             $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('client_id')->nullable()->constrained('clients');
             $table->integer('total')->default(0);
             $table->timestamps();
         });

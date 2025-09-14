@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\DetailTransaksi;
+use App\Models\Barang;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
@@ -15,7 +16,8 @@ new class extends Component {
     public string $search = '';
     public bool $drawer = false;
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
-    public int $user_id = 0;
+    public int $user_id = 0;    // ✅ filter user
+    public int $barang_id = 0;  // ✅ filter barang
     public int $filter = 0;
     public int $perPage = 10;
 
@@ -23,12 +25,12 @@ new class extends Component {
         ['id' => 10, 'name' => '10'],
         ['id' => 25, 'name' => '25'],
         ['id' => 50, 'name' => '50'],
-        ['id' => 100, 'name' => '100']
+        ['id' => 100, 'name' => '100'],
     ];
 
     public function clear(): void
     {
-        $this->reset(['search', 'user_id', 'filter']);
+        $this->reset(['search', 'user_id', 'barang_id', 'filter']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -45,6 +47,7 @@ new class extends Component {
         return [
             ['key' => 'transaksi.invoice', 'label' => 'Invoice', 'class' => 'w-48'],
             ['key' => 'transaksi.tanggal', 'label' => 'Tanggal', 'class' => 'w-32'],
+            ['key' => 'transaksi.client.name', 'label' => 'Client', 'class' => 'w-32'],
             ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-64'],
             ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-64'],
             ['key' => 'kuantitas', 'label' => 'Qty', 'class' => 'w-20 text-center'],
@@ -55,20 +58,29 @@ new class extends Component {
     public function details(): LengthAwarePaginator
     {
         return DetailTransaksi::query()
-            ->with(['transaksi:id,invoice,tanggal,user_id', 'barang:id,name', 'kategori:id,name'])
-            ->whereHas('kategori', function (Builder $q) {
-                $q->where('name', 'like', '%Telur%');
-            })
-            ->where('bagian', 'like', '%Aset%')
-            ->when($this->search, fn (Builder $q) =>
-                $q->whereHas('transaksi', fn ($t) =>
+            ->with([
+                'transaksi:id,invoice,tanggal,user_id,client_id',
+                'transaksi.client:id,name',
+                'barang:id,name',
+                'kategori:id,name'
+            ])
+            ->whereHas('kategori', fn(Builder $q) =>
+                $q->where('name', 'like', '%Telur%')
+            )
+            ->where('bagian', 'like', '%Pendapatan%')
+            ->orWhere('bagian', 'like', '%Pengeluaran%')
+            ->when($this->search, fn(Builder $q) =>
+                $q->whereHas('transaksi', fn($t) =>
                     $t->where('invoice', 'like', "%{$this->search}%")
                 )
             )
-            ->when($this->user_id, fn (Builder $q) =>
-                $q->whereHas('transaksi', fn ($t) =>
+            ->when($this->user_id, fn(Builder $q) =>
+                $q->whereHas('transaksi', fn($t) =>
                     $t->where('user_id', $this->user_id)
                 )
+            )
+            ->when($this->barang_id, fn(Builder $q) =>
+                $q->where('barang_id', $this->barang_id)
             )
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
@@ -76,14 +88,19 @@ new class extends Component {
 
     public function with(): array
     {
-        $this->filter = ($this->search !== '' ? 1 : 0) + ($this->user_id !== 0 ? 1 : 0);
+        $this->filter = ($this->search !== '' ? 1 : 0)
+                      + ($this->user_id !== 0 ? 1 : 0)
+                      + ($this->barang_id !== 0 ? 1 : 0);
 
         return [
             'details' => $this->details(),
-            'users' => User::all(),
+            'barangs' => Barang::whereHas('jenis', fn($q) =>
+                $q->where('name', 'like', '%Telur%')
+            )->select('id','name')->get(),
+            'users'   => User::select('id','name')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
-            'pages' => $this->page,
+            'pages'   => $this->page,
         ];
     }
 
@@ -98,9 +115,9 @@ new class extends Component {
 ?>
 
 <div>
-    <x-header title="Detail Transaksi" separator progress-indicator>
+    <x-header title="Transaksi Telur" separator progress-indicator>
         <x-slot:actions>
-            <x-button label="Create" link="/details/create" responsive icon="o-plus" class="btn-primary" />
+            <x-button label="Create" link="/telur/create" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
@@ -109,8 +126,7 @@ new class extends Component {
             <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
         </div>
         <div class="md:col-span-6">
-            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
-                icon="o-magnifying-glass" />
+            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
         </div>
         <div class="md:col-span-1">
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"
@@ -119,7 +135,8 @@ new class extends Component {
     </div>
 
     <x-card>
-        <x-table :headers="$headers" :rows="$details" :sort-by="$sortBy" with-pagination>
+        <x-table :headers="$headers" :rows="$details" :sort-by="$sortBy" with-pagination
+            link="telur/{transaksi.id}/edit?barang={barang.name}&invoice={transaksi.invoice}">
             @scope('cell-transaksi.invoice', $detail)
                 {{ $detail->transaksi?->invoice ?? '-' }}
             @endscope
@@ -137,11 +154,11 @@ new class extends Component {
             @endscope
 
             @scope('cell-kuantitas', $detail)
-                <div class="text-center">{{ $detail->kuantitas }}</div>
+                {{ $detail->kuantitas }}
             @endscope
 
             @scope('cell-value', $detail)
-                <div class="text-right">Rp {{ number_format($detail->value, 0, ',', '.') }}</div>
+                Rp {{ number_format($detail->value, 0, ',', '.') }}
             @endscope
 
             @scope('actions', $detail)
@@ -154,10 +171,15 @@ new class extends Component {
 
     <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="lg:w-1/3">
         <div class="grid gap-5">
-            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
-                icon="o-magnifying-glass" />
-            <x-select placeholder="User" wire:model.live="user_id" :options="$users" icon="o-user"
-                placeholder-value="0" />
+            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
+
+            {{-- ✅ Filter User --}}
+            <x-select placeholder="Pilih User" wire:model.live="user_id" :options="$users" option-label="name"
+                option-value="id" icon="o-user" placeholder-value="0" />
+
+            {{-- ✅ Filter Barang --}}
+            <x-select placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barangs" option-label="name"
+                option-value="id" icon="o-cube" placeholder-value="0" />
         </div>
 
         <x-slot:actions>

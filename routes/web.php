@@ -44,7 +44,7 @@ Route::middleware('auth')->group(function() {
 
     Volt::route('/telur', 'telur.index');
     Volt::route('/telur/create', 'telur.create');
-    Volt::route('/telur/{telur}/edit', 'telur.edit');
+    Volt::route('/telur/{transaksi}/edit', 'telur.edit');
 
     Volt::route('/pakan', 'pakan.index');
     Volt::route('/pakan/create', 'pakan.create');

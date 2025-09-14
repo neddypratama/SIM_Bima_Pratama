@@ -15,20 +15,20 @@ class JenisBarangSeeder extends Seeder
     {
         DB::table('jenis_barangs')->insert([
             [
-                'name' => 'Penjualan Bebek',
-                'deskripsi' => 'Kategori untuk barang penjualan bebek.',
+                'name' => 'Telur Bebek',
+                'deskripsi' => 'Kategori untuk barang Telur bebek.',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Penjualan Horn',
-                'deskripsi' => 'Kategori untuk barang penjualan horn.',
+                'name' => 'Telur Horn',
+                'deskripsi' => 'Kategori untuk barang Telur horn.',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Penjualan Arab',
-                'deskripsi' => 'Kategori untuk barang penjualan Arab.',
+                'name' => 'Telur Arab',
+                'deskripsi' => 'Kategori untuk barang Telur Arab.',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
