@@ -35,43 +35,31 @@ new class extends Component {
     #[Rule('required|array|min:1')]
     public array $details = [];
 
-    // Semua barang
-    public $barangs;
-
-    // Barang yang difilter per detail
-    public array $filteredBarangs = [];
+    public $bagianOptions = [['id' => 'Aset', 'name' => 'Aset'], ['id' => 'Liabilitas', 'name' => 'Liabilitas']];
 
     public function with(): array
     {
         return [
             'users' => User::all(),
-            'barangs' => $this->barangs,
-            'kategoris' => Kategori::where('name', 'like', '%Telur%')
-                ->where(function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Pengeluaran%');
-                })
-                ->get(),
-            'clients' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get()
+            'barangs' => Barang::all(),
+            'kategoris' => Kategori::all(),
+            'clients' => Client::all()
                 ->groupBy('type')
                 ->mapWithKeys(
                     fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
+                        $type => $group
+                            ->map(
+                                fn($c) => [
+                                    'id' => $c->id,
+                                    'name' => $c->name,
+                                ],
+                            )
+                            ->values()
+                            ->toArray(),
                     ],
                 )
                 ->toArray(),
         ];
-    }
-
-    public function mount(): void
-    {
-        $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
-        $this->updatedTanggal($this->tanggal);
-
-        // Load semua barang awal
-        $this->barangs = Barang::all();
     }
 
     public function updatedTanggal($value): void
@@ -89,27 +77,16 @@ new class extends Component {
             $this->calculateTotal();
         }
 
-        // Update type dan barang saat kategori berubah
-        if (str_ends_with($key, '.kategori_id')) {
+        // Ubah type otomatis jika bagian berubah
+        if (str_ends_with($key, '.bagian')) {
             $parts = explode('.', $key);
+
+            // sekarang parts cuma [index, field]
             if (count($parts) === 2) {
                 [$index, $field] = $parts;
 
-                if (!empty($this->details[$index]['kategori_id'])) {
-                    $kategori = Kategori::find($this->details[$index]['kategori_id']);
-                    if ($kategori) {
-                        // Set type otomatis
-                        $this->details[$index]['type'] = $kategori->type === 'Pendapatan' ? 'Kredit' : 'Debit';
-
-                        // Filter barang berdasarkan jenis_id kategori
-                        $this->filteredBarangs[$index] = Barang::where('jenis_id', $kategori->jenis_id)->get()->toArray();
-
-                        // Reset barang_id sebelumnya
-                        $this->details[$index]['barang_id'] = null;
-                    }
-                } else {
-                    $this->filteredBarangs[$index] = [];
-                    $this->details[$index]['barang_id'] = null;
+                if (!empty($this->details[$index]['bagian'])) {
+                    $this->details[$index]['type'] = $this->details[$index]['bagian'] === 'Pendapatan' ? 'Kredit' : 'Debit';
                 }
             }
         }
@@ -118,6 +95,13 @@ new class extends Component {
     private function calculateTotal(): void
     {
         $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+    }
+
+    public function mount(): void
+    {
+        $this->user_id = auth()->id();
+        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->updatedTanggal($this->tanggal);
     }
 
     public function save(): void
@@ -137,6 +121,7 @@ new class extends Component {
             $this->validate([
                 'details.*.type' => 'required|in:Kredit,Debit',
                 'details.*.value' => 'required|numeric|min:0',
+                'details.*.bagian' => 'required|in:Pendapatan,Pengeluaran',
                 'details.*.barang_id' => 'required|exists:barangs,id',
                 'details.*.kuantitas' => 'required|integer|min:1',
                 'details.*.kategori_id' => 'required|exists:kategoris,id',
@@ -146,13 +131,14 @@ new class extends Component {
                 'transaksi_id' => $transaksi->id,
                 'type' => $item['type'],
                 'value' => (int) $item['value'],
-                'barang_id' => $item['barang_id'],
-                'kuantitas' => $item['kuantitas'],
-                'kategori_id' => $item['kategori_id'],
+                'bagian' => $item['bagian'],
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+                'kategori_id' => $item['kategori_id'] ?? null,
             ]);
         }
 
-        $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur');
+        $this->success('Transaksi berhasil dibuat!', redirectTo: '/transaksis');
     }
 
     public function addDetail(): void
@@ -160,65 +146,63 @@ new class extends Component {
         $this->details[] = [
             'type' => 'Kredit',
             'value' => 0,
+            'bagian' => null,
             'barang_id' => null,
             'kuantitas' => 1,
             'kategori_id' => null,
         ];
-
-        $index = count($this->details) - 1;
-        $this->filteredBarangs[$index] = [];
         $this->calculateTotal();
     }
 
     public function removeDetail(int $index): void
     {
         unset($this->details[$index]);
-        unset($this->filteredBarangs[$index]);
         $this->details = array_values($this->details);
-        $this->filteredBarangs = array_values($this->filteredBarangs);
         $this->calculateTotal();
     }
 };
+
 ?>
 
 <div class="p-4 space-y-6">
     <x-header title="Create Transaksi" separator progress-indicator />
 
     <x-form wire:submit="save">
-        <div class="lg:grid grid-cols-5 gap-4">
+        <div class="lg:grid grid-cols-5">
             <div class="col-span-2">
                 <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
                 <x-input label="Invoice" wire:model="invoice" readonly />
                 <x-input label="Rincian" wire:model="name" />
-                <x-input label="User" :value="auth()->user()->name" readonly />
+                <x-input label='User' :value="auth()->user()->name" readonly />
                 <x-select-group wire:model="client_id" label="Client" :options="$clients" placeholder="Pilih Client" />
                 <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
             </div>
         </div>
 
         <hr class="my-5" />
-
-        <div class="lg:grid grid-cols-5 gap-4">
+        <div class="lg:grid grid-cols-5">
             <div class="col-span-2">
                 <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
                 @foreach ($details as $index => $item)
-                    <div class="grid grid-cols-2 gap-4 items-center">
-                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
-                            :options="$kategoris" placeholder="Pilih Kategori" />
+                    <div class="grid grid-cols-3 gap-4 items-center">
                         <x-select wire:model.live="details.{{ $index }}.barang_id" label="Barang"
-                            :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
-                    </div>
-                    <div class="grid grid-cols-3 gap-4">
+                            :options="$barangs" placeholder="Pilih Barang" />
                         <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
                             money="IDR" />
                         <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas" type="number"
                             min="1" />
-                        <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
                     </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-select wire:model.live="details.{{ $index }}.bagian" label="Bagian" :options="$bagianOptions"
+                            placeholder="Pilih Bagian" />
+                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
+                            :options="$kategoris" placeholder="Pilih Kategori" />
+                    </div>
+
                     <x-button spinner icon="o-trash" class="bg-red-500 text-white"
                         wire:click="removeDetail({{ $index }})" />
                 @endforeach

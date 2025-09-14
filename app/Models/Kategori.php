@@ -11,9 +11,16 @@ class Kategori extends Model
     protected $fillable = [
         'name',
         'deskripsi',
+        'type',
+        'jenis_id'
     ];
     public function detail()
     {
         return $this->hasMany(DetailTransaksi::class);
+    }
+
+    public function jenis()
+    {
+        return $this->belongsTo(JenisBarang::class);
     }
 }

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->foreignId('barang_id')->nullable()->constrained('barangs');
             $table->integer('kuantitas')->nullable();
             $table->foreignId('kategori_id')->constrained('kategoris');
-            $table->enum('bagian', ['Aset', 'Liabilitas', 'Pendapatan', 'Pengeluaran']);
             $table->timestamps();
         });
     }

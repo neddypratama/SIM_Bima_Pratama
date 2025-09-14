@@ -47,18 +47,25 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'transaksi.invoice', 'label' => 'Invoice', 'class' => 'w-32'], ['key' => 'transaksi.tanggal', 'label' => 'Tanggal', 'class' => 'w-32'], ['key' => 'transaksi.client.name', 'label' => 'Client', 'class' => 'w-32'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-32'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-48'], ['key' => 'kuantitas', 'label' => 'Qty', 'class' => 'w-1 text-center'], ['key' => 'value', 'label' => 'Harga', 'class' => 'w-32 text-right', 'format' => ['currency', 0, 'Rp']], ['key' => 'transaksi.total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [
+            ['key' => 'transaksi.invoice', 'label' => 'Invoice', 'class' => 'w-32'], 
+            ['key' => 'transaksi.tanggal', 'label' => 'Tanggal', 'class' => 'w-32'], 
+            ['key' => 'transaksi.client.name', 'label' => 'Client', 'class' => 'w-32'], 
+            ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-32'], 
+            ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-48'], 
+            ['key' => 'kuantitas', 'label' => 'Qty', 'class' => 'w-1 text-center'], 
+            ['key' => 'value', 'label' => 'Harga', 'class' => 'w-32 text-right', 'format' => ['currency',  0, 'Rp']], 
+            ['key' => 'transaksi.total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency',  0, 'Rp']],
+        ];
     }
 
     public function details(): LengthAwarePaginator
     {
         return DetailTransaksi::query()
-            ->with(['transaksi:id,invoice,tanggal,total,client_id', 'transaksi.client:id,name', 'barang:id,name', 'kategori:id,name,type'])
-            ->whereHas('kategori', function (Builder $q) {
-                $q->where('name', 'like', '%Telur%')->where(function ($q2) {
-                    $q2->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Pengeluaran%');
-                });
-            })
+            ->with(['transaksi:id,invoice,tanggal,total,client_id', 'transaksi.client:id,name', 'barang:id,name', 'kategori:id,name'])
+            ->whereHas('kategori', fn(Builder $q) => $q->where('name', 'like', '%Kas%'))
+            ->where('bagian', 'like', '%Aset%')
+            ->orWhere('bagian', 'like', '%Liabilitas%')
             ->when($this->search, fn(Builder $q) => $q->whereHas('transaksi', fn($t) => $t->where('invoice', 'like', "%{$this->search}%")))
             ->when($this->user_id, fn(Builder $q) => $q->whereHas('transaksi', fn($t) => $t->where('user_id', $this->user_id)))
             ->when($this->barang_id, fn(Builder $q) => $q->where('barang_id', $this->barang_id))
@@ -91,9 +98,9 @@ new class extends Component {
 ?>
 
 <div>
-    <x-header title="Transaksi Telur" separator progress-indicator>
+    <x-header title="Transaksi Kas Tunai" separator progress-indicator>
         <x-slot:actions>
-            <x-button label="Create" link="/telur/create" responsive icon="o-plus" class="btn-primary" />
+            <x-button label="Create" link="/tunai/create" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
@@ -113,25 +120,25 @@ new class extends Component {
 
     <x-card>
         <x-table :headers="$headers" :rows="$details" :sort-by="$sortBy" with-pagination
-            link="telur/{transaksi.id}/edit?barang={barang.name}&invoice={transaksi.invoice}">
+            link="tunai/{transaksi.id}/edit?barang={barang.name}&invoice={transaksi.invoice}">
             @scope('cell-transaksi.invoice', $detail)
-                {{ $detail->transaksi?->invoice ?? '-' }}
+            {{ $detail->transaksi?->invoice ?? '-' }}
             @endscope
 
             @scope('cell-transaksi.tanggal', $detail)
-                {{ $detail->transaksi?->tanggal ?? '-' }}
+            {{ $detail->transaksi?->tanggal ?? '-' }}
             @endscope
 
             @scope('cell-barang.name', $detail)
-                {{ $detail->barang?->name ?? '-' }}
+            {{ $detail->barang?->name ?? '-' }}
             @endscope
 
             @scope('cell-kategori.name', $detail)
-                {{ $detail->kategori?->name ?? '-' }}
+            {{ $detail->kategori?->name ?? '-' }}
             @endscope
 
             @scope('cell-kuantitas', $detail)
-                {{ $detail->kuantitas }}
+            {{ $detail->kuantitas }}
             @endscope
 
             @scope('cell-value', $detail)
@@ -139,7 +146,7 @@ new class extends Component {
             @endscope
 
             @scope('actions', $detail)
-                <x-button icon="o-trash" wire:click="delete({{ $detail->transaksi->id }})"
+                <x-button icon="o-trash" wire:click="delete({{ $detail['transaksi.id'] }})"
                     wire:confirm="Yakin ingin menghapus detail transaksi ini?" spinner
                     class="btn-ghost btn-sm text-red-500" />
             @endscope
