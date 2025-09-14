@@ -42,5 +42,24 @@ Route::middleware('auth')->group(function() {
     Volt::route('/transaksis/create', 'transaksis.create');
     Volt::route('/transaksis/{transaksi}/edit', 'transaksis.edit'); 
 
+    Volt::route('/telur', 'telur.index');
+    Volt::route('/telur/create', 'telur.create');
+    Volt::route('/telur/{telur}/edit', 'telur.edit');
+
+    Volt::route('/pakan', 'pakan.index');
+    Volt::route('/pakan/create', 'pakan.create');
+    Volt::route('/pakan/{pakan}/edit', 'pakan.edit');
+
+    Volt::route('/lainnya', 'lainnya.index');
+    Volt::route('/lainnya/create', 'lainnya.create');
+    Volt::route('/lainnya/{lainnya}/edit', 'lainnya.edit');
+
+    Volt::route('/tunai', 'tunai.index');
+    Volt::route('/tunai/create', 'tunai.create');
+    Volt::route('/tunai/{tunai}/edit', 'tunai.edit');
+
+    Volt::route('/transfer', 'transfer.index');
+    Volt::route('/transfer/create', 'transfer.create');
+    Volt::route('/transfer/{transfer}/edit', 'transfer.edit');
 });
 

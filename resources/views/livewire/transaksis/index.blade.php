@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
@@ -40,6 +41,8 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
         $transaksi->delete();
+        $detail = DetailTransaksi::where('transaksi_id', $id);
+        $detail->delete();
         $this->warning("Transaksi $transaksi->name akan dihapus", position: 'toast-top');
     }
 
