@@ -83,7 +83,7 @@
                 </x-menu-sub>
 
                 <x-menu-sub title="Transactions" icon="o-cog-6-tooth">
-                    <x-menu-item title="Transaksi Teluar" icon="o-sparkles" link="/telur" />
+                    <x-menu-item title="Transaksi Telur" icon="o-sparkles" link="/telur" />
                     <x-menu-item title="Transaksi Pakan" icon="o-sparkles" link="/pakan" />
                     <x-menu-item title="Transaksi Lainnya" icon="o-sparkles" link="/lainnya" />
                     <x-menu-item title="Transaksi Tunai" icon="o-sparkles" link="/tunai" />
