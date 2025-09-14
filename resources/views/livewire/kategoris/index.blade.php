@@ -102,7 +102,7 @@ new class extends Component {
             ['key' => 'id', 'label' => '#'],
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'],
             ['key' => 'deskripsi', 'label' => 'Deskripsi', 'class' => 'w-100'],
-            ['key' => 'transaksis_count', 'label' => 'Transaksi', 'class' => 'w-64'], // Gunakan `Transaksis_count`
+            // ['key' => 'transaksis_count', 'label' => 'Transaksi', 'class' => 'w-64'], // Gunakan `Transaksis_count`
             ['key' => 'created_at', 'label' => 'Tanggal dibuat', 'class' => 'w-30'],
         ];
     }
@@ -110,7 +110,7 @@ new class extends Component {
     public function kategoris(): LengthAwarePaginator
     {
         return Kategori::query()
-            ->withCount('transaksis') // Menghitung jumlah users di setiap Kategori
+            // ->withCount('transaksis') // Menghitung jumlah users di setiap Kategori
             ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);

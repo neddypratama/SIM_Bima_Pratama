@@ -20,4 +20,8 @@ class DetailTransaksi extends Model
     {
         return $this->belongsTo(Client::class);
     }
+    public function kategori()
+    {
+        return $this->belongsTo(Kategori::class);
+    }
 }

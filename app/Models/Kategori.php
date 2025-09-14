@@ -12,8 +12,8 @@ class Kategori extends Model
         'name',
         'deskripsi',
     ];
-    public function transaksis()
+    public function detail()
     {
-        return $this->hasMany(Transaksi::class, 'kategori_id');
+        return $this->hasMany(DetailTransaksi::class);
     }
 }
