@@ -15,8 +15,6 @@ use Illuminate\Support\Str;
 new class extends Component {
     use Toast, WithFileUploads;
 
-    public Transaksi $transaksi;
-
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
 
@@ -34,10 +32,12 @@ new class extends Component {
     #[Rule('required|array|min:1')]
     public array $details = [];
 
-    #[Rule('required|in:Aset,Liabilitas,Pendapatan,Pengeluaran')]
-    public ?string $bagian = null;
-
-    public $bagianOptions = [['id' => 'Aset', 'name' => 'Aset'], ['id' => 'Liabilitas', 'name' => 'Liabilitas'], ['id' => 'Pendapatan', 'name' => 'Pendapatan'], ['id' => 'Pengeluaran', 'name' => 'Pengeluaran']];
+    public $bagianOptions = [
+        ['id' => 'Aset', 'name' => 'Aset'],
+        ['id' => 'Liabilitas', 'name' => 'Liabilitas'],
+        ['id' => 'Pendapatan', 'name' => 'Pendapatan'],
+        ['id' => 'Pengeluaran', 'name' => 'Pengeluaran']
+    ];
 
     public function with(): array
     {
@@ -53,11 +53,10 @@ new class extends Component {
     {
         if ($value) {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
-            $this->invoice = 'INV-' . $tanggal . '-' . Str::upper(Str::random(10));
+            $this->invoice = 'INV-' . $tanggal . '-' . Str::upper(Str::random(6));
         }
     }
 
-    // ✅ Perbaikan: perhitungan total hanya jika value atau qty berubah
     public function updatedDetails($value, $key): void
     {
         if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas')) {
@@ -67,7 +66,8 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)
+            ->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
     }
 
     public function mount(): void
@@ -78,16 +78,11 @@ new class extends Component {
 
     public function save(): void
     {
-        if (empty($this->invoice)) {
-            $this->updatedTanggal($this->tanggal);
-        }
-
         $this->validate();
 
         $transaksi = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
-            'kategori_id' => $this->kategori_id ?? null,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
             'total' => $this->total,
@@ -96,7 +91,7 @@ new class extends Component {
         foreach ($this->details as $item) {
             $this->validate([
                 'details.*.type' => 'required|in:Kredit,Debit',
-                'details.*.value' => 'required|integer|min:0',
+                'details.*.value' => 'required|numeric|min:0',
                 'details.*.bagian' => 'required|in:Aset,Liabilitas,Pendapatan,Pengeluaran',
                 'details.*.barang_id' => 'nullable|exists:barangs,id',
                 'details.*.kuantitas' => 'nullable|integer|min:1',
@@ -107,7 +102,7 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $transaksi->id,
                 'type' => $item['type'],
-                'value' => $item['value'],
+                'value' => (int) $item['value'],
                 'bagian' => $item['bagian'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
@@ -144,12 +139,12 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksis" separator progress-indicator />
+    <x-header title="Create Transaksi" separator progress-indicator />
 
     <x-form wire:submit="save">
         <div class="lg:grid grid-cols-5">
             <div class="col-span-2">
-                <x-header title="Basic Transaksis" subtitle="Basic info from Transaksis" size="text-2xl" />
+                <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
                 <x-input label="Invoice" wire:model="invoice" readonly />
@@ -162,8 +157,7 @@ new class extends Component {
         <hr class="my-5" />
         <div class="lg:grid grid-cols-5">
             <div class="col-span-2">
-                <x-header title="Detail Items {{ $this->total }}" subtitle="Tambah Barang ke dalam transaksi"
-                    size="text-2xl" />
+                <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
                 @foreach ($details as $index => $item)
@@ -175,14 +169,19 @@ new class extends Component {
                         <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas" type="number"
                             min="1" />
                     </div>
-                    <x-select wire:model.live="details.{{ $index }}.client_id" label="Client" :options="$clients"
-                        placeholder="Pilih Client" />
-                    <x-select wire:model.live="details.{{ $index }}.type" :options="[['name' => 'Kredit', 'id' => 'Kredit'], ['name' => 'Debit', 'id' => 'Debit']]" label="Type"
-                        placeholder="Pilih Type" />
-                    <x-select wire:model.live="details.{{ $index }}.bagian" label="Bagian" :options="$bagianOptions"
-                        placeholder="Pilih Bagian" />
-                    <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
-                        :options="$kategoris" placeholder="Pilih Kategori" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-select wire:model.live="details.{{ $index }}.client_id" label="Client"
+                            :options="$clients" placeholder="Pilih Client" />
+                        <x-select wire:model.live="details.{{ $index }}.type"
+                            :options="[['name' => 'Kredit', 'id' => 'Kredit'], ['name' => 'Debit', 'id' => 'Debit']]"
+                            label="Type" placeholder="Pilih Type" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-select wire:model.live="details.{{ $index }}.bagian" label="Bagian" :options="$bagianOptions"
+                            placeholder="Pilih Bagian" />
+                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
+                            :options="$kategoris" placeholder="Pilih Kategori" />
+                    </div>
 
                     <x-button spinner icon="o-trash" class="bg-red-500 text-white"
                         wire:click="removeDetail({{ $index }})" />
