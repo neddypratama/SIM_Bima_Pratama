@@ -150,9 +150,27 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $stok->id,
-                'value' => (int) $item['value'],
+                'value' => (int) $item['value'], // harga satuan
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
+            ]);
+
+            $barang = Barang::find($item['barang_id']);
+
+            // Hitung HPP baru
+            $stokLama = $barang->stok;
+            $hppLama = $barang->hpp ?? 0; // default 0 jika belum ada HPP
+            $qtyBaru = $item['kuantitas'] ?? 0;
+            $hargaSatuanBaru = $item['value'] ?? 0;
+
+            $totalHarga = ($stokLama * $hppLama) + ($qtyBaru * $hargaSatuanBaru);
+            $stokBaru = $stokLama + $qtyBaru;
+            $hppBaru = $stokBaru > 0 ? $totalHarga / $stokBaru : 0;
+
+            // Update stok dan HPP barang
+            $barang->update([
+                'stok' => $stokBaru,
+                'hpp' => $hppBaru,
             ]);
         }
 

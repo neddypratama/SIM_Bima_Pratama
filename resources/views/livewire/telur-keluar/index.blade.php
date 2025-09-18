@@ -32,17 +32,36 @@ new class extends Component {
 
     public function delete($id): void
     {
-        $transaksi = Transaksi::find($id);
+        // Ambil transaksi utama berdasarkan $id
+        $transaksi = Transaksi::findOrFail($id);
 
-        $details = DetailTransaksi::where('transaksi_id', $id)->get();
+        // Ambil HPP & Stok berdasarkan linked_id = transaksi utama
+        $hpp = Transaksi::where('linked_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'HPP'))->first();
 
-        // Kalau sudah yakin ada datanya, hapus dulu semua detail
+        $stok = Transaksi::where('linked_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first();
+
+        // ✅ Kembalikan stok barang sebelum hapus detail stok
+        if ($stok) {
+            foreach ($stok->details as $detail) {
+                $barang = Barang::find($detail->barang_id);
+                if ($barang) {
+                    $barang->increment('stok', $detail->kuantitas);
+                }
+            }
+
+            $stok->details()->delete();
+            $stok->delete();
+        }
+
+        if ($hpp) {
+            $hpp->details()->delete();
+            $hpp->delete();
+        }
+
         $transaksi->details()->delete();
-
-        // Baru hapus transaksi
         $transaksi->delete();
 
-        $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
+        $this->warning("Transaksi {$transaksi->invoice}, relasi transaksi, dan semua detailnya berhasil dihapus & stok dikembalikan", position: 'toast-top');
     }
 
     public function headers(): array
@@ -56,7 +75,7 @@ new class extends Component {
             ->with(['client:id,name', 'kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('kategori', function (Builder $q) {
-                $q->where('name', 'like', '%Stok Telur%')->orWhere('name', 'like', 'Pendapatan Telur%');
+                $q->where('name', 'like', 'Pendapatan Telur%');
             })
             ->when($this->search, fn(Builder $q) => $q->whereHas('transaksi', fn($t) => $t->where('invoice', 'like', "%{$this->search}%")))
             ->orderBy(...array_values($this->sortBy))

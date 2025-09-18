@@ -40,17 +40,16 @@ new class extends Component {
     #[Rule('required|array|min:1')]
     public array $details = [];
 
-    // Semua barang
     public $barangs;
-
-    // Barang yang difilter per detail
+    public $pokok;
+    public $totalPokok;
     public array $filteredBarangs = [];
-
     public string $kas = '';
 
     public function with(): array
     {
         return [
+            'pokok' => $this->pokok,
             'users' => User::all(),
             'barangs' => $this->barangs,
             'kategoris' => Kategori::where('name', 'like', '%Telur%')
@@ -77,12 +76,11 @@ new class extends Component {
         $this->tanggal = now()->format('Y-m-d\TH:i');
         $this->updatedTanggal($this->tanggal);
 
-        // Load semua barang awal
         $this->barangs = Barang::all();
+        $this->pokok = Barang::all();
 
         $kategori = Kategori::where('name', 'Stok Telur')->first();
         if ($kategori) {
-            // Pastikan minimal ada satu detail
             if (empty($this->details)) {
                 $this->details[] = [
                     'barang_id' => null,
@@ -91,19 +89,9 @@ new class extends Component {
                 ];
             }
 
-            // Load filteredBarangs per detail
             foreach ($this->details as $index => $detail) {
-                $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))
-                    ->get()
-                    ->map(
-                        fn($barang) => [
-                            'id' => $barang->id,
-                            'name' => $barang->name,
-                        ],
-                    )
-                    ->toArray();
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
 
-                // Reset barang_id agar user pilih ulang
                 $this->details[$index]['barang_id'] = null;
             }
         }
@@ -122,7 +110,6 @@ new class extends Component {
 
     public function updatedDetails($value, $key): void
     {
-        // Hitung total jika value/qty berubah
         if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas')) {
             $this->calculateTotal();
         }
@@ -131,6 +118,14 @@ new class extends Component {
     private function calculateTotal(): void
     {
         $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+
+        $this->totalPokok = collect($this->details)->sum(function ($item) {
+            if (!$item['barang_id']) {
+                return 0;
+            }
+            $barang = Barang::find($item['barang_id']);
+            return $barang ? $barang->hpp * (int) ($item['kuantitas'] ?? 1) : 0;
+        });
     }
 
     public function save(): void
@@ -149,7 +144,22 @@ new class extends Component {
         $totalTransaksi = 0;
         $detailData = [];
 
-        // 🔄 Hitung harga satuan rata-rata sekali saja per item
+        // === 3. Transaksi Penjualan / Lainnya ===
+        $transaksi = Transaksi::create([
+            'invoice' => $this->invoice,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'kategori_id' => $this->kategori_id,
+            'client_id' => $this->client_id,
+            'type' => 'Kredit',
+            'total' => $this->total,
+        ]);
+
+        foreach ($detailData as $d) {
+            DetailTransaksi::create(array_merge($d, ['transaksi_id' => $transaksi->id]));
+        }
+
         foreach ($this->details as $item) {
             $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
                 $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Telur'))->where('type', 'Debit');
@@ -157,7 +167,6 @@ new class extends Component {
 
             $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
             $totalQty = $detailQuery->sum('kuantitas');
-
             $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
 
             $totalTransaksi += $hargaSatuan * ($item['kuantitas'] ?? 1);
@@ -180,6 +189,7 @@ new class extends Component {
                 'client_id' => $this->client_id,
                 'type' => 'Debit',
                 'total' => $totalTransaksi,
+                'linked_id' => $transaksi->id,
             ]);
 
             foreach ($detailData as $d) {
@@ -197,31 +207,18 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => 'Kredit',
             'total' => $totalTransaksi,
-            'linked_id' => $hpp->id,
+            'linked_id' => $transaksi->id ?? null,
         ]);
 
         foreach ($detailData as $d) {
             DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id]));
+
+            // 🔄 Update stok barang (kurangi stok keluar)
+            $barang = Barang::find($d['barang_id']);
+            if ($barang) {
+                $barang->decrement('stok', $d['kuantitas']);
+            }
         }
-
-        // === 3. Transaksi Penjualan / Lainnya ===
-        $transaksi = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
-            'client_id' => $this->client_id,
-            'type' => 'Kredit',
-            'total' => $this->total,
-        ]);
-
-        DetailTransaksi::create([
-            'transaksi_id' => $transaksi->id,
-            'barang_id' => null,
-            'kuantitas' => null,
-            'value' => $this->total, // hanya satu baris, catat total transaksi
-        ]);
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur-keluar');
     }
@@ -236,18 +233,9 @@ new class extends Component {
 
         $index = count($this->details) - 1;
 
-        // Jika kategori sudah dipilih, filter barang sesuai kategori
         if ($this->kategori_id) {
             $kategori = Kategori::where('name', 'Stok Telur')->first();
-            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))
-                ->get()
-                ->map(
-                    fn($barang) => [
-                        'id' => $barang->id,
-                        'name' => $barang->name,
-                    ],
-                )
-                ->toArray();
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
         } else {
             $this->filteredBarangs[$index] = [];
         }
@@ -306,6 +294,17 @@ new class extends Component {
                         <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas" type="number"
                             min="1" />
                         <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 items-center">
+                        <x-input label="HPP" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
+                        <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
+                        <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
+                        <x-input label="Total" :value="number_format(
+                            ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0) * ($item['kuantitas'] ?? 0),
+                            0,
+                            '.',
+                            ',',
+                        )" prefix="Rp" readonly />
                     </div>
                     <x-button spinner icon="o-trash" class="bg-red-500 text-white"
                         wire:click="removeDetail({{ $index }})" />

@@ -51,16 +51,19 @@ new class extends Component {
             'barangs' => $this->barangs,
             'kategoris' => Kategori::where('name', 'like', '%Telur%')
                 ->where(function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%')
-                      ->orWhere('type', 'like', '%Aset%');
-                })->get(),
+                    $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Aset%');
+                })
+                ->get(),
             'clients' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
                 ->get()
                 ->groupBy('type')
-                ->mapWithKeys(fn($group, $type) => [
-                    $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                ])->toArray(),
+                ->mapWithKeys(
+                    fn($group, $type) => [
+                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
+                    ],
+                )
+                ->toArray(),
         ];
     }
 
@@ -78,20 +81,27 @@ new class extends Component {
 
         $this->barangs = Barang::all();
 
-        $this->details = $transaksi->details->map(fn($d) => [
-            'barang_id' => $d->barang_id,
-            'value' => $d->value,
-            'kuantitas' => $d->kuantitas,
-        ])->toArray();
+        $this->details = $transaksi->details
+            ->map(
+                fn($d) => [
+                    'barang_id' => $d->barang_id,
+                    'value' => $d->value,
+                    'kuantitas' => $d->kuantitas,
+                ],
+            )
+            ->toArray();
 
         // Set filteredBarangs per detail
         foreach ($this->details as $index => $detail) {
             $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))
                 ->get()
-                ->map(fn($barang) => [
-                    'id' => $barang->id,
-                    'name' => $barang->name,
-                ])->toArray();
+                ->map(
+                    fn($barang) => [
+                        'id' => $barang->id,
+                        'name' => $barang->name,
+                    ],
+                )
+                ->toArray();
         }
     }
 
@@ -110,10 +120,7 @@ new class extends Component {
     public function updatedKategoriId($value): void
     {
         foreach ($this->details as $index => $detail) {
-            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $value))
-                ->get()
-                ->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])
-                ->toArray();
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $value))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
 
             $this->details[$index]['barang_id'] = null;
         }
@@ -129,10 +136,7 @@ new class extends Component {
 
         $index = count($this->details) - 1;
         if ($this->kategori_id) {
-            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))
-                ->get()
-                ->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])
-                ->toArray();
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
         } else {
             $this->filteredBarangs[$index] = [];
         }
@@ -151,13 +155,34 @@ new class extends Component {
 
     public function save(): void
     {
-        $this->validate();
         $this->validate([
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
             'details.*.kuantitas' => 'required|integer|min:1',
         ]);
 
+        // 1️⃣ Rollback stok lama
+        foreach ($this->transaksi->details as $oldDetail) {
+            $barang = Barang::find($oldDetail->barang_id);
+            if (!$barang) {
+                continue;
+            }
+
+            // Kurangi stok
+            $stokBaru = max(0, $barang->stok - $oldDetail->kuantitas);
+            $barang->update(['stok' => $stokBaru]);
+
+            // Hitung ulang HPP dari semua transaksi lama (kecuali transaksi yang sedang diedit)
+            $detailQuery = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'));
+
+            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
+            $totalQty = $detailQuery->sum('kuantitas');
+
+            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
+            $barang->update(['hpp' => $hppBaru]);
+        }
+
+        // 2️⃣ Update transaksi
         $this->transaksi->update([
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -168,14 +193,35 @@ new class extends Component {
             'type' => 'Debit',
         ]);
 
-        // Update detail
-        $this->transaksi->details()->delete(); // hapus semua detail lama
+        // 3️⃣ Hapus detail lama
+        $this->transaksi->details()->delete();
+
+        // 4️⃣ Simpan detail baru + update stok & HPP
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $this->transaksi->id,
-                'barang_id' => $item['barang_id'],
-                'value' => $item['value'],
-                'kuantitas' => $item['kuantitas'],
+                'value' => (int) $item['value'],
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+            ]);
+
+            $barang = Barang::find($item['barang_id']);
+            if (!$barang) {
+                continue;
+            }
+
+            $stokLama = $barang->stok;
+            $hppLama = $barang->hpp ?? 0;
+            $qtyBaru = $item['kuantitas'] ?? 0;
+            $hargaSatuanBaru = $item['value'] ?? 0;
+
+            $totalHarga = $stokLama * $hppLama + $qtyBaru * $hargaSatuanBaru;
+            $stokBaru = $stokLama + $qtyBaru;
+            $hppBaru = $stokBaru > 0 ? $totalHarga / $stokBaru : 0;
+
+            $barang->update([
+                'stok' => $stokBaru,
+                'hpp' => $hppBaru,
             ]);
         }
 

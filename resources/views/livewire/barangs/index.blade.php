@@ -51,7 +51,7 @@ new class extends Component {
             ['key' => 'jenis_name', 'label' => 'Jenis Barang'], 
             ['key' => 'name', 'label' => 'Name'],
             ['key' => 'stok', 'label' => 'Stok'],
-            ['key' => 'harga', 'label' => 'Harga Standar', 'class' => 'w-1'],
+            ['key' => 'hpp', 'label' => 'Harga Pokok Penjualan', 'class' => 'w-1'],
             ['key' => 'satuan_name', 'label' => 'Satuan', 'class' => 'w-1'],
         ];
     }
