@@ -12,15 +12,13 @@ class Kategori extends Model
         'name',
         'deskripsi',
         'type',
-        'jenis_id'
     ];
-    public function detail()
+    public function transaksi()
     {
-        return $this->hasMany(DetailTransaksi::class);
+        return $this->hasMany(Transaksi::class);
     }
 
-    public function jenis()
-    {
-        return $this->belongsTo(JenisBarang::class);
+    public function jenis() {
+        return $this->hasMany(JenisBarang::class);
     }
 }

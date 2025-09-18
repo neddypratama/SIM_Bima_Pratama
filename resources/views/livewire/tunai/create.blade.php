@@ -11,90 +11,63 @@ use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 new class extends Component {
     use Toast, WithFileUploads;
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice2 = '';
 
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
+    #[Rule('required|integer|min:0')]
     public int $total = 0;
 
     #[Rule('required')]
     public ?int $user_id = null;
 
-    #[Rule('required')]
+    #[Rule('nullable')]
     public ?int $client_id = null;
+
+    #[Rule('required')]
+    public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
 
-    #[Rule('required|array|min:1')]
+    #[Rule('nullable|array|min:0')]
     public array $details = [];
 
-    public $bagianOptions = [['id' => 'Aset', 'name' => 'Aset'], ['id' => 'Liabilitas', 'name' => 'Liabilitas']];
+    // Client yang akan ditampilkan di select
+    public array $clients = [];
+
+    // Simpan kategori yang dipilih supaya tidak query ulang di Blade
+    public ?Kategori $selectedKategori = null;
+
+    #[Rule('nullable')]
+    public string $alur = '';
+
+    public $alurOption = [['id' => 'Masuk', 'name' => 'Masuk'], ['id' => 'Keluar', 'name' => 'Keluar']];
 
     public function with(): array
     {
         return [
             'users' => User::all(),
-            'barangs' => Barang::all(),
-            'kategoris' => Kategori::all(),
-            'clients' => Client::all()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group
-                            ->map(
-                                fn($c) => [
-                                    'id' => $c->id,
-                                    'name' => $c->name,
-                                ],
-                            )
-                            ->values()
-                            ->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'kategoris' => Kategori::query()
+                ->where(function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('type', 'Aset')->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Bank%');
+                    })
+                        ->orWhere('type', 'Liabilitas')
+                        ->orWhere(function ($q3) {
+                            $q3->where('type', 'Pengeluaran')->where('name', 'not like', '%Pembelian%');
+                        });
+                })
+                ->orderBy('name')
+                ->get(),
         ];
-    }
-
-    public function updatedTanggal($value): void
-    {
-        if ($value) {
-            $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
-            $this->invoice = 'INV-' . $tanggal . '-' . Str::upper(Str::random(6));
-        }
-    }
-
-    public function updatedDetails($value, $key): void
-    {
-        // Hitung total jika value/qty berubah
-        if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas')) {
-            $this->calculateTotal();
-        }
-
-        // Ubah type otomatis jika bagian berubah
-        if (str_ends_with($key, '.bagian')) {
-            $parts = explode('.', $key);
-
-            // sekarang parts cuma [index, field]
-            if (count($parts) === 2) {
-                [$index, $field] = $parts;
-
-                if (!empty($this->details[$index]['bagian'])) {
-                    $this->details[$index]['type'] = $this->details[$index]['bagian'] === 'Pendapatan' ? 'Kredit' : 'Debit';
-                }
-            }
-        }
-    }
-
-    private function calculateTotal(): void
-    {
-        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
     }
 
     public function mount(): void
@@ -102,118 +75,220 @@ new class extends Component {
         $this->user_id = auth()->id();
         $this->tanggal = now()->format('Y-m-d\TH:i');
         $this->updatedTanggal($this->tanggal);
+        $this->loadClients();
+    }
+
+    private function loadClients(?string $type = null): void
+    {
+        $query = Client::query();
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        $this->clients = $query
+            ->get()
+            ->groupBy('type')
+            ->mapWithKeys(
+                fn($group, $type) => [
+                    $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
+                ],
+            )
+            ->toArray();
+
+        $this->client_id = null;
+    }
+
+    public function updatedTanggal($value): void
+    {
+        if ($value) {
+            $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
+            $str = Str::upper(Str::random(4));
+            $this->invoice = 'INV-' . $tanggal . '-TNI-' . $str;
+            $this->invoice2 = 'INV-' . $tanggal . '-BBN-' . $str;
+        }
+    }
+
+    public function updatedKategoriId($value): void
+    {
+        $this->selectedKategori = $value ? Kategori::find($value) : null;
+
+        if ($this->selectedKategori) {
+            if (Str::contains(strtolower($this->selectedKategori->name), 'peternak')) {
+                $this->loadClients('peternak');
+            } elseif (Str::contains(strtolower($this->selectedKategori->name), 'karyawan')) {
+                $this->loadClients('karyawan');
+            } elseif (Str::contains(strtolower($this->selectedKategori->name), 'pedagang')) {
+                $this->loadClients('pedagang');
+            } else {
+                $this->loadClients();
+            }
+        } else {
+            $this->loadClients();
+        }
     }
 
     public function save(): void
     {
+
         $this->validate();
 
-        $transaksi = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-            'client_id' => $this->client_id,
-        ]);
+        $kategori = $this->selectedKategori;
+        $total = $this->total;
+        $client = $this->client_id;
 
-        foreach ($this->details as $item) {
-            $this->validate([
-                'details.*.type' => 'required|in:Kredit,Debit',
-                'details.*.value' => 'required|numeric|min:0',
-                'details.*.bagian' => 'required|in:Pendapatan,Pengeluaran',
-                'details.*.barang_id' => 'required|exists:barangs,id',
-                'details.*.kuantitas' => 'required|integer|min:1',
-                'details.*.kategori_id' => 'required|exists:kategoris,id',
+        // === 1. JIKA TYPE PENGELUARAN ===
+        if ($kategori?->type === 'Pengeluaran') {
+            $kasKategori = Kategori::where('name', 'like', '%Kas%')->first();
+
+            if (!$kasKategori) {
+                $this->error('Kategori Kas tidak ditemukan!');
+                return;
+            }
+
+            $transaksi = Transaksi::create([
+                'invoice' => $this->invoice,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $total,
+                'client_id' => null,
+                'kategori_id' => $kasKategori->id,
             ]);
 
             DetailTransaksi::create([
                 'transaksi_id' => $transaksi->id,
-                'type' => $item['type'],
-                'value' => (int) $item['value'],
-                'bagian' => $item['bagian'],
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'kategori_id' => $item['kategori_id'] ?? null,
+                'type' => 'Kredit',
+                'value' => $total,
+            ]);
+
+            $aset = Transaksi::create([
+                'invoice' => $this->invoice2,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $total,
+                'client_id' => null,
+                'kategori_id' => $this->kategori_id,
+            ]);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $aset->id,
+                'type' => 'Kredit',
+                'value' => $total,
             ]);
         }
+        // === 2. KAS TUNAI ===
+        elseif ($kategori?->name === 'Kas Tunai') {
+            $type = $this->alur === 'Masuk' ? 'Debit' : 'Kredit';
 
-        $this->success('Transaksi berhasil dibuat!', redirectTo: '/transaksis');
-    }
+            $transaksi = Transaksi::create([
+                'invoice' => $this->invoice,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $total,
+                'client_id' => $client,
+                'kategori_id' => $this->kategori_id,
+            ]);
 
-    public function addDetail(): void
-    {
-        $this->details[] = [
-            'type' => 'Kredit',
-            'value' => 0,
-            'bagian' => null,
-            'barang_id' => null,
-            'kuantitas' => 1,
-            'kategori_id' => null,
-        ];
-        $this->calculateTotal();
-    }
+            DetailTransaksi::create([
+                'transaksi_id' => $transaksi->id,
+                'type' => $type,
+                'value' => $total,
+            ]);
+        }
+        // === 3. BON ===
+        elseif ($kategori?->name === 'Bon') {
+            $transaksi = Transaksi::create([
+                'invoice' => $this->invoice,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $total,
+                'client_id' => $client,
+                'kategori_id' => $this->kategori_id,
+            ]);
 
-    public function removeDetail(int $index): void
-    {
-        unset($this->details[$index]);
-        $this->details = array_values($this->details);
-        $this->calculateTotal();
+            DetailTransaksi::create([
+                'transaksi_id' => $transaksi->id,
+                'type' => 'Debit',
+                'value' => $total,
+            ]);
+        }
+        // === 4. HUTANG ===
+        elseif ($kategori?->name === 'Hutang') {
+            $transaksi = Transaksi::create([
+                'invoice' => $this->invoice,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $total,
+                'client_id' => $client,
+                'kategori_id' => $this->kategori_id,
+            ]);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $transaksi->id,
+                'type' => 'Kredit',
+                'value' => $total,
+            ]);
+        }
+        $this->success('Transaksi berhasil dibuat!', redirectTo: '/tunai');
     }
 };
-
 ?>
 
 <div class="p-4 space-y-6">
     <x-header title="Create Transaksi" separator progress-indicator />
 
     <x-form wire:submit="save">
-        <div class="lg:grid grid-cols-5">
+        <div class="lg:grid grid-cols-5 gap-4">
             <div class="col-span-2">
                 <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                <x-input label="Invoice" wire:model="invoice" readonly />
-                <x-input label="Rincian" wire:model="name" />
-                <x-input label='User' :value="auth()->user()->name" readonly />
-                <x-select-group wire:model="client_id" label="Client" :options="$clients" placeholder="Pilih Client" />
-                <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                <div class="grid grid-cols-3 gap-4">
+                    <x-input label="Invoice" wire:model="invoice" readonly />
+                    <x-input label="User" :value="auth()->user()->name" readonly />
+                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                </div>
             </div>
         </div>
 
         <hr class="my-5" />
-        <div class="lg:grid grid-cols-5">
+
+        <div class="lg:grid grid-cols-5 gap-4">
             <div class="col-span-2">
                 <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                @foreach ($details as $index => $item)
-                    <div class="grid grid-cols-3 gap-4 items-center">
-                        <x-select wire:model.live="details.{{ $index }}.barang_id" label="Barang"
-                            :options="$barangs" placeholder="Pilih Barang" />
-                        <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
-                            money="IDR" />
-                        <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas" type="number"
-                            min="1" />
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <x-select wire:model.live="details.{{ $index }}.bagian" label="Bagian" :options="$bagianOptions"
-                            placeholder="Pilih Bagian" />
-                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
-                            :options="$kategoris" placeholder="Pilih Kategori" />
-                    </div>
+                <x-input label="Rincian" wire:model="name" />
 
-                    <x-button spinner icon="o-trash" class="bg-red-500 text-white"
-                        wire:click="removeDetail({{ $index }})" />
-                @endforeach
+                <div class="grid grid-cols-2 gap-4">
+                    <x-select wire:model.live="kategori_id" label="Kategori" :options="$kategoris"
+                        placeholder="Pilih Kategori" />
+                    <x-input label="Total" wire:model="total" prefix="Rp" locale="IDR" money />
+                </div>
 
-                <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail" class="mt-3" />
-                <x-input label="Total" :value="number_format($total, 0, '.', ',')" prefix="Rp" readonly />
+                @if ($selectedKategori)
+                    @if (Str::contains(strtolower($selectedKategori->name), 'kas tunai'))
+                        <div class="grid grid-cols-2 gap-4">
+                            <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                                placeholder="Pilih Client" />
+                            <x-select wire:model.live="alur" label="Jenis Transaksi" :options="$alurOption" />
+                        </div>
+                    @elseif(Str::contains(strtolower($selectedKategori->name), 'peternak') ||
+                            Str::contains(strtolower($selectedKategori->name), 'karyawan') ||
+                            Str::contains(strtolower($selectedKategori->name), 'pedagang'))
+                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                            placeholder="Pilih Client" />
+                    @endif
+                @endif
             </div>
         </div>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/telur" />
+            <x-button spinner label="Cancel" link="/tunai" />
             <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>

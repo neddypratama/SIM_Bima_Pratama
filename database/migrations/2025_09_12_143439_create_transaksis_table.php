@@ -16,9 +16,12 @@ return new class extends Migration
             $table->string('invoice')->unique();
             $table->date('tanggal');
             $table->string('name');
+            $table->enum('type', ['Kredit', 'Debit']);
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('client_id')->nullable()->constrained('clients');
+            $table->foreignId('kategori_id')->constrained('kategoris');
             $table->integer('total')->default(0);
+            $table->foreignId('linked_id')->nullable()->constrained('transaksis');
             $table->timestamps();
         });
     }

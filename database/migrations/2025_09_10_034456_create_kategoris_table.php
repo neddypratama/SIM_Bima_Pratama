@@ -15,8 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('deskripsi')->nullable();
-            $table->enum('type', ['Aset', 'Liabilitas', 'Pendapatan', 'Pengeluaran']);
-            $table->foreignId('jenis_id')->nullable()->constrained('jenis_barangs'); // sebutkan nama tabel secara eksplisit
+            $table->enum('type', ['Aset', 'Liabilitas', 'Pendapatan', 'Pengeluaran']); // sebutkan nama tabel secara eksplisit
             $table->timestamps();
         });
     }

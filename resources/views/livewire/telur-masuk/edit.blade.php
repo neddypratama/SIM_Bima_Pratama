@@ -11,11 +11,14 @@ use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 new class extends Component {
     use Toast, WithFileUploads;
 
-    #[Rule('required|unique:transaksis,invoice')]
+    public Transaksi $transaksi;
+
+    #[Rule('required')]
     public string $invoice = '';
 
     #[Rule('required')]
@@ -30,15 +33,15 @@ new class extends Component {
     #[Rule('required')]
     public ?int $client_id = null;
 
+    #[Rule('required')]
+    public ?int $kategori_id = null;
+
     public ?string $tanggal = null;
 
     #[Rule('required|array|min:1')]
     public array $details = [];
 
-    // Semua barang
     public $barangs;
-
-    // Barang yang difilter per detail
     public array $filteredBarangs = [];
 
     public function with(): array
@@ -48,70 +51,54 @@ new class extends Component {
             'barangs' => $this->barangs,
             'kategoris' => Kategori::where('name', 'like', '%Telur%')
                 ->where(function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Pengeluaran%');
-                })
-                ->get(),
+                    $q->where('type', 'like', '%Pendapatan%')
+                      ->orWhere('type', 'like', '%Aset%');
+                })->get(),
             'clients' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
                 ->get()
                 ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+                ->mapWithKeys(fn($group, $type) => [
+                    $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
+                ])->toArray(),
         ];
     }
 
-    public function mount(): void
+    public function mount(Transaksi $transaksi): void
     {
-        $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
-        $this->updatedTanggal($this->tanggal);
+        $this->transaksi = $transaksi;
 
-        // Load semua barang awal
+        $this->invoice = $transaksi->invoice;
+        $this->name = $transaksi->name;
+        $this->user_id = $transaksi->user_id;
+        $this->client_id = $transaksi->client_id;
+        $this->kategori_id = $transaksi->kategori_id;
+        $this->tanggal = Carbon::parse($transaksi->tanggal)->format('Y-m-d\TH:i:s');
+        $this->total = $transaksi->total;
+
         $this->barangs = Barang::all();
-    }
 
-    public function updatedTanggal($value): void
-    {
-        if ($value) {
-            $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
-            $this->invoice = 'INV-' . $tanggal . '-' . Str::upper(Str::random(6));
+        $this->details = $transaksi->details->map(fn($d) => [
+            'barang_id' => $d->barang_id,
+            'value' => $d->value,
+            'kuantitas' => $d->kuantitas,
+        ])->toArray();
+
+        // Set filteredBarangs per detail
+        foreach ($this->details as $index => $detail) {
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))
+                ->get()
+                ->map(fn($barang) => [
+                    'id' => $barang->id,
+                    'name' => $barang->name,
+                ])->toArray();
         }
     }
 
     public function updatedDetails($value, $key): void
     {
-        // Hitung total jika value/qty berubah
         if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas')) {
             $this->calculateTotal();
-        }
-
-        // Update type dan barang saat kategori berubah
-        if (str_ends_with($key, '.kategori_id')) {
-            $parts = explode('.', $key);
-            if (count($parts) === 2) {
-                [$index, $field] = $parts;
-
-                if (!empty($this->details[$index]['kategori_id'])) {
-                    $kategori = Kategori::find($this->details[$index]['kategori_id']);
-                    if ($kategori) {
-                        // Set type otomatis
-                        $this->details[$index]['type'] = $kategori->type === 'Pendapatan' ? 'Kredit' : 'Debit';
-
-                        // Filter barang berdasarkan jenis_id kategori
-                        $this->filteredBarangs[$index] = Barang::where('jenis_id', $kategori->jenis_id)->get()->toArray();
-
-                        // Reset barang_id sebelumnya
-                        $this->details[$index]['barang_id'] = null;
-                    }
-                } else {
-                    $this->filteredBarangs[$index] = [];
-                    $this->details[$index]['barang_id'] = null;
-                }
-            }
         }
     }
 
@@ -120,53 +107,36 @@ new class extends Component {
         $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
     }
 
-    public function save(): void
+    public function updatedKategoriId($value): void
     {
-        $this->validate();
+        foreach ($this->details as $index => $detail) {
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $value))
+                ->get()
+                ->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])
+                ->toArray();
 
-        $transaksi = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-            'client_id' => $this->client_id,
-        ]);
-
-        foreach ($this->details as $item) {
-            $this->validate([
-                'details.*.type' => 'required|in:Kredit,Debit',
-                'details.*.value' => 'required|numeric|min:0',
-                'details.*.barang_id' => 'required|exists:barangs,id',
-                'details.*.kuantitas' => 'required|integer|min:1',
-                'details.*.kategori_id' => 'required|exists:kategoris,id',
-            ]);
-
-            DetailTransaksi::create([
-                'transaksi_id' => $transaksi->id,
-                'type' => $item['type'],
-                'value' => (int) $item['value'],
-                'barang_id' => $item['barang_id'],
-                'kuantitas' => $item['kuantitas'],
-                'kategori_id' => $item['kategori_id'],
-            ]);
+            $this->details[$index]['barang_id'] = null;
         }
-
-        $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur');
     }
 
     public function addDetail(): void
     {
         $this->details[] = [
-            'type' => 'Kredit',
             'value' => 0,
             'barang_id' => null,
             'kuantitas' => 1,
-            'kategori_id' => null,
         ];
 
         $index = count($this->details) - 1;
-        $this->filteredBarangs[$index] = [];
+        if ($this->kategori_id) {
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))
+                ->get()
+                ->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])
+                ->toArray();
+        } else {
+            $this->filteredBarangs[$index] = [];
+        }
+
         $this->calculateTotal();
     }
 
@@ -177,6 +147,39 @@ new class extends Component {
         $this->details = array_values($this->details);
         $this->filteredBarangs = array_values($this->filteredBarangs);
         $this->calculateTotal();
+    }
+
+    public function save(): void
+    {
+        $this->validate();
+        $this->validate([
+            'details.*.barang_id' => 'required|exists:barangs,id',
+            'details.*.value' => 'required|numeric|min:0',
+            'details.*.kuantitas' => 'required|integer|min:1',
+        ]);
+
+        $this->transaksi->update([
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'client_id' => $this->client_id,
+            'kategori_id' => $this->kategori_id,
+            'tanggal' => $this->tanggal,
+            'total' => $this->total,
+            'type' => 'Debit',
+        ]);
+
+        // Update detail
+        $this->transaksi->details()->delete(); // hapus semua detail lama
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $this->transaksi->id,
+                'barang_id' => $item['barang_id'],
+                'value' => $item['value'],
+                'kuantitas' => $item['kuantitas'],
+            ]);
+        }
+
+        $this->success('Transaksi berhasil diupdate!', redirectTo: '/telur-masuk');
     }
 };
 ?>
@@ -190,11 +193,18 @@ new class extends Component {
                 <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                <x-input label="Invoice" wire:model="invoice" readonly />
-                <x-input label="Rincian" wire:model="name" />
-                <x-input label="User" :value="auth()->user()->name" readonly />
-                <x-select-group wire:model="client_id" label="Client" :options="$clients" placeholder="Pilih Client" />
-                <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                <div class="grid grid-cols-3 gap-4">
+                    <x-input label="Invoice" wire:model="invoice" readonly />
+                    <x-input label="User" :value="auth()->user()->name" readonly />
+                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
+                        <x-input label="Rincian" wire:model="name" />
+                    </div>
+                    <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                        placeholder="Pilih Client" />
+                </div>
             </div>
         </div>
 
@@ -206,13 +216,9 @@ new class extends Component {
             </div>
             <div class="col-span-3 grid gap-3">
                 @foreach ($details as $index => $item)
-                    <div class="grid grid-cols-2 gap-4 items-center">
-                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
-                            :options="$kategoris" placeholder="Pilih Kategori" />
+                    <div class="grid grid-cols-4 gap-2 items-center">
                         <x-select wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                             :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
-                    </div>
-                    <div class="grid grid-cols-3 gap-4">
                         <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
                             money="IDR" />
                         <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas" type="number"
@@ -229,7 +235,7 @@ new class extends Component {
         </div>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/telur" />
+            <x-button spinner label="Cancel" link="/telur-masuk" />
             <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>

@@ -33,42 +33,32 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::find($id);
-        $kode = substr($transaksi->invoice, -4);
-        $order = Transaksi::where('invoice', 'like', 'INV-%-STR-' . $kode)->first();
 
         $details = DetailTransaksi::where('transaksi_id', $id)->get();
-        $details2 = DetailTransaksi::where('transaksi_id', $order->id)->get();
 
         // Kalau sudah yakin ada datanya, hapus dulu semua detail
         $transaksi->details()->delete();
-        $order->details()->delete();
 
         // Baru hapus transaksi
         $transaksi->delete();
-        $order->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-32'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-48'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-32'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-32'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-48'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
             ->with(['client:id,name', 'kategori:id,name,type'])
-            ->whereHas('kategori', function ($q) {
-                $q->where(function ($q2) {
-                    $q2->where('type', 'Aset')->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Bank%');
-                })
-                    ->orWhere('type', 'Liabilitas')
-                    ->orWhere(function ($q3) {
-                        $q3->where('type', 'Pengeluaran')->where('name', 'not like', '%Pembelian%');
-                    });
+            ->where('type', 'Debit')
+            ->whereHas('kategori', function (Builder $q) {
+                $q->where('name', 'like', '%Stok Telur%');
             })
-            ->when($this->search, fn(Builder $q) => $q->where('invoice', 'like', "%{$this->search}%"))
+            ->when($this->search, fn(Builder $q) => $q->whereHas('transaksi', fn($t) => $t->where('invoice', 'like', "%{$this->search}%")))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -79,8 +69,6 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
-            // 'barangs' => Barang::whereHas('jenis', fn($q) => $q->where('name', 'like', '%Telur%'))->select('id', 'name')->get(),
-            // 'users' => User::select('id', 'name')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -98,9 +86,9 @@ new class extends Component {
 ?>
 
 <div>
-    <x-header title="Transaksi Tunai" separator progress-indicator>
+    <x-header title="Transaksi Pembelian Telur" separator progress-indicator>
         <x-slot:actions>
-            <x-button label="Create" link="/tunai/create" responsive icon="o-plus" class="btn-primary" />
+            <x-button label="Create" link="/telur-masuk/create" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
@@ -120,7 +108,7 @@ new class extends Component {
 
     <x-card>
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="tunai/{id}/edit?invoice={invoice}">
+            link="telur-masuk/{id}/edit?invoice={invoice}">
             @scope('cell-kategori.name', $transaksi)
                 {{ $transaksi->kategori?->name ?? '-' }}
             @endscope
@@ -130,7 +118,7 @@ new class extends Component {
                     <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
                         wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                         class="btn-ghost btn-sm text-red-500" />
-                    <x-button icon="o-eye" link="/tunai/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
+                    <x-button icon="o-eye" link="/telur-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
                         class="btn-ghost btn-sm text-yellow-500" />
                 </div>
             @endscope

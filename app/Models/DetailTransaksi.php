@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class DetailTransaksi extends Model
 {
     protected $table = 'detail_transaksis';
-    protected $fillable = ['transaksi_id', 'type', 'value', 'barang_id', 'kuantitas', 'kategori_id'];
+    protected $fillable = ['transaksi_id', 'value', 'barang_id', 'kuantitas',];
     
     public function transaksi()
     {
@@ -17,8 +17,5 @@ class DetailTransaksi extends Model
     {
         return $this->belongsTo(Barang::class);
     }
-    public function kategori()
-    {
-        return $this->belongsTo(Kategori::class);
-    }
+    
 }

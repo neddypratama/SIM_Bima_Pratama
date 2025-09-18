@@ -11,6 +11,7 @@ class JenisBarang extends Model
     protected $fillable = [
         'name',
         'deskripsi',
+        'kategori_id'
     ];
 
     public function barangs()
@@ -18,8 +19,8 @@ class JenisBarang extends Model
         return $this->hasMany(Barang::class, 'jenis_id');
     }
 
-    public function kategoris()
+    public function kategori()
     {
-        return $this->hasMany(Kategori::class, 'jenis_id');
+        return $this->belongsTo(Kategori::class);
     }
 }

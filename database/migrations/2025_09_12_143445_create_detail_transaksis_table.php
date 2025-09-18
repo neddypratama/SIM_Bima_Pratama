@@ -14,11 +14,9 @@ return new class extends Migration
         Schema::create('detail_transaksis', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaksi_id')->constrained('transaksis');
-            $table->enum('type', ['Kredit', 'Debit']);
-            $table->integer('value');
             $table->foreignId('barang_id')->nullable()->constrained('barangs');
             $table->integer('kuantitas')->nullable();
-            $table->foreignId('kategori_id')->constrained('kategoris');
+            $table->integer('value');
             $table->timestamps();
         });
     }

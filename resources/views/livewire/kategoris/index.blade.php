@@ -136,6 +136,7 @@ new class extends Component {
         return [
             'kategoris' => $this->kategoris(),
             'typeOptions' => $this->typeOptions,
+            'jenis' => JenisBarang::all(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -191,6 +192,8 @@ new class extends Component {
             <x-textarea label="Kategori Deskripsi" wire:model.live="newKategoriDeskripsi" placeholder="Here ..." />
             <x-select label="Kategori Type" wire:model.live="newKategoriType" :options="$typeOptions"
                 placeholder="Pilih Type" />
+            <x-select label="Jenis Barang" wire:model.live="newKategoriJenisId" :options="$jenis"
+                placeholder="Pilih Jenis" />
         </div>
 
         <x-slot:actions>
@@ -204,6 +207,7 @@ new class extends Component {
             <x-input label="Kategori Name" wire:model.live="editingName" />
             <x-textarea label="Kategori Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
             <x-select label="Kategori Type" wire:model.live="editingType" :options="$typeOptions" placeholder="Pilih Type" />
+            <x-select label="Jenis Barang" wire:model.live="editingJenisId" :options="$jenis" placeholder="Pilih Jenis" />
         </div>
 
         <x-slot:actions>

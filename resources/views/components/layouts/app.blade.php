@@ -83,13 +83,25 @@
                 </x-menu-sub>
 
                 <x-menu-sub title="Transactions" icon="o-cog-6-tooth">
-                    <x-menu-item title="Transaksi Telur" icon="o-sparkles" link="/telur" />
-                    <x-menu-item title="Transaksi Pakan" icon="o-sparkles" link="/pakan" />
+                    <x-menu-item title="Pembelian Telur" icon="o-sparkles" link="/telur-masuk" />
+                    <x-menu-item title="Penjualan Telur" icon="o-sparkles" link="/telur-keluar" />
+                    {{-- <x-menu-item title="Transaksi Pakan" icon="o-sparkles" link="/pakan" />
                     <x-menu-item title="Transaksi Obat" icon="o-sparkles" link="/obat" />
                     <x-menu-item title="Transaksi Lainnya" icon="o-sparkles" link="/lainnya" />
-                    <x-menu-item title="Transaksi Tunai" icon="o-sparkles" link="/tunai" />
-                    <x-menu-item title="Transaksi Transfer" icon="o-sparkles" link="/transfer" />
+
+                    <x-menu-item title="Transaksi Kas Tunai" icon="o-sparkles" link="/tunai" />
+                    <x-menu-item title="Transaksi Beban Tunai" icon="o-sparkles" link="/beban-tunai" />
+                    <x-menu-item title="Transaksi Hutang Tunai" icon="o-sparkles" link="/hutang-tunai" />
+                    
+                    <x-menu-item title="Transaksi Bank" icon="o-sparkles" link="/bank" />
+                    <x-menu-item title="Transaksi Beban Bank" icon="o-sparkles" link="/beban-bank" />
+                    <x-menu-item title="Transaksi Hutang Bank" icon="o-sparkles" link="/hutang-bank" />
+                    <x-menu-item title="Transaksi Titipan" icon="o-sparkles" link="/titipan" />
+                    <x-menu-item title="Transaksi Bon" icon="o-sparkles" link="/bon" /> --}}
+
                 </x-menu-sub>
+
+
 
             </x-menu>
         </x-slot:sidebar>
