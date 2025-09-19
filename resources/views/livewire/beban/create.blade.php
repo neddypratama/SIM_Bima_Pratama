@@ -18,6 +18,9 @@ new class extends Component {
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
 
+    #[Rule('required|unique:transaksis,invoice')]
+    public string $invoice2 = '';
+
     #[Rule('required')]
     public string $name = '';
 
@@ -27,58 +30,31 @@ new class extends Component {
     #[Rule('required')]
     public ?int $user_id = null;
 
-    #[Rule('nullable')]
-    public ?int $client_id = null;
-
-    public ?int $kategori_id = null;
-
     #[Rule('required')]
-    public ?string $type = null;
-
-    #[Rule('required|integer')]
-    public ?int $linked_id = null;
+    public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
 
     public array $details = [];
 
-    public $barangs = [];
+    // Semua barang
+    public $barangs;
+
+    // Barang yang difilter per detail
+    public array $filteredBarangs = [];
 
     public function with(): array
     {
         return [
             'users' => User::all(),
-            'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
-            // 🔥 Group Transaksi untuk x-select-group
-            'transaksi' => Transaksi::with('kategori')
-                ->whereNull('linked_id') // ✅ Ambil hanya transaksi yang belum di-relasikan
-                ->get()
-                ->groupBy(fn($t) => $t->kategori->type) // ✅ Group by kategori.name
-                ->mapWithKeys(
-                    fn($group, $label) => [
-                        $label => $group
-                            ->map(
-                                fn($t) => [
-                                    'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total),
-                                ],
-                            )
-                            ->values()
-                            ->toArray(),
-                    ],
-                )
-                ->toArray(),
-            // 🔥 Opsi tipe transaksi dengan nama friendly
-            'optionType' => [['id' => 'Debit', 'name' => 'Kas Masuk'], ['id' => 'Kredit', 'name' => 'Kas Keluar']],
+            'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->get(),
         ];
     }
 
     public function mount(): void
     {
-        $this->barangs = Barang::all();
         $this->user_id = auth()->id();
         $this->tanggal = now()->format('Y-m-d\TH:i');
-        $this->kategori_id = Kategori::where('name', 'Kas Tunai')->first()?->id;
         $this->updatedTanggal($this->tanggal);
     }
 
@@ -87,32 +63,29 @@ new class extends Component {
         if ($value) {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
-            $this->invoice = 'INV-' . $tanggal . '-TNI-' . $str;
+            $this->invoice = 'INV-' . $tanggal . '-PGN-' . $str;
+            $this->invoice2 = 'INV-' . $tanggal . '-TNI-' . $str;
         }
     }
 
     public function save(): void
     {
+        // ✅ Validasi seluruh input sekaligus
         $this->validate();
 
-        $stok = Transaksi::create([
+        $beban = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
             'kategori_id' => $this->kategori_id,
-            'client_id' => $this->client_id,
-            'type' => $this->type,
+            'client_id' => null,
+            'type' => 'Debit',
             'total' => $this->total,
-            'linked_id' => $this->linked_id,
+            'linked_id' => null,
         ]);
 
-        $transaksi = Transaksi::find($this->linked_id);
-        $transaksi->update([
-            'linked_id' => $stok->id,
-        ]);
-
-        $this->success('Transaksi berhasil dibuat!', redirectTo: '/tunai');
+        $this->success('Transaksi berhasil dibuat!', redirectTo: '/beban');
     }
 };
 ?>
@@ -131,10 +104,12 @@ new class extends Component {
                     <x-input label="User" :value="auth()->user()->name" readonly />
                     <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                 </div>
-                <x-input label="Rincian" wire:model="name" />
-                <div class="grid grid-cols-2 gap-4">
-                    <x-select-group label="Client" wire:model="client_id" :options="$clients" placeholder="Pilih Client"/>
-                    <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe"/>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
+                        <x-input label="Rincian" wire:model="name" />
+                    </div>
+                    <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
+                        placeholder="Pilih Kategori" />
                 </div>
             </div>
         </div>
@@ -146,18 +121,12 @@ new class extends Component {
                 <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="col-span-2">
-                        <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
-                            placeholder="Pilih Transaksi" />
-                    </div>
-                    <x-input label="Total" wire:model="total" prefix="Rp" money />
-                </div>
+                <x-input label="Total" wire:model="total" prefix="Rp" money />
             </div>
         </div>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/tunai" />
+            <x-button spinner label="Cancel" link="/beban" />
             <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>

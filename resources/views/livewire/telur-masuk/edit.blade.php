@@ -241,7 +241,7 @@ new class extends Component {
             <div class="col-span-3 grid gap-3">
                 <div class="grid grid-cols-3 gap-4">
                     <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="auth()->user()->name" readonly />
+                    <x-input label="User" :value="$users->firstWhere('id', $this->user_id)?->name" readonly />
                     <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                 </div>
                 <div class="grid grid-cols-3 gap-4">

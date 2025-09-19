@@ -65,6 +65,7 @@
                     <x-menu-separator />
                 @endif
 
+                <x-menu-item title="Dashboard" icon="o-sparkles" link="/" />
                 <x-menu-sub title="User Management" icon="o-cog-6-tooth">
                     <x-menu-item title="Users" icon="o-sparkles" link="/users" />
                     <x-menu-item title="Roles" icon="o-sparkles" link="/roles" />
@@ -87,17 +88,14 @@
                     <x-menu-item title="Penjualan Telur" icon="o-sparkles" link="/telur-keluar" />
                     {{-- <x-menu-item title="Transaksi Pakan" icon="o-sparkles" link="/pakan" />
                     <x-menu-item title="Transaksi Obat" icon="o-sparkles" link="/obat" />
-                    <x-menu-item title="Transaksi Lainnya" icon="o-sparkles" link="/lainnya" />
+                    <x-menu-item title="Transaksi Lainnya" icon="o-sparkles" link="/lainnya" /> --}}
 
                     <x-menu-item title="Transaksi Kas Tunai" icon="o-sparkles" link="/tunai" />
-                    <x-menu-item title="Transaksi Beban Tunai" icon="o-sparkles" link="/beban-tunai" />
-                    <x-menu-item title="Transaksi Hutang Tunai" icon="o-sparkles" link="/hutang-tunai" />
+                    <x-menu-item title="Transaksi Beban" icon="o-sparkles" link="/beban" />
                     
-                    <x-menu-item title="Transaksi Bank" icon="o-sparkles" link="/bank" />
-                    <x-menu-item title="Transaksi Beban Bank" icon="o-sparkles" link="/beban-bank" />
-                    <x-menu-item title="Transaksi Hutang Bank" icon="o-sparkles" link="/hutang-bank" />
-                    <x-menu-item title="Transaksi Titipan" icon="o-sparkles" link="/titipan" />
-                    <x-menu-item title="Transaksi Bon" icon="o-sparkles" link="/bon" /> --}}
+                    {{-- <x-menu-item title="Transaksi Bank" icon="o-sparkles" link="/bank" /> --}}
+                    <x-menu-item title="Transaksi Hutang" icon="o-sparkles" link="/hutang" />
+                    <x-menu-item title="Transaksi Piutang" icon="o-sparkles" link="/piutang" />
 
                 </x-menu-sub>
 
