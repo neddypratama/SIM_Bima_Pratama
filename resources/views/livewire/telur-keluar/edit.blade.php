@@ -38,6 +38,7 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         $this->transaksi = $transaksi->load('details');
+        $telur = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first()->load('details');
 
         $this->invoice = $transaksi->invoice;
         $this->name = $transaksi->name;
@@ -56,6 +57,8 @@ new class extends Component {
                 'barang_id' => $detail->barang_id,
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
+                'max_qty' => (int)Barang::find($detail->barang_id)->stok + $detail->kuantitas,
+                'hpp' => $telur->details->first()?->value,
             ];
         }
 
@@ -71,7 +74,7 @@ new class extends Component {
             'pokok' => $this->pokok,
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'pendapatanKategori' => Kategori::where('name', 'like', '%Telur%')->where('type', 'like', '%Pendapatan%')->get(),
+            'kategoris' => Kategori::where('name', 'like', '%Telur%')->where('type', 'like', '%Pendapatan%')->get(),
             'clients' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
                 ->get()
@@ -87,7 +90,27 @@ new class extends Component {
 
     public function updatedDetails($value, $key): void
     {
-        if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas')) {
+        if (str_ends_with($key, '.barang_id')) {
+            $index = (int) explode('.', $key)[0];
+            $barang = Barang::find($value);
+            if ($barang) {
+                $this->details[$index]['max_qty'] = $barang->stok;
+                $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
+                $this->details[$index]['hpp'] = 0;
+            }
+        }
+
+        if (str_ends_with($key, '.kuantitas')) {
+            $index = (int) explode('.', $key)[0];
+            $qty = (int) ($value ?: 1);
+            $maxQty = $this->details[$index]['max_qty'] ?? null;
+            if ($maxQty !== null && $qty > $maxQty) {
+                $qty = $maxQty; // ✅ batasi qty sesuai stok
+            }
+            $this->details[$index]['kuantitas'] = $qty;
+        }
+
+        if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas') || str_ends_with($key, '.hpp')) {
             $this->calculateTotal();
         }
     }
@@ -101,7 +124,9 @@ new class extends Component {
                 return 0;
             }
             $barang = Barang::find($item['barang_id']);
-            return $barang ? $barang->hpp * (int) ($item['kuantitas'] ?? 1) : 0;
+            $hpp = isset($item['hpp']) && $item['hpp'] > 0 ? (float) $item['hpp'] : (float) ($barang->hpp ?? 0);
+            $qty = (int) ($item['kuantitas'] ?? 0);
+            return $hpp * $qty;
         });
     }
 
@@ -115,6 +140,13 @@ new class extends Component {
             'details.*.kuantitas' => 'required|integer|min:1',
         ]);
 
+        foreach ($this->details as $i => $item) {
+            if ($item['max_qty'] !== null && $item['kuantitas'] > $item['max_qty']) {
+                $this->addError("details.$i.kuantitas", 'Qty tidak boleh melebihi stok barang.');
+                return;
+            }
+        }
+
         $hppTransaksi = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'HPP'))->first();
         $stokTransaksi = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first();
 
@@ -126,18 +158,20 @@ new class extends Component {
         $detailData = [];
 
         foreach ($this->details as $item) {
-            $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', fn($q) => $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Telur'))->where('type', 'Debit'));
+            $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
+                $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Telur'))->where('type', 'Debit');
+            });
 
-            $totalHarga = $detailQuery->sum(DB::raw('value * kuantitas'));
+            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
             $totalQty = $detailQuery->sum('kuantitas');
             $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
 
-            $totalTransaksi += $hargaSatuan * ($item['kuantitas'] ?? 1);
+            $totalTransaksi += ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1);
 
             $detailData[] = [
                 'barang_id' => $item['barang_id'],
-                'kuantitas' => $item['kuantitas'],
-                'value' => $hargaSatuan,
+                'kuantitas' => $item['kuantitas'] ?? 1,
+                'value' => $item['hpp'] ?? $hargaSatuan,
             ];
         }
 
@@ -225,17 +259,21 @@ new class extends Component {
             'value' => 0,
             'barang_id' => null,
             'kuantitas' => 1,
+            'hpp' => 0,
+            'max_qty' => null,
         ];
 
         $index = count($this->details) - 1;
         $kategori = Kategori::where('name', 'Stok Telur')->first();
+
         $this->filteredBarangs[$index] = $kategori ? Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray() : [];
+
+        $this->calculateTotal();
     }
 
     public function removeDetail(int $index): void
     {
-        unset($this->details[$index]);
-        unset($this->filteredBarangs[$index]);
+        unset($this->details[$index], $this->filteredBarangs[$index]);
         $this->details = array_values($this->details);
         $this->filteredBarangs = array_values($this->filteredBarangs);
         $this->calculateTotal();
@@ -255,14 +293,14 @@ new class extends Component {
             <div class="col-span-3 grid gap-3">
                 <div class="grid grid-cols-3 gap-4">
                     <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="$users->firstWhere('id', $this->user_id)?->name" readonly />
+                    <x-input label="User" :value="auth()->user()->name" readonly />
                     <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                 </div>
                 <x-input label="Rincian" wire:model="name" />
                 <div class="grid grid-cols-2 gap-4">
                     <x-select-group wire:model="client_id" label="Client" :options="$clients"
                         placeholder="Pilih Client" />
-                    <x-select wire:model.live="kategori_id" label="Kategori" :options="$pendapatanKategori"
+                    <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                         placeholder="Pilih Kategori" />
                 </div>
             </div>
@@ -277,20 +315,23 @@ new class extends Component {
             <div class="col-span-3 grid gap-3">
                 @foreach ($details as $index => $item)
                     <div class="grid grid-cols-4 gap-2 items-center">
-                        <x-select wire:model.live="details.{{ $index }}.barang_id" label="Barang"
+                        <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
                             :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
                         <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
                             money="IDR" />
-                        <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas" type="number"
-                            min="1" />
+                        <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
+                            wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
+                            :max="$item['max_qty'] ?? null" />
                         <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
                     </div>
                     <div class="grid grid-cols-4 gap-2 items-center">
-                        <x-input label="HPP" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
+                        <x-input label="Harga Standart" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
+                        <x-input label="HPP" wire:model.live="details.{{ $index }}.hpp" prefix="Rp "
+                            money="IDR" />
                         <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
-                        <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
                         <x-input label="Total" :value="number_format(
-                            ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0) * ($item['kuantitas'] ?? 0),
+                            ($item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)) *
+                                ($item['kuantitas'] ?? 0),
                             0,
                             '.',
                             ',',
