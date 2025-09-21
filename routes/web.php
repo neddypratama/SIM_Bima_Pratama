@@ -91,5 +91,8 @@ Route::middleware('auth')->group(function() {
     Volt::route('/hutang/create', 'hutang.create');
     Volt::route('/hutang/{transaksi}/edit', 'hutang.edit');
     Volt::route('/hutang/{transaksi}/show', 'hutang.show');
+
+    Volt::route('/laporan-labarugi', 'laporan.labarugi');
+    Volt::route('/laporan-neraca-saldo', 'laporan.neraca-saldo');
 });
 

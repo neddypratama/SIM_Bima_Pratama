@@ -56,7 +56,7 @@ new class extends Component {
         return Transaksi::query()
             ->with(['client:id,name', 'kategori:id,name,type'])
             ->whereHas('kategori', function (Builder $q) {
-                $q->where('type', 'like', '%Aset%')->Where('name', 'like', '%Bon%');
+                $q->where('type', 'like', '%Aset%')->Where('name', 'like', '%Piutang%');
             })
             ->when($this->search, fn(Builder $q) => $q->whereHas('transaksi', fn($t) => $t->where('invoice', 'like', "%{$this->search}%")))
             ->orderBy(...array_values($this->sortBy))

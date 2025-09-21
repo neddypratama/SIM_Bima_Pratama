@@ -92,14 +92,16 @@
 
                     <x-menu-item title="Transaksi Kas Tunai" icon="o-sparkles" link="/tunai" />
                     <x-menu-item title="Transaksi Beban" icon="o-sparkles" link="/beban" />
-                    
+
                     {{-- <x-menu-item title="Transaksi Bank" icon="o-sparkles" link="/bank" /> --}}
                     <x-menu-item title="Transaksi Hutang" icon="o-sparkles" link="/hutang" />
                     <x-menu-item title="Transaksi Piutang" icon="o-sparkles" link="/piutang" />
-
                 </x-menu-sub>
 
-
+                <x-menu-sub title="Laporan & Akuntasi" icon="o-cog-6-tooth">
+                    <x-menu-item title="Laporan Laba Rugi" icon="o-sparkles" link="/laporan-labarugi" />
+                    <x-menu-item title="Laporan Neraca Saldo" icon="o-sparkles" link="/laporan-neraca-saldo" />
+                </x-menu-sub>
 
             </x-menu>
         </x-slot:sidebar>

@@ -75,7 +75,7 @@ new class extends Component {
             ->with(['client:id,name', 'kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('kategori', function (Builder $q) {
-                $q->where('name', 'like', 'Pendapatan Telur%');
+                $q->where('name', 'like', 'Penjualan Telur%');
             })
             ->when($this->search, fn(Builder $q) => $q->whereHas('transaksi', fn($t) => $t->where('invoice', 'like', "%{$this->search}%")))
             ->orderBy(...array_values($this->sortBy))

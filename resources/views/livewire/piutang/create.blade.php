@@ -35,6 +35,9 @@ new class extends Component {
 
     public ?string $tanggal = null;
 
+    #[Rule('required')]
+    public ?string $type = null;
+
     public array $details = [];
 
     // Semua barang
@@ -48,7 +51,26 @@ new class extends Component {
         return [
             'users' => User::all(),
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
-            'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'like', '%Bon%')->get(),
+            'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'like', '%Piutang%')->get(),
+            'optionType' => [['id' => 'Kredit', 'name' => 'Piutang Bertambah'], ['id' => 'Debit', 'name' => 'Piutang Berkurang']],
+            'transaksi' => Transaksi::with('kategori')
+                ->whereNull('linked_id') // ✅ Ambil hanya transaksi yang belum di-relasikan
+                ->get()
+                ->groupBy(fn($t) => $t->kategori->type) // ✅ Group by kategori.name
+                ->mapWithKeys(
+                    fn($group, $label) => [
+                        $label => $group
+                            ->map(
+                                fn($t) => [
+                                    'id' => $t->id,
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total),
+                                ],
+                            )
+                            ->values()
+                            ->toArray(),
+                    ],
+                )
+                ->toArray(),
         ];
     }
 
@@ -80,11 +102,15 @@ new class extends Component {
             'tanggal' => $this->tanggal,
             'kategori_id' => $this->kategori_id,
             'client_id' => $this->client_id,
-            'type' => 'Debit',
+            'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => null,
+            'linked_id' => $this->linked_id,
         ]);
 
+        $transaksi = Transaksi::find($this->linked_id);
+        $transaksi->update([
+            'linked_id' => $beban->id,
+        ]);
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/piutang');
     }
 };
@@ -105,11 +131,12 @@ new class extends Component {
                     <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                 </div>
                 <x-input label="Rincian" wire:model="name" />
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <x-select-group wire:model="client_id" label="Client" :options="$clients"
                         placeholder="Pilih Client" />
                     <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                         placeholder="Pilih Kategori" />
+                    <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                 </div>
             </div>
         </div>
@@ -121,6 +148,10 @@ new class extends Component {
                 <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
+                <div class="col-span-2">
+                    <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
+                        placeholder="Pilih Transaksi" />
+                </div>
                 <x-input label="Total" wire:model="total" prefix="Rp" money />
             </div>
         </div>

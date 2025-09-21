@@ -35,6 +35,9 @@ new class extends Component {
     #[Rule('nullable')]
     public ?int $client_id = null;
 
+    #[Rule('nullable|integer')]
+    public ?int $linked_id = null;
+
     public ?string $tanggal = null;
 
     public function with(): array
@@ -44,6 +47,25 @@ new class extends Component {
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
             'kategoris' => Kategori::where('type', 'like', '%Liabilitas%')->where('name', 'like', '%Hutang%')->get(),
             'optionType' => [['id' => 'Kredit', 'name' => 'Hutang Bertambah'], ['id' => 'Debit', 'name' => 'Hutang Berkurang']],
+            'transaksiOptions' => Transaksi::with('kategori')
+                ->whereNull('linked_id')
+                ->orWhere('id', $this->transaksi->linked_id)
+                ->get()
+                ->groupBy(fn($t) => $t->kategori->name ?? 'Tanpa Kategori')
+                ->mapWithKeys(
+                    fn($group, $label) => [
+                        $label => $group
+                            ->map(
+                                fn($t) => [
+                                    'id' => $t->id,
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total),
+                                ],
+                            )
+                            ->values()
+                            ->toArray(),
+                    ],
+                )
+                ->toArray(),
         ];
     }
 
@@ -60,6 +82,7 @@ new class extends Component {
         $this->kategori_id = $this->hutang->kategori_id;
         $this->client_id = $this->hutang->client_id;
         $this->type = $this->hutang->type;
+        $this->linked_id = $transaksi->linked_id;
         $this->tanggal = \Carbon\Carbon::parse($this->hutang->tanggal)->format('Y-m-d\TH:i');
     }
 
@@ -76,6 +99,7 @@ new class extends Component {
             'client_id' => $this->client_id,
             'total' => $this->total,
             'type' => $this->type,
+            'linked_id' => $this->linked_id,
         ]);
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/hutang');
@@ -114,7 +138,11 @@ new class extends Component {
             <div class="col-span-2">
                 <x-header title="Detail Items" subtitle="Perbarui nominal transaksi" size="text-2xl" />
             </div>
-            <div class="col-span-3 grid gap-3">
+            <div class="grid grid-cols-3 gap-4">
+                <div class="col-span-2">
+                    <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksiOptions"
+                        placeholder="Pilih Transaksi" />
+                </div>
                 <x-input label="Total" wire:model="total" prefix="Rp" money />
             </div>
         </div>
