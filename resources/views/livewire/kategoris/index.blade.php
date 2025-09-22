@@ -31,14 +31,12 @@ new class extends Component {
     public string $editingName = '';
     public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama Kategori
     public string $editingType = '';
-    public ?int $editingJenisId = null;
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
     public string $newKategoriName = '';
     public string $newKategoriDeskripsi = ''; // Untuk menyimpan input nama Kategori baru
     public string $newKategoriType = '';
-    public ?int $newKategoriJenisId = null;
 
     // Clear filters
     public function clear(): void
@@ -61,7 +59,6 @@ new class extends Component {
         $this->newKategoriName = ''; // Reset input sebelum membuka modal
         $this->newKategoriDeskripsi = '';
         $this->newKategoriType = '';
-        $this->newKategoriJenisId = null;
         $this->createModal = true;
     }
 
@@ -71,10 +68,9 @@ new class extends Component {
             'newKategoriName' => 'required|string|max:255',
             'newKategoriDeskripsi' => 'nullable',
             'newKategoriType' => 'required|string|in:Aset,Liabilitas,Pendapatan,Pengeluaran,Modal',
-            'newKategoriJenisId' => 'nullable|exists:jenis_barangs,id',
         ]);
 
-        Kategori::create(['name' => $this->newKategoriName, 'deskripsi' => $this->newKategoriDeskripsi, 'type' => $this->newKategoriType, 'jenis_id' => $this->newKategoriJenisId]);
+        Kategori::create(['name' => $this->newKategoriName, 'deskripsi' => $this->newKategoriDeskripsi, 'type' => $this->newKategoriType]);
 
         $this->createModal = false;
         $this->success('Kategori created successfully.', position: 'toast-top');
@@ -88,7 +84,6 @@ new class extends Component {
             $this->editingName = $this->editingKategori->name;
             $this->editingDeskripsi = $this->editingKategori->deskripsi;
             $this->editingType = $this->editingKategori->type;
-            $this->editingJenisId = $this->editingKategori->jenis_id;
             $this->editModal = true; // Tampilkan modal
         }
     }
@@ -100,9 +95,8 @@ new class extends Component {
                 'editingName' => 'required|string|max:255',
                 'editingDeskripsi' => 'nullable',
                 'editingType' => 'required|string|in:Aset,Liabilitas,Pendapatan,Pengeluaran,Modal',
-                'editingJenisId' => 'nullable|exists:jenis_barangs,id',
             ]);
-            $this->editingKategori->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'type' => $this->editingType, 'jenis_id' => $this->editingJenisId, 'updated_at' => now()]);
+            $this->editingKategori->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'type' => $this->editingType, 'updated_at' => now()]);
             $this->editModal = false;
             $this->success('Kategori updated successfully.', position: 'toast-top');
         }
@@ -116,7 +110,6 @@ new class extends Component {
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'],
             ['key' => 'deskripsi', 'label' => 'Deskripsi', 'class' => 'w-100'],
             ['key' => 'type', 'label' => 'Type', 'class' => 'w-30'], // Gunakan `Transaksis_count`
-            ['key' => 'jenis.name', 'label' => 'Jenis Barang', 'class' => 'w-48'],
             ['key' => 'created_at', 'label' => 'Tanggal dibuat', 'class' => 'w-30'],
         ];
     }
@@ -125,8 +118,11 @@ new class extends Component {
     {
         return Kategori::query()
             ->withAggregate('jenis', 'name')
-            // ->withCount('transaksis') // Menghitung jumlah users di setiap Kategori
-            ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
+            ->when($this->search, function (Builder $q) {
+                $q->where(function ($query) {
+                    $query->where('name', 'like', "%{$this->search}%")->orWhere('type', 'like', "%{$this->search}%");
+                });
+            })
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -136,7 +132,6 @@ new class extends Component {
         return [
             'kategoris' => $this->kategoris(),
             'typeOptions' => $this->typeOptions,
-            'jenis' => JenisBarang::all(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -192,8 +187,6 @@ new class extends Component {
             <x-textarea label="Kategori Deskripsi" wire:model.live="newKategoriDeskripsi" placeholder="Here ..." />
             <x-select label="Kategori Type" wire:model.live="newKategoriType" :options="$typeOptions"
                 placeholder="Pilih Type" />
-            <x-select label="Jenis Barang" wire:model.live="newKategoriJenisId" :options="$jenis"
-                placeholder="Pilih Jenis" />
         </div>
 
         <x-slot:actions>
@@ -207,7 +200,6 @@ new class extends Component {
             <x-input label="Kategori Name" wire:model.live="editingName" />
             <x-textarea label="Kategori Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
             <x-select label="Kategori Type" wire:model.live="editingType" :options="$typeOptions" placeholder="Pilih Type" />
-            <x-select label="Jenis Barang" wire:model.live="editingJenisId" :options="$jenis" placeholder="Pilih Jenis" />
         </div>
 
         <x-slot:actions>

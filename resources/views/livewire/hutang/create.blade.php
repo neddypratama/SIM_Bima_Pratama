@@ -36,7 +36,7 @@ new class extends Component {
     #[Rule('required')]
     public ?string $type = null;
 
-    #[Rule('required|integer')]
+    #[Rule('nullable|integer')]
     public ?int $linked_id = null;
 
     public ?string $tanggal = null;
@@ -107,7 +107,7 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => $this->linked_id,
+            'linked_id' => $this->linked_id ?? null,
         ]);
 
         $transaksi = Transaksi::find($this->linked_id);
@@ -152,11 +152,13 @@ new class extends Component {
                 <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                <div class="col-span-2">
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
                         <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
                             placeholder="Pilih Transaksi" />
                     </div>
                     <x-input label="Total" wire:model="total" prefix="Rp" money />
+                </div>
             </div>
         </div>
 

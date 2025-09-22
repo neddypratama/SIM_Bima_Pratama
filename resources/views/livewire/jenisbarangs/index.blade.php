@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\JenisBarang;
+use App\Models\Kategori;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,11 +30,13 @@ new class extends Component {
 
     public string $editingName = '';
     public string $editingDeskripsi = ''; // Menyimpan nilai input untuk nama JenisBarang
+    public ?int $editingKategori;
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
-    public string $newJenisBarangName = '';
-    public string $newJenisBarangDeskripsi = ''; // Untuk menyimpan input nama JenisBarang baru
+    public string $newName = '';
+    public string $newDeskripsi = ''; // Untuk menyimpan input nama JenisBarang baru
+    public ?int $newKategori;
 
     // Clear filters
     public function clear(): void
@@ -53,22 +56,24 @@ new class extends Component {
 
     public function create(): void
     {
-        $this->newJenisBarangName = ''; // Reset input sebelum membuka modal
-        $this->newJenisBarangDeskripsi = '';
+        $this->newName = ''; // Reset input sebelum membuka modal
+        $this->newDeskripsi = '';
+        $this->newKategori = 0;
         $this->createModal = true;
     }
 
     public function saveCreate(): void
     {
         $this->validate([
-            'newJenisBarangName' => 'required|string|max:255',
-            'newJenisBarangDeskripsi' => 'nullable',
+            'newName' => 'required|string|max:255',
+            'newDeskripsi' => 'nullable',
+            'newKategori' => 'nullable',
         ]);
 
-        JenisBarang::create(['name' => $this->newJenisBarangName, 'deskripsi' => $this->newJenisBarangDeskripsi]);
+        JenisBarang::create(['name' => $this->newName, 'deskripsi' => $this->newDeskripsi, 'kategori_id' => $this->newKategori]);
 
         $this->createModal = false;
-        $this->success('JenisBarang created successfully.', position: 'toast-top');
+        $this->success('Jenis Barang created successfully.', position: 'toast-top');
     }
 
     public function edit($id): void
@@ -76,12 +81,9 @@ new class extends Component {
         $this->editingJenisBarang = JenisBarang::find($id);
 
         if ($this->editingJenisBarang) {
-            $this->validate([
-                'editingName' => 'required|string|max:255',
-                'editingDeskripsi' => 'nullable',
-            ]);
             $this->editingName = $this->editingJenisBarang->name;
             $this->editingDeskripsi = $this->editingJenisBarang->deskripsi;
+            $this->editingKategori = $this->editingJenisBarang->kategori_id;
             $this->editModal = true; // Tampilkan modal
         }
     }
@@ -89,9 +91,14 @@ new class extends Component {
     public function saveEdit(): void
     {
         if ($this->editingJenisBarang) {
-            $this->editingJenisBarang->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'updated_at' => now()]);
+            $this->validate([
+                'editingName' => 'required|string|max:255',
+                'editingDeskripsi' => 'nullable',
+                'editingKategori' => 'nullable',
+            ]);
+            $this->editingJenisBarang->update(['name' => $this->editingName, 'deskripsi' => $this->editingDeskripsi, 'kategori_id' => $this->editingKategori, 'updated_at' => now()]);
             $this->editModal = false;
-            $this->success('JenisBarang updated successfully.', position: 'toast-top');
+            $this->success('Jenis Barang updated successfully.', position: 'toast-top');
         }
     }
 
@@ -120,6 +127,7 @@ new class extends Component {
     {
         return [
             'jenisbarangs' => $this->jenisbarangs(),
+            'kategori' => Kategori::where('name', 'like', '%Stok%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -174,8 +182,9 @@ new class extends Component {
 
     <x-modal wire:model="createModal" title="Create JenisBarang">
         <div class="grid gap-4">
-            <x-input label="JenisBarang Name" wire:model.live="newJenisBarangName" />
-            <x-textarea label="JenisBarang Deskripsi" wire:model.live="newJenisBarangDeskripsi" placeholder="Here ..." />
+            <x-input label="Jenis Barang Name" wire:model.live="newName" />
+            <x-textarea label="Jenis Barang Deskripsi" wire:model.live="newDeskripsi" placeholder="Here ..." />
+            <x-select label='Kategori' wire:model.live="newKategori" placeholder="--Kategori--" :options="$kategori" />
         </div>
 
         <x-slot:actions>
@@ -186,8 +195,9 @@ new class extends Component {
 
     <x-modal wire:model="editModal" title="Edit JenisBarang">
         <div class="grid gap-4">
-            <x-input label="JenisBarang Name" wire:model.live="editingName" />
-            <x-textarea label="JenisBarang Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
+            <x-input label="Jenis Barang Name" wire:model.live="editingName" />
+            <x-textarea label="Jenis Barang Deskripsi" wire:model.live="editingDeskripsi" placeholder="Here ..." />
+            <x-select label='Kategori' wire:model.live="editingKategori" placeholder="--Kategori--" :options="$kategori" />
         </div>
 
         <x-slot:actions>

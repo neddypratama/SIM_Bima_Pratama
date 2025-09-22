@@ -113,11 +113,17 @@ new class extends Component {
 
     public function clients(): LengthAwarePaginator
     {
-        return Client::query()->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
+        return Client::query()
+            ->with('transaksi.kategori') // agar eager load, lebih hemat query
+            ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
+            ->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))
+            ->orderBy(...array_values($this->sortBy))
+            ->paginate($this->perPage);
     }
 
     public function with(): array
     {
+
         if ($this->filter >= 0 && $this->filter < 2) {
             if (!$this->search == null) {
                 $this->filter = 1;
@@ -175,12 +181,29 @@ new class extends Component {
     <x-card>
         <x-table :headers="$headers" :rows="$clients" :sort-by="$sortBy" with-pagination
             @row-click="$wire.edit($event.detail.id)">
+
+            {{-- Kolom Bon --}}
+            @scope('cell_bon', $client)
+                <span class="font-bold text-blue-600">
+                    {{ number_format($client->bon, 0, ',', '.') }}
+                </span>
+            @endscope
+
+            {{-- Kolom Titipan --}}
+            @scope('cell_titipan', $client)
+                <span class="font-bold text-green-600">
+                    {{ number_format($client->titipan, 0, ',', '.') }}
+                </span>
+            @endscope
+
+            {{-- Tombol Aksi --}}
             @scope('actions', $client)
                 <x-button icon="o-trash" wire:click="delete({{ $client['id'] }})"
                     wire:confirm="Yakin ingin menghapus {{ $client['name'] }}?" spinner
                     class="btn-ghost btn-sm text-red-500" />
             @endscope
         </x-table>
+
     </x-card>
 
     <!-- FILTER DRAWER -->
@@ -200,7 +223,8 @@ new class extends Component {
         <div class="grid gap-4">
             <x-input label="Client Name" wire:model.live="newClientName" />
             <x-textarea label="Client Alamat" wire:model.live="newClientAlamat" placeholder="Here ..." />
-            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="newClientType" :options="$tipeClientOptions" icon="o-flag" />
+            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="newClientType"
+                :options="$tipeClientOptions" icon="o-flag" />
         </div>
 
         <x-slot:actions>
@@ -213,7 +237,8 @@ new class extends Component {
         <div class="grid gap-4">
             <x-input label="Client Name" wire:model.live="editingName" />
             <x-textarea label="Client Alamat" wire:model.live="editingAlamat" placeholder="Here ..." />
-            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="editingType" :options="$tipeClientOptions" icon="o-flag" />
+            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="editingType"
+                :options="$tipeClientOptions" icon="o-flag" />
         </div>
 
         <x-slot:actions>

@@ -197,16 +197,26 @@ new class extends Component {
 
     public function assetTotal(): int
     {
-        return Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Aset'))
+        $transaksis = Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Aset'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->sum('total');
+            ->get();
+
+        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
+        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
+
+        return $totalDebit - $totalKredit;
     }
 
     public function liabiliatsTotal(): int
     {
-        return Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Aset'))
+        $transaksis = Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Liabilitas'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->sum('total');
+            ->get();
+
+        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
+        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
+
+        return $totalKredit - $totalDebit;
     }
 
     public function with()

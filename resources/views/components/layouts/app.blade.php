@@ -98,7 +98,7 @@
                     <x-menu-item title="Transaksi Piutang" icon="o-sparkles" link="/piutang" />
                 </x-menu-sub>
 
-                <x-menu-sub title="Laporan & Akuntasi" icon="o-cog-6-tooth">
+                <x-menu-sub title="Laporan" icon="o-cog-6-tooth">
                     <x-menu-item title="Laporan Laba Rugi" icon="o-sparkles" link="/laporan-labarugi" />
                     <x-menu-item title="Laporan Neraca Saldo" icon="o-sparkles" link="/laporan-neraca-saldo" />
                 </x-menu-sub>
