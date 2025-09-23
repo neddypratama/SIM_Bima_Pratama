@@ -1,0 +1,178 @@
+<?php
+
+use Livewire\Volt\Component;
+use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
+use App\Models\Barang;
+use App\Models\Kategori;
+use App\Models\Client;
+use App\Models\User;
+use Mary\Traits\Toast;
+use Livewire\WithFileUploads;
+use Livewire\Attributes\Rule;
+use Carbon\Carbon;
+
+new class extends Component {
+    use Toast, WithFileUploads;
+
+    public Transaksi $transaksi;
+
+    #[Rule('required')]
+    public string $invoice = '';
+
+    #[Rule('required')]
+    public string $name = '';
+
+    #[Rule('required|integer|min:1')]
+    public int $total = 0;
+
+    #[Rule('required')]
+    public ?int $user_id = null;
+
+    #[Rule('nullable')]
+    public ?int $client_id = null;
+
+    public ?int $kategori_id = null;
+
+    #[Rule('required')]
+    public ?string $type = null;
+
+    #[Rule('nullable|integer')]
+    public ?int $linked_id = null;
+
+    public ?string $tanggal = null;
+
+    public array $details = [];
+    public $barangs = [];
+
+    public function with(): array
+    {
+        return [
+            'users' => User::all(),
+            'clients' => Client::all()
+                ->groupBy('type')
+                ->mapWithKeys(
+                    fn($group, $type) => [
+                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
+                    ],
+                )
+                ->toArray(),
+            // ✅ Ganti nama dari 'transaksi' → 'transaksiOptions'
+            'transaksiOptions' => Transaksi::with('kategori')
+                ->whereNull('linked_id')
+                ->orWhere('id', $this->transaksi->linked_id)
+                ->get()
+                ->groupBy(fn($t) => $t->kategori->name ?? 'Tanpa Kategori')
+                ->mapWithKeys(
+                    fn($group, $label) => [
+                        $label => $group
+                            ->map(
+                                fn($t) => [
+                                    'id' => $t->id,
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total),
+                                ],
+                            )
+                            ->values()
+                            ->toArray(),
+                    ],
+                )
+                ->toArray(),
+            'kategori' => Kategori::where('name', 'like', 'Bank %')->get(),
+            'optionType' => [['id' => 'Debit', 'name' => 'Kas Masuk'], ['id' => 'Kredit', 'name' => 'Kas Keluar']],
+        ];
+    }
+
+    public function mount(Transaksi $transaksi): void
+    {
+        $this->transaksi = $transaksi;
+
+        // Isi form dari data yang ada
+        $this->invoice = $transaksi->invoice;
+        $this->name = $transaksi->name;
+        $this->user_id = $transaksi->user_id;
+        $this->client_id = $transaksi->client_id;
+        $this->kategori_id = $transaksi->kategori_id;
+        $this->type = $transaksi->type;
+        $this->linked_id = $transaksi->linked_id;
+        $this->total = $transaksi->total;
+        $this->tanggal = Carbon::parse($transaksi->tanggal)->format('Y-m-d\TH:i:s');
+
+        // Ambil detail transaksi
+        $this->details = $transaksi->details
+            ->map(
+                fn($d) => [
+                    'barang_id' => $d->barang_id,
+                    'kuantitas' => $d->kuantitas,
+                ],
+            )
+            ->toArray();
+    }
+
+    public function save(): void
+    {
+        $this->validate();
+
+        // 🔥 Update transaksi utama
+        $this->transaksi->update([
+            'invoice' => $this->invoice,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'kategori_id' => $this->kategori_id,
+            'client_id' => $this->client_id,
+            'type' => $this->type,
+            'total' => $this->total,
+            'linked_id' => $this->linked_id,
+        ]);
+
+        $this->success('Transaksi berhasil diperbarui!', redirectTo: '/transfer');
+    }
+};
+?>
+
+<div class="p-4 space-y-6">
+    <x-header title="Edit Transaksi" separator progress-indicator />
+
+    <x-form wire:submit="save">
+        <div class="lg:grid grid-cols-5 gap-4">
+            <div class="col-span-2">
+                <x-header title="Basic Info" subtitle="Perbarui data transaksi" size="text-2xl" />
+            </div>
+            <div class="col-span-3 grid gap-3">
+                <div class="grid grid-cols-3 gap-4">
+                    <x-input label="Invoice" wire:model="invoice" readonly />
+                    <x-input label="User" :value="$users->firstWhere('id', $this->user_id)?->name" readonly />
+                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                </div>
+                <x-input label="Rincian" wire:model="name" />
+                <div class="grid grid-cols-3 gap-4">
+                    <x-select-group label="Client" wire:model="client_id" :options="$clients" />
+                    <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" />
+                    <x-select label="Kategori" wire:model="kategori_id" :options="$kategori" />
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-5" />
+
+        <div class="lg:grid grid-cols-5 gap-4">
+            <div class="col-span-2">
+                <x-header title="Detail Items" subtitle="Perbarui barang dalam transaksi" size="text-2xl" />
+            </div>
+            <div class="col-span-3 grid gap-3">
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
+                        <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksiOptions"
+                            placeholder="Pilih Transaksi" />
+                    </div>
+                    <x-input label="Total" wire:model="total" prefix="Rp" money />
+                </div>
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <x-button spinner label="Cancel" link="/transfer" />
+            <x-button spinner label="Update" icon="o-check" spinner="save" type="submit" class="btn-primary" />
+        </x-slot:actions>
+    </x-form>
+</div>

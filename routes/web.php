@@ -51,16 +51,26 @@ Route::middleware('auth')->group(function() {
     Volt::route('/telur-keluar/create', 'telur-keluar.create');
     Volt::route('/telur-keluar/{transaksi}/edit', 'telur-keluar.edit');
     Volt::route('/telur-keluar/{transaksi}/show', 'telur-keluar.show');
+    
+    Volt::route('/sentrat-masuk', 'sentrat-masuk.index');
+    Volt::route('/sentrat-masuk/create', 'sentrat-masuk.create');
+    Volt::route('/sentrat-masuk/{transaksi}/edit', 'sentrat-masuk.edit');
+    Volt::route('/sentrat-masuk/{transaksi}/show', 'sentrat-masuk.show');
 
-    Volt::route('/pakan', 'pakan.index');
-    Volt::route('/pakan/create', 'pakan.create');
-    Volt::route('/pakan/{transaksi}/edit', 'pakan.edit');
-    Volt::route('/pakan/{transaksi}/show', 'pakan.show');
+    Volt::route('/sentrat-keluar', 'sentrat-keluar.index');
+    Volt::route('/sentrat-keluar/create', 'sentrat-keluar.create');
+    Volt::route('/sentrat-keluar/{transaksi}/edit', 'sentrat-keluar.edit');
+    Volt::route('/sentrat-keluar/{transaksi}/show', 'sentrat-keluar.show');
 
-    Volt::route('/obat', 'obat.index');
-    Volt::route('/obat/create', 'obat.create');
-    Volt::route('/obat/{transaksi}/edit', 'obat.edit');
-    Volt::route('/obat/{transaksi}/show', 'obat.show');
+    Volt::route('/obat-masuk', 'obat-masuk.index');
+    Volt::route('/obat-masuk/create', 'obat-masuk.create');
+    Volt::route('/obat-masuk/{transaksi}/edit', 'obat-masuk.edit');
+    Volt::route('/obat-masuk/{transaksi}/show', 'obat-masuk.show');
+
+    Volt::route('/obat-keluar', 'obat-keluar.index');
+    Volt::route('/obat-keluar/create', 'obat-keluar.create');
+    Volt::route('/obat-keluar/{transaksi}/edit', 'obat-keluar.edit');
+    Volt::route('/obat-keluar/{transaksi}/show', 'obat-keluar.show');
 
     Volt::route('/lainnya', 'lainnya.index');
     Volt::route('/lainnya/create', 'lainnya.create');
@@ -77,10 +87,10 @@ Route::middleware('auth')->group(function() {
     Volt::route('/beban/{transaksi}/edit', 'beban.edit');
     Volt::route('/beban/{transaksi}/show', 'beban.show');
 
-    Volt::route('/bank', 'bank.index');
-    Volt::route('/bank/create', 'bank.create');
-    Volt::route('/bank/{transaksi}/edit', 'bank.edit');
-    Volt::route('/bank/{transaksi}/show', 'bank.show');
+    Volt::route('/transfer', 'transfer.index');
+    Volt::route('/transfer/create', 'transfer.create');
+    Volt::route('/transfer/{transaksi}/edit', 'transfer.edit');
+    Volt::route('/transfer/{transaksi}/show', 'transfer.show');
 
     Volt::route('/piutang', 'piutang.index');
     Volt::route('/piutang/create', 'piutang.create');

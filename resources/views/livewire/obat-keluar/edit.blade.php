@@ -38,7 +38,7 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         $this->transaksi = $transaksi->load('details');
-        $telur = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first()->load('details');
+        $obat = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Obat-Obatan'))->first()->load('details');
 
         $this->invoice = $transaksi->invoice;
         $this->name = $transaksi->name;
@@ -58,11 +58,11 @@ new class extends Component {
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
                 'max_qty' => (int)Barang::find($detail->barang_id)->stok + $detail->kuantitas,
-                'hpp' => $telur->details->first()?->value,
+                'hpp' => $obat->details->first()?->value,
             ];
         }
 
-        $kategori = Kategori::where('name', 'Stok Telur')->first();
+        $kategori = Kategori::where('name', 'Stok Obat-Obatan')->first();
         foreach ($this->details as $index => $detail) {
             $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
         }
@@ -74,7 +74,7 @@ new class extends Component {
             'pokok' => $this->pokok,
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'kategoris' => Kategori::where('name', 'like', '%Telur%')->where('type', 'like', '%Pendapatan%')->get(),
+            'kategoris' => Kategori::where('name', 'like', '%Obat%')->where('type', 'like', '%Pendapatan%')->get(),
             'clients' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
                 ->get()
@@ -148,9 +148,9 @@ new class extends Component {
         }
 
         $hppTransaksi = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'HPP'))->first();
-        $stokTransaksi = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first();
+        $stokTransaksi = Transaksi::where('linked_id', $this->transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Obat-Obatan'))->first();
 
-        $kategoriTelur = Kategori::where('name', 'Stok Telur')->first();
+        $kategoriObat = Kategori::where('name', 'Stok Obat-Obatan')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
 
         // Hitung total dan detail transaksi
@@ -159,7 +159,7 @@ new class extends Component {
 
         foreach ($this->details as $item) {
             $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
-                $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Telur'))->where('type', 'Debit');
+                $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Obat-Obatan'))->where('type', 'Debit');
             });
 
             $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
@@ -193,8 +193,8 @@ new class extends Component {
             }
         }
 
-        // === 2. Update / Create Transaksi Stok Telur (Kredit) ===
-        if ($kategoriTelur) {
+        // === 2. Update / Create Transaksi Stok Obat-Obatan (Kredit) ===
+        if ($kategoriObat) {
             $stokTransaksi->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
@@ -250,7 +250,7 @@ new class extends Component {
                 'kuantitas' => $item['kuantitas'],
             ]);
         }
-        $this->success('Transaksi berhasil diupdate!', redirectTo: '/telur-keluar');
+        $this->success('Transaksi berhasil diupdate!', redirectTo: '/obat-keluar');
     }
 
     public function addDetail(): void
@@ -264,7 +264,7 @@ new class extends Component {
         ];
 
         $index = count($this->details) - 1;
-        $kategori = Kategori::where('name', 'Stok Telur')->first();
+        $kategori = Kategori::where('name', 'Stok Obat-Obatan')->first();
 
         $this->filteredBarangs[$index] = $kategori ? Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray() : [];
 
@@ -347,7 +347,7 @@ new class extends Component {
         </div>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/telur-keluar" />
+            <x-button spinner label="Cancel" link="/obat-keluar" />
             <x-button spinner label="Edit" icon="o-paper-airplane" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>
