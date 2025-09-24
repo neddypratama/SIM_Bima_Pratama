@@ -1,0 +1,356 @@
+<?php
+
+use Livewire\Volt\Component;
+use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
+use App\Models\Barang;
+use App\Models\Kategori;
+use App\Models\Client;
+use App\Models\User;
+use Mary\Traits\Toast;
+use Livewire\WithFileUploads;
+use Livewire\Attributes\Rule;
+use Illuminate\Support\Str;
+
+new class extends Component {
+    use Toast, WithFileUploads;
+
+    #[Rule('required|unique:transaksis,invoice')]
+    public string $invoice = '';
+    public string $invoice2 = '';
+    public string $invoice3 = '';
+
+    #[Rule('required')]
+    public string $name = '';
+
+    #[Rule('required|integer|min:1')]
+    public int $total = 0;
+
+    #[Rule('required')]
+    public ?int $user_id = null;
+
+    #[Rule('required')]
+    public ?int $client_id = null;
+
+    #[Rule('required')]
+    public ?int $kategori_id = null;
+
+    public ?string $tanggal = null;
+
+    #[Rule('required|array|min:1')]
+    public array $details = [];
+
+    public $barangs;
+    public $pokok;
+    public $totalPokok;
+    public float $harga_jual = 0;
+    public array $filteredBarangs = [];
+    public string $kas = '';
+
+    public function with(): array
+    {
+        return [
+            'pokok' => $this->pokok,
+            'users' => User::all(),
+            'barangs' => $this->barangs,
+            'kategoris' => Kategori::where('name', 'like', '%Tray%')
+                ->where(function ($q) {
+                    $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Pengeluaran%');
+                })
+                ->get(),
+            'clients' => Client::where('type', 'like', '%Pedagang%')
+                ->orWhere('type', 'like', '%Peternak%')
+                ->get()
+                ->groupBy('type')
+                ->mapWithKeys(
+                    fn($group, $type) => [
+                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
+                    ],
+                )
+                ->toArray(),
+        ];
+    }
+
+    public function mount(): void
+    {
+        $this->user_id = auth()->id();
+        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->updatedTanggal($this->tanggal);
+
+        $this->barangs = Barang::all();
+        $this->pokok = Barang::all();
+
+        $kategori = Kategori::where('name', 'Stok Tray')->first();
+        if ($kategori) {
+            if (empty($this->details)) {
+                $this->details[] = [
+                    'barang_id' => null,
+                    'value' => 0,
+                    'kuantitas' => 1,
+                    'hpp' => 0,
+                    'max_qty' => null,
+                ];
+            }
+
+            foreach ($this->details as $index => $detail) {
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
+            }
+        }
+    }
+
+    public function updatedTanggal($value): void
+    {
+        if ($value) {
+            $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
+            $str = Str::upper(Str::random(4));
+            $this->invoice = 'INV-' . $tanggal . '-DPT-' . $str;
+            $this->invoice2 = 'INV-' . $tanggal . '-TRY-' . $str;
+            $this->invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
+        }
+    }
+
+    public function updatedDetails($value, $key): void
+    {
+        if (str_ends_with($key, '.barang_id')) {
+            $index = (int) explode('.', $key)[0];
+            $barang = Barang::find($value);
+            if ($barang) {
+                $this->details[$index]['max_qty'] = $barang->stok;
+                $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
+                $this->details[$index]['hpp'] = 0;
+            }
+        }
+
+        if (str_ends_with($key, '.kuantitas')) {
+            $index = (int) explode('.', $key)[0];
+            $qty = (int) ($value ?: 1);
+            $maxQty = $this->details[$index]['max_qty'] ?? null;
+            if ($maxQty !== null && $qty > $maxQty) {
+                $qty = $maxQty; // ✅ batasi qty sesuai stok
+            }
+            $this->details[$index]['kuantitas'] = $qty;
+        }
+
+        if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas') || str_ends_with($key, '.hpp')) {
+            $this->calculateTotal();
+        }
+    }
+
+    private function calculateTotal(): void
+    {
+        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+
+        $this->totalPokok = collect($this->details)->sum(function ($item) {
+            if (!$item['barang_id']) {
+                return 0;
+            }
+            $barang = Barang::find($item['barang_id']);
+            $hpp = isset($item['hpp']) && $item['hpp'] > 0 ? (float) $item['hpp'] : (float) ($barang->hpp ?? 0);
+            $qty = (int) ($item['kuantitas'] ?? 0);
+            return $hpp * $qty;
+        });
+    }
+
+    public function save(): void
+    {
+        $this->validate();
+
+        $this->validate([
+            'details.*.value' => 'required|numeric|min:0',
+            'details.*.barang_id' => 'required|exists:barangs,id',
+            'details.*.kuantitas' => 'required|integer|min:1',
+            'details.*.hpp' => 'required|numeric|min:0',
+        ]);
+
+        foreach ($this->details as $i => $item) {
+            if ($item['max_qty'] !== null && $item['kuantitas'] > $item['max_qty']) {
+                $this->addError("details.$i.kuantitas", 'Qty tidak boleh melebihi stok barang.');
+                return;
+            }
+        }
+
+        $kategoriTelur = Kategori::where('name', 'Stok Tray')->first();
+        $kategoriHpp = Kategori::where('name', 'HPP')->first();
+
+        $totalTransaksi = 0;
+        $detailData = [];
+
+        $transaksi = Transaksi::create([
+            'invoice' => $this->invoice,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'kategori_id' => $this->kategori_id,
+            'client_id' => $this->client_id,
+            'type' => 'Kredit',
+            'total' => $this->total,
+        ]);
+
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $transaksi->id,
+                'value' => (int) $item['value'], // harga satuan
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+            ]);
+        }
+
+        foreach ($this->details as $item) {
+            $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
+                $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Tray'))->where('type', 'Debit');
+            });
+
+            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
+            $totalQty = $detailQuery->sum('kuantitas');
+            $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
+
+            $totalTransaksi += ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1);
+
+            $detailData[] = [
+                'barang_id' => $item['barang_id'],
+                'kuantitas' => $item['kuantitas'] ?? 1,
+                'value' => $item['hpp'] ?? $hargaSatuan,
+            ];
+        }
+
+        if ($kategoriHpp) {
+            $hpp = Transaksi::create([
+                'invoice' => $this->invoice3,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'kategori_id' => $kategoriHpp->id,
+                'client_id' => $this->client_id,
+                'type' => 'Debit',
+                'total' => $totalTransaksi,
+                'linked_id' => $transaksi->id,
+            ]);
+
+            foreach ($detailData as $d) {
+                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hpp->id]));
+            }
+        }
+
+        $stok = Transaksi::create([
+            'invoice' => $this->invoice2,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'kategori_id' => $kategoriTelur->id,
+            'client_id' => $this->client_id,
+            'type' => 'Kredit',
+            'total' => $totalTransaksi,
+            'linked_id' => $transaksi->id ?? null,
+        ]);
+
+        foreach ($detailData as $d) {
+            DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id]));
+
+            $barang = Barang::find($d['barang_id']);
+            if ($barang) {
+                $barang->decrement('stok', $d['kuantitas']);
+            }
+        }
+
+        $this->success('Transaksi berhasil dibuat!', redirectTo: '/tray-keluar');
+    }
+
+    public function addDetail(): void
+    {
+        $this->details[] = [
+            'value' => 0,
+            'barang_id' => null,
+            'kuantitas' => 1,
+            'hpp' => 0,
+            'max_qty' => null,
+        ];
+
+        $index = count($this->details) - 1;
+        $kategori = Kategori::where('name', 'Stok Tray')->first();
+
+        $this->filteredBarangs[$index] = $kategori ? Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray() : [];
+
+        $this->calculateTotal();
+    }
+
+    public function removeDetail(int $index): void
+    {
+        unset($this->details[$index], $this->filteredBarangs[$index]);
+        $this->details = array_values($this->details);
+        $this->filteredBarangs = array_values($this->filteredBarangs);
+        $this->calculateTotal();
+    }
+};
+?>
+
+<div class="p-4 space-y-6">
+    <x-header title="Create Transaksi" separator progress-indicator />
+
+    <x-form wire:submit="save">
+        <div class="lg:grid grid-cols-5 gap-4">
+            <div class="col-span-2">
+                <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
+            </div>
+            <div class="col-span-3 grid gap-3">
+                <div class="grid grid-cols-3 gap-4">
+                    <x-input label="Invoice" wire:model="invoice" readonly />
+                    <x-input label="User" :value="auth()->user()->name" readonly />
+                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                </div>
+                <x-input label="Rincian" wire:model="name" />
+                <div class="grid grid-cols-2 gap-4">
+                    <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                        placeholder="Pilih Client" />
+                    <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
+                        placeholder="Pilih Kategori" />
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-5" />
+
+        <div class="lg:grid grid-cols-5 gap-4">
+            <div class="col-span-2">
+                <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
+            </div>
+            <div class="col-span-3 grid gap-3">
+                @foreach ($details as $index => $item)
+                    <div class="grid grid-cols-4 gap-2 items-center">
+                        <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
+                            :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
+                        <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
+                            money="IDR" />
+                        <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
+                            wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
+                            :max="$item['max_qty'] ?? null" />
+                        <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 items-center">
+                        <x-input label="Harga Standart" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
+                        <x-input label="HPP" wire:model.live="details.{{ $index }}.hpp" prefix="Rp "
+                            money="IDR" />
+                        <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
+                        <x-input label="Total" :value="number_format(
+                            ($item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)) *
+                                ($item['kuantitas'] ?? 0),
+                            0,
+                            '.',
+                            ',',
+                        )" prefix="Rp" readonly />
+                    </div>
+                    <x-button spinner icon="o-trash" class="bg-red-500 text-white"
+                        wire:click="removeDetail({{ $index }})" />
+                @endforeach
+
+                <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail" class="mt-3" />
+                <x-input label="Total" :value="number_format($total, 0, '.', ',')" prefix="Rp" readonly />
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <x-button spinner label="Cancel" link="/tray-keluar" />
+            <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
+                class="btn-primary" />
+        </x-slot:actions>
+    </x-form>
+</div>

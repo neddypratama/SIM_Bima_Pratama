@@ -53,67 +53,97 @@
                 {{-- User --}}
                 @if ($user = auth()->user())
                     <x-menu-separator />
-
                     <x-list-item :item="$user" value="name" sub-value="email" no-separator no-hover
                         class="-mx-2 !-my-2 rounded">
                         <x-slot:actions>
-                            <x-button icon="o-power" class="btn-circle btn-ghost btn-xs" tooltip-left="logoff"
+                            <x-button icon="o-power" class="btn-circle btn-ghost btn-xs" tooltip-left="Logout"
                                 no-wire-navigate link="/logout" />
                         </x-slot:actions>
                     </x-list-item>
-
                     <x-menu-separator />
                 @endif
 
                 <x-menu-item title="Dashboard" icon="o-sparkles" link="/" />
-                <x-menu-sub title="User Management" icon="o-cog-6-tooth">
-                    <x-menu-item title="Users" icon="o-sparkles" link="/users" />
-                    <x-menu-item title="Roles" icon="o-sparkles" link="/roles" />
+
+                {{-- ✅ User Management hanya untuk role 1 (Admin) --}}
+                @if (auth()->user()->role_id === 1)
+                    <x-menu-sub title="User Management" icon="fas.users-gear">
+                        <x-menu-item title="Users" icon="o-user" link="/users" />
+                        <x-menu-item title="Roles" icon="o-shield-check" link="/roles" />
+                    </x-menu-sub>
+                @endif
+
+                {{-- ✅ Master Data hanya untuk role 1 dan 2 --}}
+                @if (in_array(auth()->user()->role_id, [1, 2]))
+                    <x-menu-sub title="Master Data" icon="fas.database">
+                        <x-menu-item title="Jenis Barangs" icon="o-archive-box" link="/jenisbarangs" />
+                        <x-menu-item title="Barangs" icon="fas.box" link="/barangs" />
+                        <x-menu-item title="Satuans" icon="o-scale" link="/satuans" />
+                        <x-menu-item title="Kategoris" icon="o-rectangle-group" link="/kategoris" />
+                        <x-menu-item title="Clients" icon="o-users" link="/clients" />
+                        <x-menu-item title="Transaksis" icon="o-arrow-path" link="/transaksis" />
+                    </x-menu-sub>
+                @endif
+
+                {{-- ✅ Transactions untuk role sesuai route --}}
+                @if (in_array(auth()->user()->role_id, [1, 3]))
+                    <x-menu-sub title="Telur & Tray" icon="fas.egg">
+                        <x-menu-item title="Pembelian Telur" link="/telur-masuk" />
+                        <x-menu-item title="Penjualan Telur" link="/telur-keluar" />
+                        <x-menu-item title="Pembelian Tray" link="/tray-masuk" />
+                        <x-menu-item title="Penjualan Tray" link="/tray-keluar" />
+                    </x-menu-sub>
+                @endif
+
+                @if (in_array(auth()->user()->role_id, [1, 4]))
+                    <x-menu-sub title="Pakan & Obat" icon="o-beaker">
+                        <x-menu-item title="Pembelian Sentrat" link="/sentrat-masuk" />
+                        <x-menu-item title="Penjualan Sentrat" link="/sentrat-keluar" />
+                        <x-menu-item title="Pembelian Obat" link="/obat-masuk" />
+                        <x-menu-item title="Penjualan Obat" link="/obat-keluar" />
+                    </x-menu-sub>
+                @endif
+
+                <x-menu-sub title="Kas" icon="fas.building-columns">
+                    @if (in_array(auth()->user()->role_id, [1, 5]))
+                        <x-menu-item title="Transaksi Kas Tunai" link="/tunai" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 6]))
+                        <x-menu-item title="Transaksi Bank Transfer" link="/transfer" />
+                    @endif
                 </x-menu-sub>
 
-                <x-menu-sub title="Master Data" icon="o-cog-6-tooth">
-                    <x-menu-item title="Jenis Barangs" icon="o-sparkles" link="/jenisbarangs" />
-                    <x-menu-item title="Barangs" icon="o-sparkles" link="/barangs" />
-                    <x-menu-item title="Satuans" icon="o-sparkles" link="/satuans" />
-                </x-menu-sub>
+                @if (in_array(auth()->user()->role_id, [1, 5, 6]))
+                    <x-menu-sub title="Pendapatan & Beban" icon="o-currency-dollar">
+                        <x-menu-item title="Transaksi Lainnya" link="/lainnya" />
+                        <x-menu-item title="Transaksi Beban" link="/beban" />
+                    </x-menu-sub>
+                @endif
 
-                <x-menu-sub title="Kategoris & Clients" icon="o-cog-6-tooth">
-                    <x-menu-item title="Kategoris" icon="o-sparkles" link="/kategoris" />
-                    <x-menu-item title="Clients" icon="o-sparkles" link="/clients" />
-                    <x-menu-item title="Transaksis" icon="o-sparkles" link="/transaksis" />
-                </x-menu-sub>
+                @if (in_array(auth()->user()->role_id, [1, 7]))
+                    <x-menu-sub title="Piutang & Hutang" icon="o-receipt-percent">
+                        <x-menu-item title="Piutang" link="/piutang" />
+                        <x-menu-item title="Hutang" link="/hutang" />
+                    </x-menu-sub>
+                @endif
 
-                <x-menu-sub title="Transactions" icon="o-cog-6-tooth">
-                    <x-menu-item title="Pembelian Telur" icon="o-sparkles" link="/telur-masuk" />
-                    <x-menu-item title="Penjualan Telur" icon="o-sparkles" link="/telur-keluar" />
-                    <x-menu-item title="Pembelian Sentrat" icon="o-sparkles" link="/sentrat-masuk" />
-                    <x-menu-item title="Penjualan Sentrat" icon="o-sparkles" link="/sentrat-keluar" />
-                    <x-menu-item title="Pembelian Obat" icon="o-sparkles" link="/obat-masuk" />
-                    <x-menu-item title="Penjualan Obat" icon="o-sparkles" link="/obat-keluar" />
-                    {{-- <x-menu-item title="Transaksi Lainnya" icon="o-sparkles" link="/lainnya" /> --}}
-
-                    <x-menu-item title="Transaksi Kas Tunai" icon="o-sparkles" link="/tunai" />
-                    <x-menu-item title="Transaksi Bank Transfer" icon="o-sparkles" link="/transfer" />
-                    <x-menu-item title="Transaksi Beban" icon="o-sparkles" link="/beban" />
-                    <x-menu-item title="Transaksi Hutang" icon="o-sparkles" link="/hutang" />
-                    <x-menu-item title="Transaksi Piutang" icon="o-sparkles" link="/piutang" />
-                </x-menu-sub>
-
-                <x-menu-sub title="Laporan" icon="o-cog-6-tooth">
-                    <x-menu-item title="Laporan Laba Rugi" icon="o-sparkles" link="/laporan-labarugi" />
-                    <x-menu-item title="Laporan Neraca Saldo" icon="o-sparkles" link="/laporan-neraca-saldo" />
-                </x-menu-sub>
+                @if (in_array(auth()->user()->role_id, [1, 2, 8]))
+                    <x-menu-sub title="Laporan" icon="o-chart-bar">
+                        <x-menu-item title="Laporan Laba Rugi" link="/laporan-labarugi" />
+                        <x-menu-item title="Laporan Neraca Saldo" link="/laporan-neraca-saldo" />
+                    </x-menu-sub>
+                @endif
 
             </x-menu>
         </x-slot:sidebar>
 
-        {{-- The `$slot` goes here --}}
+        {{-- Content --}}
         <x-slot:content>
             {{ $slot }}
         </x-slot:content>
     </x-main>
 
-    {{--  TOAST area --}}
+    {{-- TOAST area --}}
     <x-toast />
 </body>
 

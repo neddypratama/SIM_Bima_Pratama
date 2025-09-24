@@ -49,7 +49,7 @@ new class extends Component {
         return [
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'kategoris' => Kategori::where('name', 'like', '%Telur%')
+            'kategoris' => Kategori::where('name', 'like', '%Tray%')
                 ->where(function ($q) {
                     $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Aset%');
                 })
@@ -225,7 +225,7 @@ new class extends Component {
             ]);
         }
 
-        $this->success('Transaksi berhasil diupdate!', redirectTo: '/telur-masuk');
+        $this->success('Transaksi berhasil diupdate!', redirectTo: '/tray-masuk');
     }
 };
 ?>
@@ -281,7 +281,7 @@ new class extends Component {
         </div>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/telur-masuk" />
+            <x-button spinner label="Cancel" link="/tray-masuk" />
             <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>

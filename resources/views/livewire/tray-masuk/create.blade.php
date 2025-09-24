@@ -11,14 +11,11 @@ use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 new class extends Component {
     use Toast, WithFileUploads;
 
-    public Transaksi $transaksi;
-
-    #[Rule('required')]
+    #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
 
     #[Rule('required')]
@@ -41,7 +38,10 @@ new class extends Component {
     #[Rule('required|array|min:1')]
     public array $details = [];
 
+    // Semua barang
     public $barangs;
+
+    // Barang yang difilter per detail
     public array $filteredBarangs = [];
 
     public function with(): array
@@ -49,11 +49,6 @@ new class extends Component {
         return [
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'kategoris' => Kategori::where('name', 'like', '%Telur%')
-                ->where(function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Aset%');
-                })
-                ->get(),
             'clients' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
                 ->get()
@@ -67,46 +62,59 @@ new class extends Component {
         ];
     }
 
-    public function mount(Transaksi $transaksi): void
+    public function mount(): void
     {
-        $this->transaksi = $transaksi;
-
-        $this->invoice = $transaksi->invoice;
-        $this->name = $transaksi->name;
-        $this->user_id = $transaksi->user_id;
-        $this->client_id = $transaksi->client_id;
-        $this->kategori_id = $transaksi->kategori_id;
-        $this->tanggal = Carbon::parse($transaksi->tanggal)->format('Y-m-d\TH:i:s');
-        $this->total = $transaksi->total;
+        $this->user_id = auth()->id();
+        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->updatedTanggal($this->tanggal);
 
         $this->barangs = Barang::all();
 
-        $this->details = $transaksi->details
-            ->map(
-                fn($d) => [
-                    'barang_id' => $d->barang_id,
-                    'value' => $d->value,
-                    'kuantitas' => $d->kuantitas,
-                ],
-            )
-            ->toArray();
+        $kategori = Kategori::where('name', 'Stok Tray')->first();
+        $this->kategori_id = $kategori->id;
+        if ($kategori) {
+            $this->kategori_id = $kategori->id;
 
-        // Set filteredBarangs per detail
-        foreach ($this->details as $index => $detail) {
-            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))
-                ->get()
-                ->map(
-                    fn($barang) => [
-                        'id' => $barang->id,
-                        'name' => $barang->name,
-                    ],
-                )
-                ->toArray();
+            // Pastikan minimal ada satu detail
+            if (empty($this->details)) {
+                $this->details[] = [
+                    'barang_id' => null,
+                    'value' => 0,
+                    'kuantitas' => 1,
+                ];
+            }
+
+            // Load filteredBarangs per detail
+            foreach ($this->details as $index => $detail) {
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))
+                    ->get()
+                    ->map(
+                        fn($barang) => [
+                            'id' => $barang->id,
+                            'name' => $barang->name,
+                        ],
+                    )
+                    ->toArray();
+
+                // Reset barang_id agar user pilih ulang
+                $this->details[$index]['barang_id'] = null;
+            }
+        }
+    }
+
+    public function updatedTanggal($value): void
+    {
+        if ($value) {
+            $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
+            $str = Str::upper(Str::random(4));
+            $this->invoice = 'INV-' . $tanggal . '-TRY-' . $str;
+            $this->invoice2 = 'INV-' . $tanggal . '-TNI-' . $str;
         }
     }
 
     public function updatedDetails($value, $key): void
     {
+        // Hitung total jika value/qty berubah
         if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas')) {
             $this->calculateTotal();
         }
@@ -117,13 +125,56 @@ new class extends Component {
         $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
     }
 
-    public function updatedKategoriId($value): void
+    public function save(): void
     {
-        foreach ($this->details as $index => $detail) {
-            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $value))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
+        // ✅ Validasi seluruh input sekaligus
+        $this->validate();
 
-            $this->details[$index]['barang_id'] = null;
+        $this->validate([
+            'details.*.value' => 'required|numeric|min:0',
+            'details.*.barang_id' => 'required|exists:barangs,id',
+            'details.*.kuantitas' => 'required|integer|min:1',
+        ]);
+
+        $stok = Transaksi::create([
+            'invoice' => $this->invoice,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'kategori_id' => $this->kategori_id,
+            'client_id' => $this->client_id,
+            'type' => 'Debit',
+            'total' => $this->total,
+        ]);
+
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $stok->id,
+                'value' => (int) $item['value'], // harga satuan
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+            ]);
+
+            $barang = Barang::find($item['barang_id']);
+
+            // Hitung HPP baru
+            $stokLama = $barang->stok;
+            $hppLama = $barang->hpp ?? 0; // default 0 jika belum ada HPP
+            $qtyBaru = $item['kuantitas'] ?? 0;
+            $hargaSatuanBaru = $item['value'] ?? 0;
+
+            $totalHarga = ($stokLama * $hppLama) + ($qtyBaru * $hargaSatuanBaru);
+            $stokBaru = $stokLama + $qtyBaru;
+            $hppBaru = $stokBaru > 0 ? $totalHarga / $stokBaru : 0;
+
+            // Update stok dan HPP barang
+            $barang->update([
+                'stok' => $stokBaru,
+                'hpp' => $hppBaru,
+            ]);
         }
+
+        $this->success('Transaksi berhasil dibuat!', redirectTo: '/tray-masuk');
     }
 
     public function addDetail(): void
@@ -135,8 +186,19 @@ new class extends Component {
         ];
 
         $index = count($this->details) - 1;
+
+        // Jika kategori sudah dipilih, filter barang sesuai kategori
         if ($this->kategori_id) {
-            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $this->kategori_id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
+            $kategori = Kategori::find($this->kategori_id);
+            $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))
+                ->get()
+                ->map(
+                    fn($barang) => [
+                        'id' => $barang->id,
+                        'name' => $barang->name,
+                    ],
+                )
+                ->toArray();
         } else {
             $this->filteredBarangs[$index] = [];
         }
@@ -152,81 +214,6 @@ new class extends Component {
         $this->filteredBarangs = array_values($this->filteredBarangs);
         $this->calculateTotal();
     }
-
-    public function save(): void
-    {
-        $this->validate([
-            'details.*.barang_id' => 'required|exists:barangs,id',
-            'details.*.value' => 'required|numeric|min:0',
-            'details.*.kuantitas' => 'required|integer|min:1',
-        ]);
-
-        // 1️⃣ Rollback stok lama
-        foreach ($this->transaksi->details as $oldDetail) {
-            $barang = Barang::find($oldDetail->barang_id);
-            if (!$barang) {
-                continue;
-            }
-
-            // Kurangi stok
-            $stokBaru = max(0, $barang->stok - $oldDetail->kuantitas);
-            $barang->update(['stok' => $stokBaru]);
-
-            // Hitung ulang HPP dari semua transaksi lama (kecuali transaksi yang sedang diedit)
-            $detailQuery = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'));
-
-            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
-            $totalQty = $detailQuery->sum('kuantitas');
-
-            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
-            $barang->update(['hpp' => $hppBaru]);
-        }
-
-        // 2️⃣ Update transaksi
-        $this->transaksi->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'client_id' => $this->client_id,
-            'kategori_id' => $this->kategori_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-            'type' => 'Debit',
-        ]);
-
-        // 3️⃣ Hapus detail lama
-        $this->transaksi->details()->delete();
-
-        // 4️⃣ Simpan detail baru + update stok & HPP
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $this->transaksi->id,
-                'value' => (int) $item['value'],
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-            ]);
-
-            $barang = Barang::find($item['barang_id']);
-            if (!$barang) {
-                continue;
-            }
-
-            $stokLama = $barang->stok ;
-            $hppLama = $barang->hpp ?? 0;
-            $qtyBaru = $item['kuantitas'] ?? 0;
-            $hargaSatuanBaru = $item['value'] ?? 0;
-
-            $totalHarga = $stokLama * $hppLama + $qtyBaru * $hargaSatuanBaru;
-            $stokBaru = $stokLama + $qtyBaru;
-            $hppBaru = $stokBaru > 0 ? $totalHarga / $stokBaru : 0;
-
-            $barang->update([
-                'stok' => $stokBaru,
-                'hpp' => $hppBaru,
-            ]);
-        }
-
-        $this->success('Transaksi berhasil diupdate!', redirectTo: '/telur-masuk');
-    }
 };
 ?>
 
@@ -241,7 +228,7 @@ new class extends Component {
             <div class="col-span-3 grid gap-3">
                 <div class="grid grid-cols-3 gap-4">
                     <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="$users->firstWhere('id', $this->user_id)?->name" readonly />
+                    <x-input label="User" :value="auth()->user()->name" readonly />
                     <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                 </div>
                 <div class="grid grid-cols-3 gap-4">
@@ -281,7 +268,7 @@ new class extends Component {
         </div>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/telur-masuk" />
+            <x-button spinner label="Cancel" link="/tray-masuk" />
             <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>
