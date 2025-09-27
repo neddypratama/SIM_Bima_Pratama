@@ -11,7 +11,7 @@ use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Exports\PenjualanTelurExport;
+use App\Exports\PenjualanTrayExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 new class extends Component {
@@ -57,7 +57,7 @@ new class extends Component {
         $this->exportModal = false;
         $this->success('Export dimulai...', position: 'toast-top');
 
-        return Excel::download(new PenjualanTelurExport($this->startDate, $this->endDate), 'penjualan-telur.xlsx');
+        return Excel::download(new PenjualanTrayExport($this->startDate, $this->endDate), 'penjualan-tray.xlsx');
     }
 
     public function delete($id): void

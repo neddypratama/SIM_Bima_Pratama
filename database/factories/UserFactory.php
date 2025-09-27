@@ -28,7 +28,7 @@ class UserFactory extends Factory
         return [
             // 'country_id' => Country::inRandomOrder()->first(),
             'name' => fake()->name(),
-            'role_id' => fake()->randomElement([1, 2]),
+            'role_id' => fake()->randomElement([1, 2, 3, 4, 5, 6, 7, 8]),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),

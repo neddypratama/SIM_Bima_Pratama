@@ -10,7 +10,7 @@ use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Exports\PembelianTelurExport;
+use App\Exports\PembelianTrayExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 new class extends Component {
@@ -55,7 +55,7 @@ new class extends Component {
         $this->exportModal = false;
         $this->success('Export dimulai...', position: 'toast-top');
 
-        return Excel::download(new PembelianTelurExport($this->startDate, $this->endDate), 'pembelian-telur.xlsx');
+        return Excel::download(new PembelianTrayExport($this->startDate, $this->endDate), 'pembelian-tray.xlsx');
     }
 
     public function delete($id): void

@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
-use PhpParser\Node\Expr\Cast\Void_;
+use App\Http\Middleware\RoleMiddleware;
 
 Route::middleware('guest')->group(function () {
     Volt::route('/login', 'auth/login')->name('login');
