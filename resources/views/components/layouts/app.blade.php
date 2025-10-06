@@ -20,9 +20,10 @@
     {{--  Currency  --}}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/robsontenorio/mary@0.44.2/libs/currency/currency.js">
     </script>
+</head>
 
-    {{-- Chart.js  --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{{-- Chart.js  --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 
 <body class="min-h-screen font-sans antialiased bg-base-200">

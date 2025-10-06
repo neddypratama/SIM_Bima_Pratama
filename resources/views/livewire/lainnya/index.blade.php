@@ -81,7 +81,7 @@ new class extends Component {
             ->with(['client:id,name', 'kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('kategori', function (Builder $q) {
-                $q->where('name', 'like', 'Penjualan Lainnya%');
+                $q->where('name', 'like', '%Lain-Lain%');
             })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {

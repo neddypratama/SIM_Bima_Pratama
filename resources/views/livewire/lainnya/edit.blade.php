@@ -17,9 +17,6 @@ new class extends Component {
     public string $invoice = '';
 
     #[Rule('required')]
-    public string $invoice2 = '';
-
-    #[Rule('required')]
     public string $name = '';
 
     #[Rule('required|integer|min:1')]

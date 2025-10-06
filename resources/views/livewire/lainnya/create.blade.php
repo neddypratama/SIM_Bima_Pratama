@@ -17,8 +17,6 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
-    public string $invoice2 = '';
-    public string $invoice3 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -27,18 +25,16 @@ new class extends Component {
     public int $total = 0;
 
     #[Rule('required')]
-    public ?int $user_id = null;
+    public ?int $user_id;
 
-    #[Rule('required')]
+    #[Rule('nullable')]
     public ?int $client_id = null;
 
     #[Rule('required')]
     public ?int $kategori_id = null;
 
+    #[Rule('required')]
     public ?string $tanggal = null;
-
-    #[Rule('required|array|min:1')]
-    public array $details = [];
 
     public $barangs;
     public $pokok;
@@ -60,7 +56,7 @@ new class extends Component {
         $this->user_id = auth()->id();
         $this->tanggal = now()->format('Y-m-d\TH:i');
         $this->updatedTanggal($this->tanggal);
-        $this->kategori_id = Kategori::where('name', 'like', '%Penjualan Lainnya%')->get()->id;
+        $this->kategori_id = Kategori::where('name', 'like', '%Pendapatan Lain-Lain%')->first()->id;
     }
 
     public function updatedTanggal($value): void
@@ -82,7 +78,6 @@ new class extends Component {
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
             'kategori_id' => $this->kategori_id,
-            'client_id' => null,
             'type' => 'Kredit',
             'total' => $this->total,
         ]);
