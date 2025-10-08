@@ -9,7 +9,7 @@ new class extends Component {
 
     public function mount(Transaksi $transaksi): void
     {
-        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang.satuan']);
+        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang']);
     }
 };
 ?>
@@ -68,12 +68,13 @@ new class extends Component {
                         <p class="font-semibold">{{ $detail->kuantitas }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Satuan</p>
-                        <p class="font-semibold">{{ $detail->barang?->satuan?->name ?? '-' }}</p>
-                    </div>
-                    <div>
                         <p class="mb-1 text-gray-500">Harga</p>
                         <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="mb-1 text-gray-500">Total</p>
+                        <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Type</p>

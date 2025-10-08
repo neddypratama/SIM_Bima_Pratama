@@ -162,11 +162,13 @@ new class extends Component {
 
 ?>
 
-<div>
+<div class="p-4 space-y-6">
     <x-header title="Transaksi Penjualan Telur" separator progress-indicator>
         <x-slot:actions>
-            <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-            <x-button label="Create" link="/telur-keluar/create" responsive icon="o-plus" class="btn-primary" />
+            <div class="flex flex-row sm:flex-row gap-2">
+                <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
+                <x-button label="Create" link="/telur-keluar/create" responsive icon="o-plus" class="btn-primary" />
+            </div>
         </x-slot:actions>
     </x-header>
 
@@ -184,27 +186,28 @@ new class extends Component {
         </div>
     </div>
 
-    <x-card>
-        <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="telur-keluar/{id}/edit?invoice={invoice}">
-            @scope('cell-kategori.name', $transaksi)
-                {{ $transaksi->kategori?->name ?? '-' }}
-            @endscope
+    <x-card class="overflow-x-auto">
+        <div class="min-w-[640px]">
+            <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
+                link="telur-keluar/{id}/edit?invoice={invoice}">
+                @scope('cell-kategori.name', $transaksi)
+                    {{ $transaksi->kategori?->name ?? '-' }}
+                @endscope
 
-            @scope('actions', $transaksi)
-                <div class="flex">
-                    <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
-                        wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
-                        class="btn-ghost btn-sm text-red-500" />
-                    <x-button icon="o-eye"
-                        link="/telur-keluar/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
-                        class="btn-ghost btn-sm text-yellow-500" />
-                </div>
-            @endscope
-        </x-table>
+                @scope('actions', $transaksi)
+                        <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-red-500" />
+                        <x-button icon="o-eye"
+                            link="/telur-keluar/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
+                            class="btn-ghost btn-sm text-yellow-500" />
+                   
+                @endscope
+            </x-table>
+        </div>
     </x-card>
 
-    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="lg:w-1/3">
+    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />

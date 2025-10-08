@@ -20,10 +20,9 @@
     {{--  Currency  --}}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/robsontenorio/mary@0.44.2/libs/currency/currency.js">
     </script>
-</head>
 
-{{-- Chart.js  --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {{-- Chart.js  --}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 
 <body class="min-h-screen font-sans antialiased bg-base-200">
@@ -57,8 +56,17 @@
                     <x-list-item :item="$user" value="name" sub-value="email" no-separator no-hover
                         class="-mx-2 !-my-2 rounded">
                         <x-slot:actions>
-                            <x-button icon="o-power" class="btn-circle btn-ghost btn-xs" tooltip-left="Logout"
-                                no-wire-navigate link="/logout" />
+                            <x-dropdown>
+                                <x-slot:trigger>
+                                    <x-button icon="fas.gear" class="btn-circle btn-ghost" />
+                                </x-slot:trigger>
+
+                                <div class="grid grid-rows-3 grid-flow-col gap-4">
+                                    <x-button label="Logout" icon="o-power" link="/logout" responsive />
+                                    <x-theme-toggle class="btn" label="Theme" responsive />
+                                    <x-button label="Profil" icon="o-user" link="/profile" responsive />
+                                </div>
+                            </x-dropdown>
                         </x-slot:actions>
                     </x-list-item>
                     <x-menu-separator />

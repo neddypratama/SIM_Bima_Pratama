@@ -11,7 +11,6 @@ class Barang extends Model
     protected $fillable = [
         'name',
         'jenis_id',
-        'satuan_id',
         'stok',
         'hpp'
     ];
@@ -19,10 +18,5 @@ class Barang extends Model
     public function jenis()
     {
         return $this->belongsTo(JenisBarang::class, 'jenis_id');
-    }
-
-    public function satuan()
-    {
-        return $this->belongsTo(Satuan::class, 'satuan_id');
     }
 }

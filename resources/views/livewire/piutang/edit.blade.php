@@ -123,11 +123,12 @@ new class extends Component {
                     <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                 </div>
                 <x-input label="Rincian" wire:model="name" />
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <x-select-group wire:model="client_id" label="Client" :options="$clients"
                         placeholder="Pilih Client" />
                     <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                         placeholder="Pilih Kategori" />
+                    <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                 </div>
             </div>
         </div>

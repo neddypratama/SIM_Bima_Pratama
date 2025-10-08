@@ -23,7 +23,7 @@ new class extends Component {
     public int $filter = 0;
     public int $perPage = 10;
     public int $client_id = 0;
-    
+
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
     public ?string $startDate = null;
@@ -134,49 +134,59 @@ new class extends Component {
 
 ?>
 
-<div>
+<div class="p-4 space-y-6">
     <x-header title="Transaksi Pembelian Telur" separator progress-indicator>
         <x-slot:actions>
-            <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-            <x-button label="Create" link="/telur-masuk/create" responsive icon="o-plus" class="btn-primary" />
+            <div class="flex flex-row sm:flex-row gap-2">
+                <x-button wire:click="openExportModal" icon="fas.download" primary>
+                    Export Excel
+                </x-button>
+                <x-button label="Create" link="/telur-masuk/create" responsive icon="o-plus" class="btn-primary" />
+            </div>
         </x-slot:actions>
     </x-header>
 
-    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">
-        <div class="md:col-span-1">
-            <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
+    <!-- FILTERS -->
+    <div class="grid grid-cols-1 md:grid-cols-8 gap-3 items-end mb-4">
+        <div class="md:col-span-2">
+            <x-select label="Show entries" :options="$pages" wire:model.live="perPage" class="w-full" />
         </div>
-        <div class="md:col-span-6">
-            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
-                icon="o-magnifying-glass" />
+
+        <div class="md:col-span-5">
+            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass"
+                class="w-full" />
         </div>
-        <div class="md:col-span-1">
+
+        <div class="md:col-span-1 flex justify-end">
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"
-                badge="{{ $this->filter }}" badge-classes="badge-primary" />
+                badge="{{ $this->filter }}" badge-classes="badge-primary" class="w-full md:w-auto" />
         </div>
     </div>
 
-    <x-card>
-        <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="telur-masuk/{id}/edit?invoice={invoice}">
-            @scope('cell-kategori.name', $transaksi)
-                {{ $transaksi->kategori?->name ?? '-' }}
-            @endscope
+    <!-- TABLE -->
+    <x-card class="overflow-x-auto">
+        <div class="min-w-[640px]">
+            <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
+                link="telur-masuk/{id}/edit?invoice={invoice}">
+                @scope('cell-kategori.name', $transaksi)
+                    {{ $transaksi->kategori?->name ?? '-' }}
+                @endscope
 
-            @scope('actions', $transaksi)
-                <div class="flex">
-                    <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
-                        wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
-                        class="btn-ghost btn-sm text-red-500" />
-                    <x-button icon="o-eye" link="/telur-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
-                        class="btn-ghost btn-sm text-yellow-500" />
-                </div>
-            @endscope
-        </x-table>
+                @scope('actions', $transaksi)
+                        <x-button icon="o-eye"
+                            link="/telur-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
+                            class="btn-ghost btn-sm text-yellow-500" />
+                        <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-red-500" />
+                @endscope
+            </x-table>
+        </div>
     </x-card>
 
-    <!-- FILTER DRAWER -->
-    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="lg:w-1/3">
+    <!-- DRAWER FILTER -->
+    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button
+        class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
@@ -185,20 +195,21 @@ new class extends Component {
         </div>
 
         <x-slot:actions>
-            <x-button label="Reset" icon="o-x-mark" wire:click="clear" spinner />
-            <x-button label="Done" icon="o-check" class="btn-primary" @click="$wire.drawer=false" />
+            <x-button label="Reset" icon="o-x-mark" wire:click="clear" spinner class="w-full sm:w-auto" />
+            <x-button label="Done" icon="o-check" class="btn-primary w-full sm:w-auto" @click="$wire.drawer=false" />
         </x-slot:actions>
     </x-drawer>
 
-    <!-- ✅ MODAL EXPORT -->
-    <x-modal wire:model="exportModal" title="Export Data" separator>
+    <!-- MODAL EXPORT -->
+    <x-modal wire:model="exportModal" title="Export Data" separator >
         <div class="grid gap-4">
             <x-input label="Start Date" type="date" wire:model="startDate" />
             <x-input label="End Date" type="date" wire:model="endDate" />
         </div>
+
         <x-slot:actions>
             <x-button label="Batal" @click="$wire.exportModal=false" />
-            <x-button label="Export" class="btn-primary" wire:click="export" spinner />
+            <x-button label="Export" class="btn-primary w-full sm:w-auto" wire:click="export" spinner />
         </x-slot:actions>
     </x-modal>
 </div>

@@ -11,11 +11,11 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         // dd($transaksi->details());
-        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang.satuan']);
+        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang']);
         $this->aset = Transaksi::where('invoice', 'like', 'INV-%-TLR-' . substr($transaksi->invoice, -4))->first();
-        $this->aset = $this->aset->load(['client', 'kategori', 'details.barang.satuan']);
+        $this->aset = $this->aset->load(['client', 'kategori', 'details.barang']);
         $this->hpp = Transaksi::where('invoice', 'like', 'INV-%-HPP-' . substr($transaksi->invoice, -4))->first();
-        $this->hpp = $this->hpp->load(['client', 'kategori', 'details.barang.satuan']);
+        $this->hpp = $this->hpp->load(['client', 'kategori', 'details.barang']);
     }
 };
 ?>
@@ -74,12 +74,12 @@ new class extends Component {
                         <p class="font-semibold">{{ $detail->kuantitas }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Satuan</p>
-                        <p class="font-semibold">{{ $detail->barang?->satuan?->name ?? '-' }}</p>
-                    </div>
-                    <div>
                         <p class="mb-1 text-gray-500">Harga</p>
                         <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-1 text-gray-500">Total</p>
+                        <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Type</p>
@@ -153,12 +153,12 @@ new class extends Component {
                         <p class="font-semibold">{{ $detail->kuantitas }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Satuan</p>
-                        <p class="font-semibold">{{ $detail->barang?->satuan?->name ?? '-' }}</p>
-                    </div>
-                    <div>
                         <p class="mb-1 text-gray-500">Harga</p>
                         <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-1 text-gray-500">Total</p>
+                        <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Type</p>
@@ -232,12 +232,12 @@ new class extends Component {
                         <p class="font-semibold">{{ $detail->kuantitas }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Satuan</p>
-                        <p class="font-semibold">{{ $detail->barang?->satuan?->name ?? '-' }}</p>
-                    </div>
-                    <div>
                         <p class="mb-1 text-gray-500">Harga</p>
                         <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-1 text-gray-500">Total</p>
+                        <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Type</p>

@@ -19,6 +19,7 @@ Route::get('/logout', function () {
 
 Route::middleware('auth')->group(function() {
     Volt::route('/', 'index');
+    Volt::route('/profile', 'auth/profile');
 
     Route::middleware('role:1')->group(function () {
         Volt::route('/roles', 'roles.index');

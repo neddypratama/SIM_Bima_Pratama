@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
 use App\Models\User;
+use App\Models\JenisBarang;
 use App\Models\Kategori;
 use App\Models\Barang;
 use Livewire\Volt\Component;
@@ -17,16 +18,32 @@ new class extends Component {
     public string $period = 'month';
     public $startDate;
     public $endDate;
-    public array $myChart = [];
-    public array $stokChart = [];
+    public array $pendapatanChart = [];
+    public array $pengeluaranChart = [];
+    public array $stokTelurChart = [];
+    public array $stokSentratChart = [];
+    public array $stokObatChart = [];
+    public array $stokTrayChart = [];
+
+    public ?int $selectedKategoriPendapatan = null;
+    public array $kategoriPendapatanList = [];
+
+    public ?int $selectedKategoriPengeluaran = null;
+    public array $kategoriPengeluaranList = [];
 
     public function mount()
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
         $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
+        $this->kategoriPendapatanList = Kategori::where('type', 'Pendapatan')->get()->toArray();
+        $this->kategoriPengeluaranList = Kategori::where('type', 'Pengeluaran')->get()->toArray();
         $this->setDefaultDates();
-        $this->chartGross();
-        $this->chartStokBarang();
+        $this->chartPendapatan();
+        $this->chartPengeluaran();
+        $this->chartStokTelur();
+        $this->chartStokSentrat();
+        $this->chartStokTray();
+        $this->chartStokObat();
     }
 
     protected function setDefaultDates()
@@ -59,8 +76,12 @@ new class extends Component {
     public function updatedPeriod()
     {
         $this->setDefaultDates();
-        $this->chartGross();
-        $this->chartStokBarang();
+        $this->chartPendapatan();
+        $this->chartPengeluaran();
+        $this->chartStokTelur();
+        $this->chartStokSentrat();
+        $this->chartStokTray();
+        $this->chartStokObat();
     }
 
     public function applyDateRange()
@@ -74,62 +95,111 @@ new class extends Component {
         $this->startDate = Carbon::parse($this->startDate)->startOfDay();
         $this->endDate = Carbon::parse($this->endDate)->endOfDay();
 
-        $this->chartGross();
-        $this->chartStokBarang();
+        $this->chartPendapatan();
+        $this->chartPengeluaran();
+        $this->chartStokTelur();
+        $this->chartStokSentrat();
+        $this->chartStokTray();
+        $this->chartStokObat();
         $this->toast('Periode tanggal berhasil diperbarui', 'success');
     }
 
-    public function chartGross()
+    public function chartPendapatan()
     {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        // Ambil data transaksi
-        $transactions = Transaksi::with('kategori')
+        $query = Transaksi::with('kategori')
             ->whereBetween('tanggal', [$start, $end])
-            ->orderBy('tanggal')
-            ->get();
+            ->whereHas('kategori', fn($q) => $q->where('type', 'Pendapatan'));
+
+        // Jika kategori tertentu dipilih
+        if ($this->selectedKategoriPendapatan) {
+            $query->where('kategori_id', $this->selectedKategoriPendapatan);
+        }
+
+        $transactions = $query->orderBy('tanggal')->get();
 
         // Kelompokkan per tanggal
         $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
 
-        // Buat array tanggal unik (agar tanggal tetap urut meski kosong)
+        // Buat array tanggal unik
         $dates = collect();
         $period = \Carbon\CarbonPeriod::create($start, $end);
         foreach ($period as $date) {
             $dates->push($date->format('Y-m-d'));
         }
 
-        // Siapkan data untuk income & expense
+        // Siapkan data pendapatan
         $incomeData = [];
-        $expenseData = [];
-
         foreach ($dates as $date) {
             $dayTransactions = $grouped->get($date, collect());
-            $income = $dayTransactions->filter(fn($trx) => $trx->kategori?->type === 'Pendapatan')->sum('total');
-            $expense = $dayTransactions->filter(fn($trx) => $trx->kategori?->type === 'Pengeluaran')->sum('total');
-
+            $income = $dayTransactions->sum('total');
             $incomeData[] = $income;
-            $expenseData[] = $expense;
         }
 
         // Buat chart
-        $this->myChart = [
+        $this->pendapatanChart = [
             'type' => 'line',
             'data' => [
                 'labels' => $dates->toArray(),
                 'datasets' => [
                     [
-                        'label' => 'Pendapatan',
+                        'label' => $this->selectedKategoriPendapatan ? 'Pendapatan: ' . Kategori::find($this->selectedKategoriPendapatan)?->name : 'Semua Pendapatan',
                         'data' => $incomeData,
                         'borderColor' => '#4CAF50',
                         'backgroundColor' => 'rgba(76, 175, 80, 0.2)',
                         'fill' => true,
                         'tension' => 0.3,
                     ],
+                ],
+            ],
+        ];
+    }
+
+    public function chartPengeluaran()
+    {
+        $start = Carbon::parse($this->startDate)->startOfDay();
+        $end = Carbon::parse($this->endDate)->endOfDay();
+
+        $query = Transaksi::with('kategori')
+            ->whereBetween('tanggal', [$start, $end])
+            ->whereHas('kategori', fn($q) => $q->where('type', 'Pengeluaran'));
+
+        // Jika kategori tertentu dipilih
+        if ($this->selectedKategoriPengeluaran) {
+            $query->where('kategori_id', $this->selectedKategoriPengeluaran);
+        }
+
+        $transactions = $query->orderBy('tanggal')->get();
+
+        // Kelompokkan per tanggal
+        $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
+
+        // Buat array tanggal unik
+        $dates = collect();
+        $period = \Carbon\CarbonPeriod::create($start, $end);
+        foreach ($period as $date) {
+            $dates->push($date->format('Y-m-d'));
+        }
+
+        // Siapkan data Pengeluaran
+        $incomeData = [];
+        foreach ($dates as $date) {
+            $dayTransactions = $grouped->get($date, collect());
+            $income = $dayTransactions->sum('total');
+            $incomeData[] = $income;
+        }
+
+        // Buat chart
+        $this->pengeluaranChart = [
+            'type' => 'line',
+            'data' => [
+                'labels' => $dates->toArray(),
+                'datasets' => [
                     [
-                        'label' => 'Pengeluaran',
-                        'data' => $expenseData,
+                        'label' => $this->selectedKategoriPengeluaran ? 'Pengeluaran: ' . Kategori::find($this->selectedKategoriPengeluaran)?->name : 'Semua Pengeluaran',
+                        'data' => $incomeData,
                         'borderColor' => '#F44336',
                         'backgroundColor' => 'rgba(244, 67, 54, 0.2)',
                         'fill' => true,
@@ -140,22 +210,66 @@ new class extends Component {
         ];
     }
 
-    public function chartStokBarang()
+    public function chartStokTelur()
     {
-        $barangs = Barang::select('id', 'name', 'stok')->where('stok', '>', 0)->get();
+        $telurIds = JenisBarang::where('name', 'like', 'Telur%')->pluck('id');
+        $this->stokTelurChart = $this->generateChartDataPie($telurIds, 'Stok Telur');
+    }
+
+    /**
+     * Chart stok untuk jenis barang "Sentrat"
+     */
+    public function chartStokSentrat()
+    {
+        $sentratIds = JenisBarang::where('name', 'like', '%Sentrat%')->pluck('id');
+        $this->stokSentratChart = $this->generateChartDataBar($sentratIds, 'Stok Sentrat');
+    }
+
+    /**
+     * Chart stok untuk jenis barang "Obat"
+     */
+    public function chartStokObat()
+    {
+        $obatIds = JenisBarang::where('name', 'like', '%Obat%')->pluck('id');
+        $this->stokObatChart = $this->generateChartDataBar($obatIds, 'Stok Obat');
+    }
+
+    /**
+     * Chart stok untuk jenis barang "Tray"
+     */
+    public function chartStokTray()
+    {
+        $trayIds = JenisBarang::where('name', 'like', '%Tray%')->pluck('id');
+        $this->stokTrayChart = $this->generateChartDataPie($trayIds, 'Stok Tray');
+    }
+
+    /**
+     * Fungsi helper untuk membuat chart data dari kumpulan jenis barang
+     */
+    private function generateChartDataPie($jenisIds, $judul)
+    {
+        if ($jenisIds->isEmpty()) {
+            return [];
+        }
+
+        $barangs = Barang::select('id', 'name', 'stok')->where('stok', '>', 0)->whereIn('jenis_id', $jenisIds)->get();
+
+        if ($barangs->isEmpty()) {
+            return [];
+        }
 
         $grouped = $barangs->groupBy(fn($b) => $b->name);
         $data = $grouped->map(fn($items) => $items->sum('stok'))->toArray();
 
         $colors = collect($data)->map(fn() => sprintf('#%06X', mt_rand(0, 0xffffff)))->values()->toArray();
 
-        $this->stokChart = [
-            'type' => 'bar', // ✅ Livewire aman dengan string biasa
+        return [
+            'type' => 'pie',
             'data' => [
-                'labels' => array_values(array_keys($data)), // pastikan hanya array numerik
+                'labels' => array_keys($data),
                 'datasets' => [
                     [
-                        'label' => 'Stok Barang',
+                        'label' => $judul,
                         'data' => array_values($data),
                         'backgroundColor' => $colors,
                         'borderWidth' => 1,
@@ -163,19 +277,75 @@ new class extends Component {
                 ],
             ],
             'options' => [
-                'indexAxis' => 'x',
                 'responsive' => true,
                 'plugins' => [
-                    'legend' => ['display' => false],
-                    'tooltip' => [
-                        'callbacks' => [
-                            // ❌ jangan pakai closure di sini, Livewire tidak bisa serialize closure
-                            // Kita kirim string config biasa, biarkan Chart.js yang handle
-                        ],
+                    'legend' => [
+                        'display' => true,
+                        'position' => 'bottom',
+                    ],
+                    'title' => [
+                        'display' => true,
+                        'text' => $judul,
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function generateChartDataBar($jenisIds, string $judul): array
+    {
+        if ($jenisIds->isEmpty()) {
+            return [];
+        }
+
+        $barangs = Barang::select('id', 'name', 'stok')->where('stok', '>', 0)->whereIn('jenis_id', $jenisIds)->get();
+
+        if ($barangs->isEmpty()) {
+            return [];
+        }
+
+        $grouped = $barangs->groupBy(fn($b) => $b->name);
+        $data = $grouped->map(fn($items) => $items->sum('stok'))->toArray();
+
+        $colors = collect($data)->map(fn() => sprintf('#%06X', mt_rand(0, 0xffffff)))->values()->toArray();
+
+        $labels = array_keys($data);
+
+        // 🟢 Perbaikan bagian label — setiap barang jadi satu dataset sendiri
+        $datasets = [];
+        $index = 0;
+        foreach ($data as $namaBarang => $stok) {
+            $datasets[] = [
+                'label' => $namaBarang, // ✅ label berbeda per barang
+                'data' => [$stok],
+                'backgroundColor' => $colors[$index] ?? '#4CAF50',
+                'borderWidth' => 1,
+            ];
+            $index++;
+        }
+
+        return [
+            'type' => 'bar',
+            'data' => [
+                'labels' => [$judul], // cuma satu label utama (judul kategori)
+                'datasets' => $datasets, // ✅ tiap barang punya label unik
+            ],
+            'options' => [
+                'responsive' => true,
+                'plugins' => [
+                    'legend' => [
+                        'display' => true,
+                        'position' => 'bottom',
+                    ],
+                    'title' => [
+                        'display' => true,
+                        'text' => $judul,
                     ],
                 ],
                 'scales' => [
-                    'x' => ['beginAtZero' => true],
+                    'y' => [
+                        'beginAtZero' => true,
+                    ],
                 ],
             ],
         ];
@@ -219,6 +389,16 @@ new class extends Component {
         return $totalKredit - $totalDebit;
     }
 
+    public function updatedSelectedKategoriPendapatan()
+    {
+        $this->chartPendapatan();
+    }
+
+    public function updatedSelectedKategoriPengeluaran()
+    {
+        $this->chartPengeluaran();
+    }
+
     public function with()
     {
         return [
@@ -233,7 +413,7 @@ new class extends Component {
 };
 ?>
 
-<div class="">
+<div class="p-4 space-y-6">
     <x-header title="Dashboard" separator progress-indicator>
         <x-slot:actions>
             @php
@@ -250,18 +430,8 @@ new class extends Component {
                         'hint' => 'Data minggu berjalan',
                         'icon' => 'o-calendar-days',
                     ],
-                    [
-                        'id' => 'month',
-                        'name' => 'Bulan Ini',
-                        'hint' => 'Data bulan berjalan',
-                        'icon' => 'o-chart-pie',
-                    ],
-                    [
-                        'id' => 'year',
-                        'name' => 'Tahun Ini',
-                        'hint' => 'Data tahun berjalan',
-                        'icon' => 'o-chart-bar',
-                    ],
+                    ['id' => 'month', 'name' => 'Bulan Ini', 'hint' => 'Data bulan berjalan', 'icon' => 'o-chart-pie'],
+                    ['id' => 'year', 'name' => 'Tahun Ini', 'hint' => 'Data tahun berjalan', 'icon' => 'o-chart-bar'],
                     [
                         'id' => 'custom',
                         'name' => 'Custom',
@@ -270,96 +440,130 @@ new class extends Component {
                     ],
                 ];
             @endphp
+
             <div class="flex flex-col gap-4">
                 <x-select wire:model.live="period" :options="$periods" option-label="name" option-value="id"
-                    option-description="hint" class="gap-4">
-                </x-select>
+                    option-description="hint" class="w-full" />
 
                 @if ($period === 'custom')
-                    <div class="flex flex-col gap-4 mt-2">
-                        <form wire:submit.prevent="applyDateRange">
-                            <div class="flex flex-col md:flex-row gap-4 items-start md:items-end">
-                                <x-input type="date" label="Dari Tanggal" wire:model="startDate" :max="now()->format('Y-m-d')"
-                                    class="w-full md:w-auto" />
+                    <form wire:submit.prevent="applyDateRange" class="space-y-3">
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <x-input type="date" label="Dari Tanggal" wire:model="startDate" :max="now()->format('Y-m-d')"
+                                class="flex-1" />
+                            <x-input type="date" label="Sampai Tanggal" wire:model="endDate" :min="$startDate"
+                                :max="now()->format('Y-m-d')" class="flex-1" />
+                            <x-button spinner label="Terapkan" type="submit" icon="o-check"
+                                class="btn-primary w-full md:w-auto" />
+                        </div>
 
-                                <x-input type="date" label="Sampai Tanggal" wire:model="endDate" :min="$startDate"
-                                    :max="now()->format('Y-m-d')" class="w-full md:w-auto" />
+                        @error('endDate')
+                            <div class="text-red-500 text-sm">{{ $message }}</div>
+                        @enderror
 
-                                <x-button spinner label="Terapkan" type="submit" icon="o-check"
-                                    class="btn-primary mt-2 md:mt-6 w-full md:w-auto" />
-                            </div>
-
-                            @error('endDate')
-                                <div class="text-red-500 text-sm mt-1">{{ $message }}</div>
-                            @enderror
-
-                            <div class="text-sm text-gray-500 mt-2">
-                                Periode terpilih:
-                                {{ $startDate->translatedFormat('d M Y') }} -
-                                {{ $endDate->translatedFormat('d M Y') }}
-                            </div>
-                        </form>
-                    </div>
+                        <div class="text-sm text-gray-500">
+                            Periode terpilih:
+                            {{ $startDate->translatedFormat('d M Y') }} - {{ $endDate->translatedFormat('d M Y') }}
+                        </div>
+                    </form>
                 @endif
             </div>
         </x-slot:actions>
     </x-header>
 
-    <!-- Grid Container -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Gross -->
-        <x-card class=" rounded-lg shadow p-4">
-            <div class="flex items-center justify-center gap-3">
-                <x-icon name="fas.money-bill-wave" class="text-purple-500 w-10 h-10" />
-                <div>
-                    <p class="">Pendapatan</p>
-                    <p class="text-xl  font-bold">Rp. {{ number_format($incomeTotal) }}</p>
-                </div>
+    <!-- GRID UTAMA -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Pendapatan -->
+        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
+            <x-icon name="fas.money-bill-wave" class="text-purple-500 w-10 h-10 shrink-0" />
+            <div>
+                <p class="text-sm text-gray-600">Pendapatan</p>
+                <p class="text-xl font-bold">Rp. {{ number_format($incomeTotal) }}</p>
             </div>
         </x-card>
 
-        <!-- Orders -->
-        <x-card class=" rounded-lg shadow p-4">
-            <div class="flex items-center justify-center gap-3">
-                <x-icon name="o-shopping-bag" class="text-blue-500 w-10 h-10" />
-                <div>
-                    <p class="">Pengeluaran</p>
-                    <p class="text-xl  font-bold">Rp. {{ number_format($expenseTotal) }}</p>
-                </div>
+        <!-- Pengeluaran -->
+        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
+            <x-icon name="o-shopping-bag" class="text-blue-500 w-10 h-10 shrink-0" />
+            <div>
+                <p class="text-sm text-gray-600">Pengeluaran</p>
+                <p class="text-xl font-bold">Rp. {{ number_format($expenseTotal) }}</p>
             </div>
         </x-card>
 
-        <!-- New Customers -->
-        <x-card class=" rounded-lg shadow p-4">
-            <div class="flex items-center justify-center gap-3">
-                <x-icon name="o-user-plus" class="text-green-500 w-10 h-10" />
-                <div>
-                    <p class="">Aset</p>
-                    <p class="text-xl  font-bold">Rp. {{ number_format($assetTotal) }}</p>
-                </div>
+        <!-- Aset -->
+        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
+            <x-icon name="o-user-plus" class="text-green-500 w-10 h-10 shrink-0" />
+            <div>
+                <p class="text-sm text-gray-600">Aset</p>
+                <p class="text-xl font-bold">Rp. {{ number_format($assetTotal) }}</p>
             </div>
         </x-card>
 
-        <!-- Built with -->
-        <x-card class=" rounded-lg shadow p-4">
-            <div class="flex items-center justify-center gap-3">
-                <x-icon name="o-gift" class="text-yellow-500 w-10 h-10" />
-                <div>
-                    <p class="">Liabilitas</p>
-                    <p class="text-xl  font-bold">Rp. {{ number_format($liabiliatsTotal) }}</p>
-                </div>
+        <!-- Liabilitas -->
+        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
+            <x-icon name="o-gift" class="text-yellow-500 w-10 h-10 shrink-0" />
+            <div>
+                <p class="text-sm text-gray-600">Liabilitas</p>
+                <p class="text-xl font-bold">Rp. {{ number_format($liabiliatsTotal) }}</p>
             </div>
         </x-card>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
-        <x-card class="grid col-span-3">
-            <x-slot:title>Pendapatan dan Pengeluaran</x-slot:title>
-            <x-chart wire:model="myChart" />
+
+    <!-- CHARTS -->
+    <div class="grid grid-cols-1 lg:grid-cols-10 gap-4">
+        <x-card class="col-span-10 overflow-x-auto">
+            <x-slot:title>Grafik Pendapatan</x-slot:title>
+            <x-slot:menu>
+                <x-select label="Pilih Kategori Pendapatan" wire:model.live="selectedKategoriPendapatan"
+                    :options="collect($kategoriPendapatanList)
+                        ->map(fn($k) => ['id' => $k['id'], 'name' => $k['name']])
+                        ->prepend(['id' => null, 'name' => 'Semua Pendapatan'])" option-label="name" option-value="id" class="w-full md:w-64" />
+            </x-slot:menu>
+            <div class="w-full min-w-[320px]">
+                <x-chart wire:model="pendapatanChart" />
+            </div>
         </x-card>
 
-        <x-card class="grid col-span-3">
-            <x-slot:title>Stok Barang</x-slot:title>
-            <x-chart wire:model="stokChart" />
+        <x-card class="col-span-10 overflow-x-auto">
+            <x-slot:title>Grafik Pengeluaran</x-slot:title>
+            <x-slot:menu>
+                <x-select label="Pilih Kategori Pengeluaran" wire:model.live="selectedKategoriPengeluaran"
+                    :options="collect($kategoriPengeluaranList)
+                        ->map(fn($k) => ['id' => $k['id'], 'name' => $k['name']])
+                        ->prepend(['id' => null, 'name' => 'Semua Pengeluaran'])" option-label="name" option-value="id" class="w-full md:w-64" />
+            </x-slot:menu>
+            <div class="w-full min-w-[320px]">
+                <x-chart wire:model="pengeluaranChart" />
+            </div>
+        </x-card>
+
+        <!-- Stok Charts -->
+        <x-card class="col-span-10 md:col-span-5 overflow-x-auto">
+            <x-slot:title>Stok Telur</x-slot:title>
+            <div class="w-full min-w-[320px]">
+                <x-chart wire:model="stokTelurChart" />
+            </div>
+        </x-card>
+
+        <x-card class="col-span-10 md:col-span-5 overflow-x-auto">
+            <x-slot:title>Stok Tray</x-slot:title>
+            <div class="w-full min-w-[320px]">
+                <x-chart wire:model="stokTrayChart" />
+            </div>
+        </x-card>
+
+        <x-card class="col-span-10 overflow-x-auto">
+            <x-slot:title>Stok Obat</x-slot:title>
+            <div class="w-full min-w-[320px]">
+                <x-chart wire:model="stokObatChart" />
+            </div>
+        </x-card>
+
+        <x-card class="col-span-10 overflow-x-auto">
+            <x-slot:title>Stok Sentrat</x-slot:title>
+            <div class="w-full min-w-[320px]">
+                <x-chart wire:model="stokSentratChart" />
+            </div>
         </x-card>
     </div>
 </div>

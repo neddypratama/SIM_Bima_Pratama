@@ -60,6 +60,13 @@ class KategoriSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Penjualan Tray',
+                'deskripsi' => 'Kategori untuk penjualan tray.',
+                'type' => 'Pendapatan',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Penjualan Lain-Lain',
                 'deskripsi' => 'Kategori untuk penjualan lainnya.',
                 'type' => 'Pendapatan',

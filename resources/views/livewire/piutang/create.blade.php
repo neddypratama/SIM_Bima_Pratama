@@ -110,10 +110,12 @@ new class extends Component {
             'linked_id' => $this->linked_id ?? null,
         ]);
 
-        $transaksi = Transaksi::find($this->linked_id);
-        $transaksi->update([
-            'linked_id' => $beban->id,
-        ]);
+        if ($this->linked_id != null) {
+            $transaksi = Transaksi::find($this->linked_id);
+            $transaksi->update([
+                'linked_id' => $beban->id,
+            ]);
+        }
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/piutang');
     }
 };
