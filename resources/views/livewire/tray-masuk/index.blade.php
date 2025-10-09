@@ -159,7 +159,6 @@ new class extends Component {
     </div>
 
     <x-card class="overflow-x-auto">
-        <div class="min-w-[640px]">
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
             link="tray-masuk/{id}/edit?invoice={invoice}">
             @scope('cell-kategori.name', $transaksi)
@@ -176,7 +175,6 @@ new class extends Component {
                 </div>
             @endscope
         </x-table>
-        </div>
     </x-card>
 
     <!-- FILTER DRAWER -->

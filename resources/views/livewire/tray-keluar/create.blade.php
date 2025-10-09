@@ -280,7 +280,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksi" separator progress-indicator />
+    <x-header title="Create Transaksi Penjualan Tray" separator progress-indicator />
 
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
@@ -317,7 +317,7 @@ new class extends Component {
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
                             <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
-                            <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
+                            <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value" prefix="Rp "
                                 money="IDR" />
                             <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
                                 wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"

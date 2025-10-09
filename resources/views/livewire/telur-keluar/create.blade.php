@@ -284,7 +284,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksi" separator progress-indicator />
+    <x-header title="Create Transaksi Penjualan Telur" separator progress-indicator />
 
     <x-form wire:submit="save">
         <x-card>

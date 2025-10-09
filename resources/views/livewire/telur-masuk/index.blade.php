@@ -165,7 +165,6 @@ new class extends Component {
 
     <!-- TABLE -->
     <x-card class="overflow-x-auto">
-        <div class="min-w-[640px]">
             <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
                 link="telur-masuk/{id}/edit?invoice={invoice}">
                 @scope('cell-kategori.name', $transaksi)

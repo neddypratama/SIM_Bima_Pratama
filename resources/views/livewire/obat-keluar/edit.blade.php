@@ -57,7 +57,7 @@ new class extends Component {
                 'barang_id' => $detail->barang_id,
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
-                'max_qty' => (int)Barang::find($detail->barang_id)->stok + $detail->kuantitas,
+                'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
                 'hpp' => $obat->details->first()?->value,
             ];
         }
@@ -286,69 +286,80 @@ new class extends Component {
     <x-header title="Edit Transaksi" separator progress-indicator />
 
     <x-form wire:submit="save">
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="auth()->user()->name" readonly />
-                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+        <!-- SECTION: Basic Info -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <x-input label="Rincian" wire:model="name" />
-                <div class="grid grid-cols-2 gap-4">
-                    <x-select-group wire:model="client_id" label="Client" :options="$clients"
-                        placeholder="Pilih Client" />
-                    <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
-                        placeholder="Pilih Kategori" />
+                <div class="col-span-3 grid gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-input label="Invoice" wire:model="invoice" readonly />
+                        <x-input label="User" :value="auth()->user()->name" readonly />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <x-input label="Rincian Transaksi" wire:model="name"
+                                placeholder="Contoh: Pembelian Telur Ayam Ras" />
+                        </div>
+                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                            placeholder="Pilih Client" />
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <hr class="my-5" />
+        </x-card>
 
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                @foreach ($details as $index => $item)
-                    <div class="grid grid-cols-4 gap-2 items-center">
-                        <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
-                            :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
-                        <x-input label="Value" wire:model.live="details.{{ $index }}.value" prefix="Rp "
-                            money="IDR" />
-                        <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
-                            wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
-                            :max="$item['max_qty'] ?? null" />
-                        <x-input label="Satuan" :value="$barangs->firstWhere('id', $item['barang_id'])?->satuan->name ?? '-'" readonly />
+        <!-- SECTION: Detail Items -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
+                </div>
+                <div class="col-span-3 grid gap-3">
+                    @foreach ($details as $index => $item)
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                            <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
+                                :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
+                            <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
+                                prefix="Rp " money="IDR" />
+                            <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
+                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
+                                :max="$item['max_qty'] ?? null" />
+                            <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                            <x-input label="Harga Standart" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
+                            <x-input label="HPP" wire:model.live="details.{{ $index }}.hpp" prefix="Rp "
+                                money="IDR" />
+                            <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
+                            <x-input label="Total HPP" :value="number_format(
+                                ($item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)) *
+                                    ($item['kuantitas'] ?? 0),
+                                0,
+                                '.',
+                                ',',
+                            )" prefix="Rp" readonly />
+                        </div>
+                        <div class="flex justify-end">
+                            <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
+                                class="btn-error btn-sm" label="Hapus Item" />
+                        </div>
+                    @endforeach
+
+                    <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
+                        <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
+                            class="btn-primary" />
+                        <x-input label="Total Pembayaran" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
                     </div>
-                    <div class="grid grid-cols-4 gap-2 items-center">
-                        <x-input label="Harga Standart" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
-                        <x-input label="HPP" wire:model.live="details.{{ $index }}.hpp" prefix="Rp "
-                            money="IDR" />
-                        <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
-                        <x-input label="Total" :value="number_format(
-                            ($item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)) *
-                                ($item['kuantitas'] ?? 0),
-                            0,
-                            '.',
-                            ',',
-                        )" prefix="Rp" readonly />
-                    </div>
-                    <x-button spinner icon="o-trash" class="bg-red-500 text-white"
-                        wire:click="removeDetail({{ $index }})" />
-                @endforeach
-
-                <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail" class="mt-3" />
-                <x-input label="Total" :value="number_format($total, 0, '.', ',')" prefix="Rp" readonly />
+                </div>
             </div>
-        </div>
+        </x-card>
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/obat-keluar" />
-            <x-button spinner label="Edit" icon="o-paper-airplane" spinner="save" type="submit"
+            <x-button spinner label="Update" icon="o-check" spinner="save" type="submit"
                 class="btn-primary" />
         </x-slot:actions>
     </x-form>
