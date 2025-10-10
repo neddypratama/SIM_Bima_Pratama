@@ -78,7 +78,8 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Piutang dan Hutang',
                 'role_id' => 7, // Piutang dan Hutang
-                'email' => 'piutanghutang@gmail.com',
+                'email' => '
+                ',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
                 'remember_token' => Str::random(10),

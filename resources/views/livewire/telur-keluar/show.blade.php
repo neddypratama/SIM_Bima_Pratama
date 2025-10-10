@@ -46,12 +46,12 @@ new class extends Component {
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <p class="mb-3">Nama Client</p>
-                    <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Alamat</p>
-                    <p class="font-semibold">{{ $transaksi->client?->alamat ?? '-' }}</p>
+                    <p class="mb-3">Nama Client</p>
+                    <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -125,12 +125,12 @@ new class extends Component {
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <p class="mb-3">Nama Client</p>
-                    <p class="font-semibold">{{ $aset->client?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $aset->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Alamat</p>
-                    <p class="font-semibold">{{ $aset->client?->alamat ?? '-' }}</p>
+                    <p class="mb-3">Nama Client</p>
+                    <p class="font-semibold">{{ $aset->client?->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -204,12 +204,12 @@ new class extends Component {
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <p class="mb-3">Nama Client</p>
-                    <p class="font-semibold">{{ $hpp->client?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $hpp->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Alamat</p>
-                    <p class="font-semibold">{{ $hpp->client?->alamat ?? '-' }}</p>
+                    <p class="mb-3">Nama Client</p>
+                    <p class="font-semibold">{{ $hpp->client?->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>

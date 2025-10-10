@@ -70,33 +70,31 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Edit Transaksi" separator progress-indicator />
+    <x-header title="Update Transaksi {{ $this->invoice }}" separator progress-indicator />
 
     <x-form wire:submit="save">
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Basic Info" subtitle="Perbarui transaksi" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="$users->firstWhere('id', $this->user_id)?->name" readonly />
-                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+        <!-- SECTION: Basic Info -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <x-input label="Rincian" wire:model="name" />
+                <div class="col-span-3 grid gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-input label="Invoice" wire:model="invoice" readonly />
+                        <x-input label="User" :value="auth()->user()->name" readonly />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <x-input label="Rincian Transaksi" wire:model="name"
+                                placeholder="Contoh: Penjualan tali tambang" />
+                        </div>
+                        <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <hr class="my-5" />
-
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Detail Items" subtitle="Perbarui nominal transaksi" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <x-input label="Total" wire:model="total" prefix="Rp" money />
-            </div>
-        </div>
+        </x-card>
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/lainnya" />

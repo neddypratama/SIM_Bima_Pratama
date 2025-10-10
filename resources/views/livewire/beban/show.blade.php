@@ -40,49 +40,18 @@ new class extends Component {
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <p class="mb-3">Nama Client</p>
-                    <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Alamat</p>
-                    <p class="font-semibold">{{ $transaksi->client?->alamat ?? '-' }}</p>
+                    <p class="mb-3">Nama Client</p>
+                    <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
                     <p class="font-semibold">{{ $transaksi->user?->name ?? '-' }}</p>
                 </div>
             </div>
-        </div>
-
-        {{-- Detail Barang --}}
-        <div class="p-7 mt-4 rounded-lg shadow-md">
-            <p class="mb-3 font-semibold">Detail Barang</p>
-            @forelse ($transaksi->details as $detail)
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3 rounded-lg p-5 ">
-                    <div>
-                        <p class="mb-1 text-gray-500">Barang</p>
-                        <p class="font-semibold">{{ $detail->barang?->name ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Qty</p>
-                        <p class="font-semibold">{{ $detail->kuantitas }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Satuan</p>
-                        <p class="font-semibold">{{ $detail->barang?->satuan?->name ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Harga</p>
-                        <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Type</p>
-                        <p class="font-semibold">{{ $transaksi->type }}</p>
-                    </div>
-                </div>
-            @empty
-                <p class="text-gray-500 text-sm">Tidak ada detail barang untuk transaksi ini.</p>
-            @endforelse
         </div>
 
         {{-- Total --}}

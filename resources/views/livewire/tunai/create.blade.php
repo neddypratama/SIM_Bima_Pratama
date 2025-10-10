@@ -50,7 +50,7 @@ new class extends Component {
             'users' => User::all(),
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
             // 🔥 Group Transaksi untuk x-select-group
-            'transaksi' => Transaksi::with('kategori')
+            'transaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type'])
                 ->whereNull('linked_id') // ✅ Ambil hanya transaksi yang belum di-relasikan
                 ->get()
                 ->groupBy(fn($t) => $t->kategori->type) // ✅ Group by kategori.name
@@ -60,7 +60,10 @@ new class extends Component {
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total),
+                                    'name' =>
+                                        "{$t->invoice} | {$t->name} | Rp " .
+                                        number_format($t->total) .
+                                        " | " . ($t->client->name ?? 'Tanpa Client'),
                                 ],
                             )
                             ->values()
@@ -95,6 +98,8 @@ new class extends Component {
     {
         $this->validate();
 
+        $this->client_id = Transaksi::find($this->linked_id)->client_id;
+
         $stok = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
@@ -118,43 +123,49 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksi" separator progress-indicator />
+    <x-header title="Create Transaksi Kas Tunai" separator progress-indicator />
 
     <x-form wire:submit="save">
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="auth()->user()->name" readonly />
-                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+        <!-- SECTION: Basic Info -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <x-input label="Rincian" wire:model="name" />
-                <div class="grid grid-cols-2 gap-4">
-                    <x-select-group label="Client" wire:model="client_id" :options="$clients" placeholder="Pilih Client"/>
-                    <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe"/>
-                </div>
-            </div>
-        </div>
-
-        <hr class="my-5" />
-
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="col-span-2">
-                        <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
-                            placeholder="Pilih Transaksi" />
+                <div class="col-span-3 grid gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-input label="Invoice" wire:model="invoice" readonly />
+                        <x-input label="User" :value="auth()->user()->name" readonly />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Total" wire:model="total" prefix="Rp" money />
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <x-input label="Rincian Transaksi" wire:model="name"
+                                placeholder="Contoh: Bayar Pembelian Telur Ayam Ras" />
+                        </div>
+                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
+                    </div>
                 </div>
             </div>
-        </div>
+        </x-card>
+
+        <!-- SECTION: Detail Items -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
+                </div>
+                <div class="col-span-3 grid gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
+                                placeholder="Pilih Transaksi" />
+                        </div>
+                        <x-input label="Nominal Pembayaran" wire:model="total" prefix="Rp" money />
+                    </div>
+                </div>
+            </div>
+        </x-card>
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/tunai" />

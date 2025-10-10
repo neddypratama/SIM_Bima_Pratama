@@ -49,27 +49,21 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'clients' => Client::all()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
-            // ✅ Ganti nama dari 'transaksi' → 'transaksiOptions'
-            'transaksiOptions' => Transaksi::with('kategori')
-                ->whereNull('linked_id')
-                ->orWhere('id', $this->transaksi->linked_id)
+            'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
+            'listTransaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type'])
+                ->where(function ($query) {
+                    $query->whereNull('linked_id')->orWhere('id', $this->transaksi->linked_id); // tampilkan relasi saat ini juga
+                })
+                ->where('id', '!=', $this->transaksi->id) // jangan tampilkan dirinya sendiri
                 ->get()
-                ->groupBy(fn($t) => $t->kategori->name ?? 'Tanpa Kategori')
+                ->groupBy(fn($t) => $t->kategori->type)
                 ->mapWithKeys(
                     fn($group, $label) => [
                         $label => $group
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total),
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . " | " . ($t->client->name ?? 'Tanpa Client'),
                                 ],
                             )
                             ->values()
@@ -77,6 +71,7 @@ new class extends Component {
                     ],
                 )
                 ->toArray(),
+
             'optionType' => [['id' => 'Debit', 'name' => 'Kas Masuk'], ['id' => 'Kredit', 'name' => 'Kas Keluar']],
         ];
     }
@@ -111,8 +106,23 @@ new class extends Component {
     {
         $this->validate();
 
-        // 🔥 Update transaksi utama
-        $this->transaksi->update([
+        $stok = Transaksi::findOrFail($this->transaksi->id);
+
+        // 1️⃣ Hapus link lama (jika ada dan berbeda dari yang baru)
+        if ($stok->linked_id && $stok->linked_id !== $this->linked_id) {
+            $oldLinked = Transaksi::find($stok->linked_id);
+            if ($oldLinked && $oldLinked->linked_id === $stok->id) {
+                $oldLinked->update(['linked_id' => null]);
+            }
+        }
+
+        // Jika ada transaksi yang terhubung (linked)
+        if ($this->linked_id) {
+            $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
+        }
+
+        // 2️⃣ Update transaksi utama
+        $stok->update([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -124,49 +134,63 @@ new class extends Component {
             'linked_id' => $this->linked_id,
         ]);
 
+        // 3️⃣ Update relasi baru (jika ada)
+        if ($this->linked_id) {
+            $linked = Transaksi::find($this->linked_id);
+            if ($linked) {
+                $linked->update(['linked_id' => $stok->id]);
+            }
+        }
+
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/tunai');
     }
 };
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Edit Transaksi" separator progress-indicator />
+    <x-header title="Update Transaksi {{ $this->invoice }}" separator progress-indicator />
 
     <x-form wire:submit="save">
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Basic Info" subtitle="Perbarui data transaksi" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <x-input label="Invoice" wire:model="invoice" readonly />
-                    <x-input label="User" :value="$users->firstWhere('id', $this->user_id)?->name" readonly />
-                    <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+        <!-- SECTION: Basic Info -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <x-input label="Rincian" wire:model="name" />
-                <div class="grid grid-cols-2 gap-4">
-                    <x-select-group label="Client" wire:model="client_id" :options="$clients" />
-                    <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" />
-                </div>
-            </div>
-        </div>
-
-        <hr class="my-5" />
-
-        <div class="lg:grid grid-cols-5 gap-4">
-            <div class="col-span-2">
-                <x-header title="Detail Items" subtitle="Perbarui barang dalam transaksi" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="col-span-2">
-                        <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksiOptions"
-                            placeholder="Pilih Transaksi" />
+                <div class="col-span-3 grid gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-input label="Invoice" wire:model="invoice" readonly />
+                        <x-input label="User" :value="auth()->user()->name" readonly />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Total" wire:model="total" prefix="Rp" money />
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <x-input label="Rincian Transaksi" wire:model="name"
+                                placeholder="Contoh: Bayar Pembelian Telur Ayam Ras" />
+                        </div>
+                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
+                    </div>
                 </div>
             </div>
-        </div>
+        </x-card>
+
+        <!-- SECTION: Detail Items -->
+        <x-card>
+            <div class="lg:grid grid-cols-5 gap-4">
+                <div class="col-span-2">
+                    <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
+                </div>
+                <div class="col-span-3 grid gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$listTransaksi"
+                                placeholder="Pilih Transaksi" />
+                        </div>
+                        <x-input label="Nominal Pembayaran" wire:model="total" prefix="Rp" money />
+                    </div>
+                </div>
+            </div>
+        </x-card>
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/tunai" />
