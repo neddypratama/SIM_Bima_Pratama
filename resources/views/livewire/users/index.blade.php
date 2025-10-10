@@ -91,7 +91,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Users" separator progress-indicator>
+    <x-header title="Daftar User" separator progress-indicator>
         <x-slot:actions>
             <x-button label="Create" link="/users/create" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>

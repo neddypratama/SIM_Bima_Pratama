@@ -103,7 +103,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Transaksis" separator progress-indicator />
+    <x-header title="Daftar Transaksi" separator progress-indicator />
 
     <!-- FILTERS -->
     <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">

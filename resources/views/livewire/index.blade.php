@@ -483,7 +483,7 @@ new class extends Component {
 
         <!-- Pengeluaran -->
         <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="o-shopping-bag" class="text-blue-500 w-10 h-10 shrink-0" />
+            <x-icon name="fas.shopping-bag" class="text-blue-500 w-10 h-10 shrink-0" />
             <div>
                 <p class="text-sm text-gray-600">Pengeluaran</p>
                 <p class="text-xl font-bold">Rp. {{ number_format($expenseTotal) }}</p>
@@ -492,7 +492,7 @@ new class extends Component {
 
         <!-- Aset -->
         <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="o-user-plus" class="text-green-500 w-10 h-10 shrink-0" />
+            <x-icon name="fas.sack-dollar" class="text-green-500 w-10 h-10 shrink-0" />
             <div>
                 <p class="text-sm text-gray-600">Aset</p>
                 <p class="text-xl font-bold">Rp. {{ number_format($assetTotal) }}</p>
@@ -501,7 +501,7 @@ new class extends Component {
 
         <!-- Liabilitas -->
         <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="o-gift" class="text-yellow-500 w-10 h-10 shrink-0" />
+            <x-icon name="fas.money-check-dollar" class="text-yellow-500 w-10 h-10 shrink-0" />
             <div>
                 <p class="text-sm text-gray-600">Liabilitas</p>
                 <p class="text-xl font-bold">Rp. {{ number_format($liabiliatsTotal) }}</p>

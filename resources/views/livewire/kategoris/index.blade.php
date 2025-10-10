@@ -151,7 +151,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Kategoris" separator progress-indicator>
+    <x-header title="Daftar Kategori" separator progress-indicator>
         <x-slot:actions>
             <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
