@@ -172,15 +172,16 @@ new class extends Component {
                 @endscope
 
                 @scope('actions', $transaksi)
+                <div class="flex">
                         <x-button icon="o-eye"
                             link="/telur-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                         <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
+                </div>
                 @endscope
             </x-table>
-        </div>
     </x-card>
 
     <!-- DRAWER FILTER -->

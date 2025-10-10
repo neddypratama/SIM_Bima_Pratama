@@ -473,38 +473,46 @@ new class extends Component {
     <!-- GRID UTAMA -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Pendapatan -->
-        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="fas.money-bill-wave" class="text-purple-500 w-10 h-10 shrink-0" />
-            <div>
-                <p class="text-sm text-gray-600">Pendapatan</p>
-                <p class="text-xl font-bold">Rp. {{ number_format($incomeTotal) }}</p>
+        <x-card class="rounded-lg shadow p-4">
+            <div class="flex items-center justify-center gap-3">
+                <x-icon name="fas.money-bill-wave" class="text-purple-500 w-10 h-10 shrink-0" />
+                <div>
+                    <p class="text-sm text-gray-600">Pendapatan</p>
+                    <p class="text-xl font-bold">Rp. {{ number_format($incomeTotal) }}</p>
+                </div>
             </div>
         </x-card>
 
         <!-- Pengeluaran -->
-        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="fas.shopping-bag" class="text-blue-500 w-10 h-10 shrink-0" />
-            <div>
-                <p class="text-sm text-gray-600">Pengeluaran</p>
-                <p class="text-xl font-bold">Rp. {{ number_format($expenseTotal) }}</p>
+        <x-card class="rounded-lg shadow p-4">
+            <div class="flex items-center justify-center gap-3">
+                <x-icon name="fas.shopping-bag" class="text-blue-500 w-10 h-10 shrink-0" />
+                <div>
+                    <p class="text-sm text-gray-600">Pengeluaran</p>
+                    <p class="text-xl font-bold">Rp. {{ number_format($expenseTotal) }}</p>
+                </div>
             </div>
         </x-card>
 
         <!-- Aset -->
-        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="fas.sack-dollar" class="text-green-500 w-10 h-10 shrink-0" />
-            <div>
-                <p class="text-sm text-gray-600">Aset</p>
-                <p class="text-xl font-bold">Rp. {{ number_format($assetTotal) }}</p>
+        <x-card class="rounded-lg shadow p-4">
+            <div class="flex items-center justify-center gap-3">
+                <x-icon name="fas.sack-dollar" class="text-green-500 w-10 h-10 shrink-0" />
+                <div>
+                    <p class="text-sm text-gray-600">Aset</p>
+                    <p class="text-xl font-bold">Rp. {{ number_format($assetTotal) }}</p>
+                </div>
             </div>
         </x-card>
 
         <!-- Liabilitas -->
-        <x-card class="rounded-lg shadow p-4 flex items-center gap-3">
-            <x-icon name="fas.money-check-dollar" class="text-yellow-500 w-10 h-10 shrink-0" />
-            <div>
-                <p class="text-sm text-gray-600">Liabilitas</p>
-                <p class="text-xl font-bold">Rp. {{ number_format($liabiliatsTotal) }}</p>
+        <x-card class="rounded-lg shadow p-4">
+            <div class="flex items-center justify-center gap-3">
+                <x-icon name="fas.money-check-dollar" class="text-yellow-500 w-10 h-10 shrink-0" />
+                <div>
+                    <p class="text-sm text-gray-600">Liabilitas</p>
+                    <p class="text-xl font-bold">Rp. {{ number_format($liabiliatsTotal) }}</p>
+                </div>
             </div>
         </x-card>
     </div>
