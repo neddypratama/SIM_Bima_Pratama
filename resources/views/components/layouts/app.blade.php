@@ -75,7 +75,7 @@
                 <x-menu-item title="Dashboard" icon="fas.house" link="/" />
 
                 {{-- ✅ User Management hanya untuk role 1 (Admin) --}}
-                @if (auth()->user()->role_id === 1)
+                @if (auth()->user()->role_id == 1)
                     <x-menu-sub title="User Management" icon="fas.users-gear">
                         <x-menu-item title="User" icon="fas.user" link="/users" />
                         <x-menu-item title="Role" icon="fas.user-shield" link="/roles" />
