@@ -52,7 +52,7 @@ new class extends Component {
             ['key' => 'name', 'label' => 'Name'],
             ['key' => 'stok', 'label' => 'Stok'],
             ['key' => 'hpp', 'label' => 'Harga Pokok Penjualan', 'class' => 'w-1'],
-            ['key' => 'satuan_name', 'label' => 'Satuan', 'class' => 'w-1'],
+            ['key' => 'created_at', 'label' => 'Tanggal Dibuat', 'class' => 'w-1'],
         ];
     }
 
@@ -60,7 +60,6 @@ new class extends Component {
     {
         return Barang::query()
         ->withAggregate('jenis', 'name')
-        ->withAggregate('satuan', 'name')
         ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
         ->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))
         ->orderBy(...array_values($this->sortBy))

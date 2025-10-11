@@ -3,7 +3,6 @@
 use Livewire\Volt\Component;
 use App\Models\Barang;
 use App\Models\JenisBarang;
-use App\Models\Satuan;
 use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
@@ -21,17 +20,16 @@ new class extends Component {
     #[Rule('required|exists:jenis_barangs,id')]
     public ?int $jenis_id = null;
 
-    #[Rule('required|exists:satuans,id')]
-    public ?int $satuan_id = null;
-
     #[Rule('required|integer')]
     public int $stok = 0;
+
+    #[Rule('nullable|integer')]
+    public int $hpp = 0;
 
     public function with(): array
     {
         return [
             'jenisbarang' => JenisBarang::all(),
-            'satuan' => Satuan::all(),
         ];
     }
 
@@ -76,8 +74,7 @@ new class extends Component {
             </div>
             <div class="col-span-3 grid gap-3">
                 <x-input label="Stok" wire:model="stok" type="number" />
-                <x-select label="Satuan" wire:model="satuan_id" :options="$satuan"
-                    placeholder="Pilih satuan" />
+                <x-input label="HPP" wire:model="hpp" prefix="Rp " money="IDR" />
             </div>
         </div>
 
@@ -85,7 +82,7 @@ new class extends Component {
             <x-button label="Cancel" link="/barangs" />
             {{-- The important thing here is `type="submit"` --}}
             {{-- The spinner property is nice! --}}
-            <x-button label="Create" icon="o-paper-airplane" spinner="save" type="submit" class="btn-primary" />
+            <x-button label="Save" icon="o-paper-airplane" spinner="save" type="submit" class="btn-primary" />
         </x-slot:actions>
 
     </x-form>

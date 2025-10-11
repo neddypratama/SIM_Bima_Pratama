@@ -60,7 +60,7 @@ new class extends Component {
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . " | " . ($t->client->name ?? 'Tanpa Client'),,
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . " | " . ($t->client->name ?? 'Tanpa Client'),
                                 ],
                             )
                             ->values()
