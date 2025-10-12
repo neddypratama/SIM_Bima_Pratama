@@ -27,13 +27,13 @@ class RoleSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Telur',
+                'name' => 'Pembelian Telur',
                 'deskripsi' => 'Administrator with full access',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Pakan',
+                'name' => 'Pakan dan Obat-Obatan',
                 'deskripsi' => 'Regular manager with limited access',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -47,12 +47,6 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Kas Transfer',
                 'deskripsi' => 'Regular manager with limited access',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Piutang dan Hutang',
-                'deskripsi' => 'Administrator with full access',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

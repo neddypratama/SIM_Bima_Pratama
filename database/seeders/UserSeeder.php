@@ -36,7 +36,7 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Telur',
+                'name' => 'Pembelian Telur',
                 'role_id' => 3, // Telur
                 'email' => 'telur@gmail.com',
                 'email_verified_at' => now(),
@@ -58,7 +58,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Kas Tunai',
                 'role_id' => 5, // Kas Tunai
-                'email' => 'kastunai@gmail.com',
+                'email' => 'tunai@gmail.com',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
                 'remember_token' => Str::random(10),
@@ -68,18 +68,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Kas Transfer',
                 'role_id' => 6, // Kas Transfer
-                'email' => 'kastransfer@gmail.com',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
-                'remember_token' => Str::random(10),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Piutang dan Hutang',
-                'role_id' => 7, // Piutang dan Hutang
-                'email' => '
-                ',
+                'email' => 'transfer@gmail.com',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
                 'remember_token' => Str::random(10),
@@ -88,7 +77,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'name' => 'Akuntasi dan Rekap',
-                'role_id' => 8, // Akuntasi dan Rekap
+                'role_id' => 7, // Akuntasi dan Rekap
                 'email' => 'akuntasi@gmail.com',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),

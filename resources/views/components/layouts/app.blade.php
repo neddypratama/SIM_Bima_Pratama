@@ -94,14 +94,16 @@
                 @endif
 
                 {{-- ✅ Transactions untuk role sesuai route --}}
-                @if (in_array(auth()->user()->role_id, [1, 3]))
-                    <x-menu-sub title="Telur & Tray" icon="fas.egg">
+                <x-menu-sub title="Telur & Tray" icon="fas.egg">
+                    @if (in_array(auth()->user()->role_id, [1, 3]))
                         <x-menu-item title="Pembelian Telur" icon="fas.cart-plus" link="/telur-masuk" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 6]))
                         <x-menu-item title="Penjualan Telur" icon="fas.file-invoice-dollar" link="/telur-keluar" />
                         <x-menu-item title="Pembelian Tray" icon="fas.cart-plus" link="/tray-masuk" />
                         <x-menu-item title="Penjualan Tray" icon="fas.file-invoice-dollar" link="/tray-keluar" />
-                    </x-menu-sub>
-                @endif
+                    @endif
+                </x-menu-sub>
 
                 @if (in_array(auth()->user()->role_id, [1, 4]))
                     <x-menu-sub title="Pakan & Obat" icon="fas.flask">
@@ -122,23 +124,25 @@
                 </x-menu-sub>
 
                 @if (in_array(auth()->user()->role_id, [1, 5, 6]))
-                    <x-menu-sub title="Pendapatan & Beban" icon="fas.dollar-sign">
-                        <x-menu-item title="Transaksi Lainnya" icon="fas.file-invoice-dollar" link="/lainnya" />
-                        <x-menu-item title="Transaksi Beban" icon="fas.hand-holding-dollar" link="/beban" />
+                    <x-menu-sub title="Pendapatan & Pengeluaran" icon="fas.dollar-sign">
+                        <x-menu-item title="Pendapatan Lainnya" icon="fas.file-invoice-dollar" link="/lainnya" />
+                        <x-menu-item title="Transaksi Pengeluaran" icon="fas.hand-holding-dollar" link="/beban" />
                     </x-menu-sub>
                 @endif
 
-                @if (in_array(auth()->user()->role_id, [1, 7]))
+                @if (in_array(auth()->user()->role_id, [1, 5]))
                     <x-menu-sub title="Piutang & Hutang" icon="fas.money-bill-transfer">
                         <x-menu-item title="Piutang" icon="fas.money-bill-wave" link="/piutang" />
                         <x-menu-item title="Hutang" icon="fas.money-bill-wave" link="/hutang" />
                     </x-menu-sub>
                 @endif
 
-                @if (in_array(auth()->user()->role_id, [1, 2, 8]))
+                @if (in_array(auth()->user()->role_id, [1, 2, 7]))
                     <x-menu-sub title="Laporan" icon="fas.chart-bar">
-                        <x-menu-item title="Laporan Laba Rugi" icon="fas.money-bill-transfer" link="/laporan-labarugi" />
-                        <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced" link="/laporan-neraca-saldo" />
+                        <x-menu-item title="Laporan Laba Rugi" icon="fas.money-bill-transfer"
+                            link="/laporan-labarugi" />
+                        <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced"
+                            link="/laporan-neraca-saldo" />
                     </x-menu-sub>
                 @endif
 
