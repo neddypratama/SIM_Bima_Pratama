@@ -64,7 +64,7 @@ new class extends Component {
                                 fn($t) => [
                                     'id' => $t->id,
                                     'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total)) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
-                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? $transaksiLink),
+                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0),
                                 ],
                             )
                             ->values()

@@ -55,8 +55,8 @@ new class extends Component {
                 ->whereBetween('tanggal', [$start, $end])
                 ->get();
 
-            $totalDebit = $transaksis->filter(fn($trx) => strtolower($trx->type) === 'debit')->sum('total');
-            $totalKredit = $transaksis->filter(fn($trx) => strtolower($trx->type) === 'kredit')->sum('total');
+            $totalDebit = $transaksis->filter(fn($trx) => strtolower($trx->type) == 'debit')->sum('total');
+            $totalKredit = $transaksis->filter(fn($trx) => strtolower($trx->type) == 'kredit')->sum('total');
 
             $row = [
                 'kategori' => $kategori->name,

@@ -175,7 +175,7 @@ new class extends Component {
             ];
         }
 
-        // === 1. Update / Create Transaksi HPP ===
+        // --- 1. Update / Create Transaksi HPP ---
         if ($kategoriHpp) {
             $hppTransaksi->update([
                 'name' => $this->name,
@@ -193,7 +193,7 @@ new class extends Component {
             }
         }
 
-        // === 2. Update / Create Transaksi Stok Telur (Kredit) ===
+        // --- 2. Update / Create Transaksi Stok Telur (Kredit) ---
         if ($kategoriTelur) {
             $stokTransaksi->update([
                 'name' => $this->name,
@@ -204,7 +204,7 @@ new class extends Component {
                 'total' => $totalTransaksi,
             ]);
 
-            // === Reset stok dulu berdasarkan transaksi lama ===
+            // --- Reset stok dulu berdasarkan transaksi lama ---
             if ($stokTransaksi) {
                 foreach ($stokTransaksi->details as $oldDetail) {
                     $barang = Barang::find($oldDetail->barang_id);
@@ -215,7 +215,7 @@ new class extends Component {
                 }
             }
 
-            // === Hapus detail lama & replace dengan yang baru ===
+            // --- Hapus detail lama & replace dengan yang baru ---
             $stokTransaksi->details()->delete();
 
             foreach ($detailData as $d) {
@@ -229,7 +229,7 @@ new class extends Component {
             }
         }
 
-        // === 3. Update Transaksi Pendapatan (Kredit Utama) ===
+        // --- 3. Update Transaksi Pendapatan (Kredit Utama) ---
         $this->transaksi->update([
             'name' => $this->name,
             'user_id' => $this->user_id,

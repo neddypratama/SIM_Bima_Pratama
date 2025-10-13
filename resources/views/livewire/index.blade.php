@@ -445,7 +445,7 @@ new class extends Component {
                 <x-select wire:model.live="period" :options="$periods" option-label="name" option-value="id"
                     option-description="hint" class="w-full" />
 
-                @if ($period === 'custom')
+                @if ($period == 'custom')
                     <form wire:submit.prevent="applyDateRange" class="space-y-3">
                         <div class="flex flex-col md:flex-row gap-3">
                             <x-input type="date" label="Dari Tanggal" wire:model="startDate" :max="now()->format('Y-m-d')"

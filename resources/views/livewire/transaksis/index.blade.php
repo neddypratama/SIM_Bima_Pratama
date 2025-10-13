@@ -122,11 +122,11 @@ new class extends Component {
 
     <x-card>
         <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination>
-            @scope('actions', $transaksi)
+            {{-- @scope('actions', $transaksi)
                 <x-button icon="o-trash" wire:click="delete({{ $transaksi['id'] }})"
                     wire:confirm="Yakin ingin menghapus {{ $transaksi['name'] }}?" spinner
                     class="btn-ghost btn-sm text-red-500" />
-            @endscope
+            @endscope --}}
         </x-table>
     </x-card>
 
