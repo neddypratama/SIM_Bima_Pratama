@@ -118,7 +118,7 @@ new class extends Component {
             if ($barang) {
                 $this->details[$index]['max_qty'] = $barang->stok;
                 $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
-                $this->details[$index]['hpp'] = 0;
+                $this->details[$index]['hpp'] = (float) $barang->hpp ?? 0;
             }
         }
 
@@ -224,7 +224,6 @@ new class extends Component {
                 'client_id' => $this->client_id,
                 'type' => 'Debit',
                 'total' => $totalTransaksi,
-                'linked_id' => $transaksi->id,
             ]);
 
             foreach ($detailData as $d) {
@@ -241,8 +240,11 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => 'Kredit',
             'total' => $totalTransaksi,
-            'linked_id' => $transaksi->id ?? null,
         ]);
+
+        // Hubungkan HPP ↔ Stok
+        $hpp->linkedTransaksis()->attach($stok->id);
+        $stok->linkedTransaksis()->attach($hpp->id);
 
         foreach ($detailData as $d) {
             DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id]));
@@ -303,7 +305,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="sm:col-span-2">
                             <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Pembelian Telur Ayam Ras" />
+                                placeholder="Contoh: Penjualan Sentrat" />
                         </div>
                         <x-select-group wire:model="client_id" label="Client" :options="$clients"
                             placeholder="Pilih Client" />
@@ -331,18 +333,24 @@ new class extends Component {
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
-                            <x-input label="Harga Standart" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
-                            <x-input label="HPP" wire:model.live="details.{{ $index }}.hpp" prefix="Rp "
-                                money="IDR" />
+                            <x-input label="Barang" :value="$pokok->firstWhere('id', $item['barang_id'])?->name ?? '-'" readonly />
+                            <x-input label="Harga Pokok (HPP)" :value="number_format(
+                                $item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0),
+                                0,
+                                ',',
+                                '.',
+                            )" prefix="Rp" readonly />
+
                             <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
                             <x-input label="Total HPP" :value="number_format(
                                 ($item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)) *
                                     ($item['kuantitas'] ?? 0),
                                 0,
-                                '.',
                                 ',',
+                                '.',
                             )" prefix="Rp" readonly />
                         </div>
+
                         <div class="flex justify-end">
                             <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
                                 class="btn-error btn-sm" label="Hapus Item" />

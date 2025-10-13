@@ -64,11 +64,12 @@ new class extends Component {
     {
         // Ambil transaksi utama berdasarkan $id
         $transaksi = Transaksi::findOrFail($id);
+        $inv = substr($transaksi->invoice, -4);
 
         // Ambil HPP & Stok berdasarkan linked_id = transaksi utama
-        $hpp = Transaksi::where('linked_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'HPP'))->first();
+        $hpp = Transaksi::where('invoice', $inv)->whereHas('kategori', fn($q) => $q->where('name', 'HPP'))->first();
 
-        $stok = Transaksi::where('linked_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first();
+        $stok = Transaksi::where('invoice', $inv)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->first();
 
         // ✅ Kembalikan stok barang sebelum hapus detail stok
         if ($stok) {

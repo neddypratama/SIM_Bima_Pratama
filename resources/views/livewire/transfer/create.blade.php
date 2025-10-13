@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -50,17 +51,24 @@ new class extends Component {
             'users' => User::all(),
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
             // 🔥 Group Transaksi untuk x-select-group
-            'transaksi' => Transaksi::with('kategori')
-                ->whereNull('linked_id') // ✅ Ambil hanya transaksi yang belum di-relasikan
+            'transaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type', 'linked.linkedTransaksi'])
+                ->whereHas('kategori', function ($q) {
+                    $q->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
+                })
                 ->get()
-                ->groupBy(fn($t) => $t->kategori->type) // ✅ Group by kategori.name
+                ->filter(function ($t) {
+                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
+                    return $t->linked->isEmpty() || ($t->total - $totalLinked) > 0;
+                })
+                ->groupBy(fn($t) => $t->kategori->type ?? 'Tanpa Kategori')
                 ->mapWithKeys(
                     fn($group, $label) => [
                         $label => $group
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . " | " . ($t->client->name ?? 'Tanpa Client'),
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total)) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0),
                                 ],
                             )
                             ->values()
@@ -97,7 +105,7 @@ new class extends Component {
 
         $this->client_id = Transaksi::findOrFail($this->linked_id)->client_id;
 
-        $stok = Transaksi::create([
+        $tunai = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -106,12 +114,11 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => $this->linked_id,
         ]);
 
-        $transaksi = Transaksi::find($this->linked_id);
-        $transaksi->update([
-            'linked_id' => $stok->id,
+        TransaksiLink::create([
+            'transaksi_id' => $this->linked_id,
+            'linked_id' => $tunai->id,
         ]);
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/transfer');

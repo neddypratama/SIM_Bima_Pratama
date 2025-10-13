@@ -14,14 +14,13 @@ return new class extends Migration
         Schema::create('transaksis', function (Blueprint $table) {
             $table->id();
             $table->string('invoice')->unique();
-            $table->date('tanggal');
+            $table->datetime('tanggal');
             $table->string('name');
             $table->enum('type', ['Kredit', 'Debit']);
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('client_id')->nullable()->constrained('clients');
             $table->foreignId('kategori_id')->constrained('kategoris');
             $table->integer('total')->default(0);
-            $table->foreignId('linked_id')->nullable()->constrained('transaksis');
             $table->timestamps();
         });
     }

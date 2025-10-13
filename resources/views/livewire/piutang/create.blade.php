@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -55,21 +56,25 @@ new class extends Component {
             'users' => User::all(),
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
             'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'like', '%Piutang%')->get(),
-            'optionType' => [['id' => 'Kredit', 'name' => 'Piutang Bertambah'], ['id' => 'Debit', 'name' => 'Piutang Berkurang']],
-            'transaksi' => Transaksi::with('kategori')
-                ->whereNull('linked_id')
-                ->whereHas('kategori', function ($query) {
-                    $query->where('type', 'Pendapatan'); // ✅ hanya ambil kategori tipe Aset dan Beban
+            'optionType' => [['id' => 'Debit', 'name' => 'Piutang Bertambah'], ['id' => 'Kredit', 'name' => 'Piutang Berkurang']],
+            'transaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type', 'linked.linkedTransaksi'])
+                ->whereHas('kategori', function ($q) {
+                    $q->where('type', 'like', '%Pendapatan%');
                 })
                 ->get()
-                ->groupBy(fn($t) => $t->kategori->type) // ✅ Group by kategori.name
+                ->filter(function ($t) {
+                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
+                    return $t->linked->isEmpty() || ($t->total - $totalLinked) > 0;
+                })
+                ->groupBy(fn($t) => $t->kategori->type ?? 'Tanpa Kategori')
                 ->mapWithKeys(
                     fn($group, $label) => [
                         $label => $group
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format(max(0, $t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0))) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0),
                                 ],
                             )
                             ->values()
@@ -114,15 +119,18 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => $this->linked_id ?? null,
+        ]);
+        // Hubungkan HPP ↔ Stok
+        TransaksiLink::create([
+            'transaksi_id' => $this->linked_id,
+            'linked_id' => $beban->id,
         ]);
 
-        if ($this->linked_id != null) {
-            $transaksi = Transaksi::find($this->linked_id);
-            $transaksi->update([
-                'linked_id' => $beban->id,
-            ]);
-        }
+        TransaksiLink::create([
+            'transaksi_id' => $beban->id,
+            'linked_id' => $this->linked_id,
+        ]);
+
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/piutang');
     }
 };
@@ -145,11 +153,14 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Rincian" wire:model="name" />
+                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bon Pak Agus" />
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType" placeholder="Pilih Tipe" />
-                        <x-select-group wire:model="client_id" label="Client" :options="$clients" placeholder="Pilih Client" />
-                        <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris" placeholder="Pilih Kategori" />
+                        <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
+                            placeholder="Pilih Tipe" />
+                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                            placeholder="Pilih Client" />
+                        <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
+                            placeholder="Pilih Kategori" />
                     </div>
                 </div>
             </div>
@@ -163,7 +174,7 @@ new class extends Component {
                 </div>
 
                 <div class="col-span-3 grid gap-3">
-                    @if ($type === 'Kredit')
+                    @if ($type == 'Debit')
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="col-span-2">
                                 <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
@@ -183,8 +194,8 @@ new class extends Component {
         <!-- ACTION BUTTONS -->
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/piutang" />
-            <x-button spinner label="Save" icon="o-paper-airplane" spinner="save" type="submit" class="btn-primary" />
+            <x-button spinner label="Save" icon="o-paper-airplane" spinner="save" type="submit"
+                class="btn-primary" />
         </x-slot:actions>
     </x-form>
 </div>
-

@@ -234,7 +234,7 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="col-span-2">
-                            <x-input label="Rincian" wire:model="name" />
+                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Pembelian Sentrat"/>
                         </div>
                         <x-select-group wire:model="client_id" label="Client" :options="$clients"
                             placeholder="Pilih Client" />

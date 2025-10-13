@@ -64,13 +64,10 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        // ✅ Unlink semua transaksi yang punya linked_id = $id
-        Transaksi::where('linked_id', $id)->update(['linked_id' => null]);
+        // ✅ Hapus semua relasi di transaksi_links
+        \App\Models\TransaksiLink::where('transaksi_id', $id)->orWhere('linked_id', $id)->delete();
 
-        // ✅ Hapus semua detail dulu
-        $transaksi->details()->delete();
-
-        // ✅ Baru hapus transaksi utamanya
+        $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');

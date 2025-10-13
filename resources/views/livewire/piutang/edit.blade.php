@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\Kategori;
 use App\Models\Client;
 use App\Models\User;
@@ -46,23 +47,24 @@ new class extends Component {
             'users' => User::all(),
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
             'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'like', '%Piutang%')->get(),
-            'transaksiOptions' => Transaksi::with(['client:id,name', 'kategori:id,name,type'])
-                ->where(function ($query) {
-                    $query->whereNull('linked_id')->orWhere('id', $this->piutang->linked_id); // tampilkan relasi saat ini juga
-                })
-                ->where('id', '!=', $this->piutang->id) // jangan tampilkan dirinya sendiri
-                ->whereHas('kategori', function ($query) {
-                    $query->where('type', 'Pendapatan'); // ✅ hanya ambil kategori tipe Aset dan Beban
+            'transaksiOptions' => Transaksi::with(['client:id,name', 'kategori:id,name,type', 'linked.linkedTransaksi'])
+                ->whereHas('kategori', function ($q) {
+                    $q->where('type', 'like', '%Pendapatan%');
                 })
                 ->get()
-                ->groupBy(fn($t) => $t->kategori->type)
+                ->filter(function ($t) {
+                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
+                    return $t->linked->isEmpty() || ($t->total - $totalLinked) > 0;
+                })
+                ->groupBy(fn($t) => $t->kategori->type ?? 'Tanpa Kategori')
                 ->mapWithKeys(
                     fn($group, $label) => [
                         $label => $group
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total)) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? $transaksiLink),
                                 ],
                             )
                             ->values()
@@ -70,16 +72,16 @@ new class extends Component {
                     ],
                 )
                 ->toArray(),
+
             'optionType' => [['id' => 'Debit', 'name' => 'Piutang Bertambah'], ['id' => 'Kredit', 'name' => 'Piutang Berkurang']],
         ];
     }
 
     public function mount(Transaksi $transaksi): void
     {
-        // Ambil transaksi utama
         $this->piutang = Transaksi::with('kategori')->findOrFail($transaksi->id);
 
-        // Set data form
+        // Set field dasar
         $this->invoice = $this->piutang->invoice;
         $this->name = $this->piutang->name;
         $this->total = $this->piutang->total;
@@ -87,8 +89,22 @@ new class extends Component {
         $this->kategori_id = $this->piutang->kategori_id;
         $this->client_id = $this->piutang->client_id;
         $this->type = $this->piutang->type;
-        $this->linked_id = $this->piutang->linked_id;
         $this->tanggal = \Carbon\Carbon::parse($this->piutang->tanggal)->format('Y-m-d\TH:i');
+
+        // 🔍 Cek apakah transaksi ini muncul sebagai transaksi_id atau linked_id
+        $link = \App\Models\TransaksiLink::where('transaksi_id', $transaksi->id)->orWhere('linked_id', $transaksi->id)->first();
+
+        if ($link) {
+            // Jika transaksi ini ada di sisi transaksi_id, ambil linked_id
+            if ($link->transaksi_id == $transaksi->id) {
+                $this->linked_id = $link->linked_id;
+            } else {
+                // Jika transaksi ini ada di sisi linked_id, ambil transaksi_id
+                $this->linked_id = $link->transaksi_id;
+            }
+        } else {
+            $this->linked_id = null;
+        }
     }
 
     public function save(): void
@@ -97,20 +113,10 @@ new class extends Component {
 
         $stok = Transaksi::findOrFail($this->piutang->id);
 
-        // 1️⃣ Hapus link lama (jika ada dan berbeda dari yang baru)
-        if ($stok->linked_id && $stok->linked_id !== $this->linked_id) {
-            $oldLinked = Transaksi::find($stok->linked_id);
-            if ($oldLinked && $oldLinked->linked_id === $stok->id) {
-                $oldLinked->update(['linked_id' => null]);
-            }
-        }
+        // 1️⃣ Hapus link lama (jika ada)
+        $stok->linkedTransaksis()->detach(); // hapus semua link lama
 
-        // Jika ada transaksi yang terhubung (linked)
-        if ($this->linked_id != null) {
-            $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
-        }
-
-        // Update transaksi utama
+        // 2️⃣ Update transaksi utama
         $this->piutang->update([
             'invoice' => $this->invoice,
             'name' => $this->name,
@@ -120,15 +126,12 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => $this->linked_id,
+            // tidak perlu linked_id di sini
         ]);
 
-        // 3️⃣ Update relasi baru (jika ada)
-        if ($this->linked_id) {
-            $linked = Transaksi::find($this->linked_id);
-            if ($linked) {
-                $linked->update(['linked_id' => $stok->id]);
-            }
+        // 3️⃣ Buat relasi baru jika ada
+        if (!empty($this->linked_id)) {
+            $this->piutang->linkedTransaksis()->attach($this->linked_id);
         }
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/piutang');
@@ -155,9 +158,12 @@ new class extends Component {
                     </div>
                     <x-input label="Rincian" wire:model="name" />
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType" placeholder="Pilih Tipe" />
-                        <x-select-group wire:model="client_id" label="Client" :options="$clients" placeholder="Pilih Client" />
-                        <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris" placeholder="Pilih Kategori" />
+                        <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
+                            placeholder="Pilih Tipe" />
+                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
+                            placeholder="Pilih Client" />
+                        <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
+                            placeholder="Pilih Kategori" />
                     </div>
                 </div>
             </div>
@@ -171,7 +177,7 @@ new class extends Component {
                 </div>
 
                 <div class="col-span-3 grid gap-3">
-                    @if ($type === 'Kredit')
+                    @if ($type == 'Debit')
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="col-span-2">
                                 <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksiOptions"

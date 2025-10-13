@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -68,20 +69,24 @@ new class extends Component {
                 ->toArray(),
             'kategoris' => Kategori::where('type', 'like', '%Liabilitas%')->orWhere('name', 'like', '%Hutang%')->get(),
             'optionType' => [['id' => 'Kredit', 'name' => 'Hutang Bertambah'], ['id' => 'Debit', 'name' => 'Hutang Berkurang']],
-            'transaksi' => Transaksi::with('kategori')
-                ->whereNull('linked_id')
-                ->whereHas('kategori', function ($query) {
-                    $query->where('type', 'Aset'); // ✅ hanya ambil kategori tipe Aset dan Beban
+            'transaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type', 'linked.linkedTransaksi'])
+                ->whereHas('kategori', function ($q) {
+                    $q->where('type', 'not like', '%Kas%')->where('name', 'not like', '%Bank%')->where('type', 'like', '%Aset%');
                 })
                 ->get()
-                ->groupBy(fn($t) => $t->kategori->type) // ✅ Group by kategori.name
+                ->filter(function ($t) {
+                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
+                    return $t->linked->isEmpty() || ($t->total - $totalLinked) > 0;
+                })
+                ->groupBy(fn($t) => $t->kategori->type ?? 'Tanpa Kategori')
                 ->mapWithKeys(
                     fn($group, $label) => [
                         $label => $group
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total)) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0),
                                 ],
                             )
                             ->values()
@@ -128,11 +133,15 @@ new class extends Component {
             'linked_id' => $this->linked_id ?? null,
         ]);
 
-        if ($this->linked_id) {
-            $transaksi = Transaksi::find($this->linked_id);
-            $transaksi?->update(['linked_id' => $beban->id]);
-        }
+        TransaksiLink::create([
+            'transaksi_id' => $this->linked_id,
+            'linked_id' => $beban->id,
+        ]);
 
+        TransaksiLink::create([
+            'transaksi_id' => $beban->id ,
+            'linked_id' => $this->linked_id,
+        ]);
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/hutang');
     }
 };
@@ -155,7 +164,7 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Rincian" wire:model="name" />
+                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Titipan Pak Agus"/>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
                             placeholder="Pilih Tipe" />
@@ -176,7 +185,7 @@ new class extends Component {
                 </div>
 
                 <div class="col-span-3 grid gap-3">
-                    @if ($type === 'Kredit')
+                    @if ($type == 'Kredit')
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="col-span-2">
                                 <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"

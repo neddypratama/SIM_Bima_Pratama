@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -50,20 +51,24 @@ new class extends Component {
         return [
             'users' => User::all(),
             'clients' => Client::all()->groupBy('type')->mapWithKeys(fn($group, $type) => [$type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray()])->toArray(),
-            'listTransaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type'])
-                ->where(function ($query) {
-                    $query->whereNull('linked_id')->orWhere('id', $this->transaksi->linked_id); // tampilkan relasi saat ini juga
+            'listTransaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type', 'linked.linkedTransaksi'])
+                ->whereHas('kategori', function ($q) {
+                    $q->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
                 })
-                ->where('id', '!=', $this->transaksi->id) // jangan tampilkan dirinya sendiri
                 ->get()
-                ->groupBy(fn($t) => $t->kategori->type)
+                ->filter(function ($t) {
+                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
+                    return $t->linked->isEmpty() || ($t->total - $totalLinked) > 0;
+                })
+                ->groupBy(fn($t) => $t->kategori->type ?? 'Tanpa Kategori')
                 ->mapWithKeys(
                     fn($group, $label) => [
                         $label => $group
                             ->map(
                                 fn($t) => [
                                     'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total) . " | " . ($t->client->name ?? 'Tanpa Client'),
+                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total)) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
+                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0),
                                 ],
                             )
                             ->values()
@@ -71,7 +76,6 @@ new class extends Component {
                     ],
                 )
                 ->toArray(),
-
             'optionType' => [['id' => 'Debit', 'name' => 'Kas Masuk'], ['id' => 'Kredit', 'name' => 'Kas Keluar']],
         ];
     }
@@ -87,7 +91,20 @@ new class extends Component {
         $this->client_id = $transaksi->client_id;
         $this->kategori_id = $transaksi->kategori_id;
         $this->type = $transaksi->type;
-        $this->linked_id = $transaksi->linked_id;
+        // 🔍 Cek apakah transaksi ini muncul sebagai transaksi_id atau linked_id
+        $link = \App\Models\TransaksiLink::where('transaksi_id', $transaksi->id)->orWhere('linked_id', $transaksi->id)->first();
+
+        if ($link) {
+            // Jika transaksi ini ada di sisi transaksi_id, ambil linked_id
+            if ($link->transaksi_id == $transaksi->id) {
+                $this->linked_id = $link->linked_id;
+            } else {
+                // Jika transaksi ini ada di sisi linked_id, ambil transaksi_id
+                $this->linked_id = $link->transaksi_id;
+            }
+        } else {
+            $this->linked_id = null;
+        }
         $this->total = $transaksi->total;
         $this->tanggal = Carbon::parse($transaksi->tanggal)->format('Y-m-d\TH:i:s');
 
@@ -106,23 +123,10 @@ new class extends Component {
     {
         $this->validate();
 
-        $stok = Transaksi::findOrFail($this->transaksi->id);
+        $tunai = $this->transaksi;
 
-        // 1️⃣ Hapus link lama (jika ada dan berbeda dari yang baru)
-        if ($stok->linked_id && $stok->linked_id !== $this->linked_id) {
-            $oldLinked = Transaksi::find($stok->linked_id);
-            if ($oldLinked && $oldLinked->linked_id === $stok->id) {
-                $oldLinked->update(['linked_id' => null]);
-            }
-        }
-
-        // Jika ada transaksi yang terhubung (linked)
-        if ($this->linked_id) {
-            $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
-        }
-
-        // 2️⃣ Update transaksi utama
-        $stok->update([
+        // Update transaksi utama
+        $tunai->update([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -131,15 +135,22 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => $this->linked_id,
         ]);
 
-        // 3️⃣ Update relasi baru (jika ada)
+        // Hapus link lama
+        $tunai->linked()->delete();
+
+        // Buat link baru jika ada
         if ($this->linked_id) {
-            $linked = Transaksi::find($this->linked_id);
-            if ($linked) {
-                $linked->update(['linked_id' => $stok->id]);
-            }
+            TransaksiLink::create([
+                'transaksi_id' => $tunai->id,
+                'linked_id' => $this->linked_id,
+            ]);
+
+            TransaksiLink::create([
+                'transaksi_id' => $this->linked_id,
+                'linked_id' => $tunai->id,
+            ]);
         }
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/tunai');

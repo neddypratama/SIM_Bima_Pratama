@@ -43,31 +43,16 @@ Route::middleware('auth')->group(function() {
         Volt::route('/kategoris', 'kategoris.index');
 
         Volt::route('/transaksis', 'transaksis.index');
-        Volt::route('/transaksis/create', 'transaksis.create');
-        Volt::route('/transaksis/{transaksi}/edit', 'transaksis.edit'); 
+        // Volt::route('/transaksis/create', 'transaksis.create');
+        Volt::route('/transaksis/{transaksi}/show', 'transaksis.show'); 
     });
 
-    // User Telur dan Tray
+    // User Pembelian Telur 
     Route::middleware('role:1,3')->group(function () {
         Volt::route('/telur-masuk', 'telur-masuk.index');
         Volt::route('/telur-masuk/create', 'telur-masuk.create');
         Volt::route('/telur-masuk/{transaksi}/edit', 'telur-masuk.edit');
         Volt::route('/telur-masuk/{transaksi}/show', 'telur-masuk.show');
-    
-        Volt::route('/telur-keluar', 'telur-keluar.index');
-        Volt::route('/telur-keluar/create', 'telur-keluar.create');
-        Volt::route('/telur-keluar/{transaksi}/edit', 'telur-keluar.edit');
-        Volt::route('/telur-keluar/{transaksi}/show', 'telur-keluar.show');
-
-        Volt::route('/tray-masuk', 'tray-masuk.index');
-        Volt::route('/tray-masuk/create', 'tray-masuk.create');
-        Volt::route('/tray-masuk/{transaksi}/edit', 'tray-masuk.edit');
-        Volt::route('/tray-masuk/{transaksi}/show', 'tray-masuk.show');
-    
-        Volt::route('/tray-keluar', 'tray-keluar.index');
-        Volt::route('/tray-keluar/create', 'tray-keluar.create');
-        Volt::route('/tray-keluar/{transaksi}/edit', 'tray-keluar.edit');
-        Volt::route('/tray-keluar/{transaksi}/show', 'tray-keluar.show');
     });
 
     // User Pakan dan Obat
@@ -99,6 +84,17 @@ Route::middleware('auth')->group(function() {
         Volt::route('/tunai/create', 'tunai.create');
         Volt::route('/tunai/{transaksi}/edit', 'tunai.edit');
         Volt::route('/tunai/{transaksi}/show', 'tunai.show');
+
+        // User Piutang dan Hutang Pegawai, Peternak, dan Pedagang
+        Volt::route('/piutang', 'piutang.index');
+        Volt::route('/piutang/create', 'piutang.create');
+        Volt::route('/piutang/{transaksi}/edit', 'piutang.edit');
+        Volt::route('/piutang/{transaksi}/show', 'piutang.show');
+    
+        Volt::route('/hutang', 'hutang.index');
+        Volt::route('/hutang/create', 'hutang.create');
+        Volt::route('/hutang/{transaksi}/edit', 'hutang.edit');
+        Volt::route('/hutang/{transaksi}/show', 'hutang.show');
     });
 
 
@@ -108,6 +104,22 @@ Route::middleware('auth')->group(function() {
         Volt::route('/transfer/create', 'transfer.create');
         Volt::route('/transfer/{transaksi}/edit', 'transfer.edit');
         Volt::route('/transfer/{transaksi}/show', 'transfer.show');
+
+        // User Penjualan Telur dan Tray
+        Volt::route('/telur-keluar', 'telur-keluar.index');
+        Volt::route('/telur-keluar/create', 'telur-keluar.create');
+        Volt::route('/telur-keluar/{transaksi}/edit', 'telur-keluar.edit');
+        Volt::route('/telur-keluar/{transaksi}/show', 'telur-keluar.show');
+
+        Volt::route('/tray-masuk', 'tray-masuk.index');
+        Volt::route('/tray-masuk/create', 'tray-masuk.create');
+        Volt::route('/tray-masuk/{transaksi}/edit', 'tray-masuk.edit');
+        Volt::route('/tray-masuk/{transaksi}/show', 'tray-masuk.show');
+    
+        Volt::route('/tray-keluar', 'tray-keluar.index');
+        Volt::route('/tray-keluar/create', 'tray-keluar.create');
+        Volt::route('/tray-keluar/{transaksi}/edit', 'tray-keluar.edit');
+        Volt::route('/tray-keluar/{transaksi}/show', 'tray-keluar.show');
     });
 
     // User Kas Tunai dan Kas Bank pendapatan lainnya dan beban
@@ -124,21 +136,8 @@ Route::middleware('auth')->group(function() {
         Volt::route('/beban/{transaksi}/show', 'beban.show');
     });
 
-    // User Piutang dan Hutang Pegawai, Peternak, dan Pedagang
-    Route::middleware('role:1,7')->group(function () {
-        Volt::route('/piutang', 'piutang.index');
-        Volt::route('/piutang/create', 'piutang.create');
-        Volt::route('/piutang/{transaksi}/edit', 'piutang.edit');
-        Volt::route('/piutang/{transaksi}/show', 'piutang.show');
-    
-        Volt::route('/hutang', 'hutang.index');
-        Volt::route('/hutang/create', 'hutang.create');
-        Volt::route('/hutang/{transaksi}/edit', 'hutang.edit');
-        Volt::route('/hutang/{transaksi}/show', 'hutang.show');
-    });
-
     // User Rekap dan Manager
-    Route::middleware('role:1,2,8')->group(function () {
+    Route::middleware('role:1,2,7')->group(function () {
         Volt::route('/laporan-labarugi', 'laporan.labarugi');
         Volt::route('/laporan-neraca-saldo', 'laporan.neraca-saldo');
     });

@@ -10,7 +10,12 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang']);
-        $this->aset = Transaksi::find($transaksi->linked_id)->load(['client', 'kategori', 'details.barang']);
+
+        // Cari transaksi_link di mana transaksi ini adalah linked_id
+        $link = \App\Models\TransaksiLink::where('linked_id', $transaksi->id)->first();
+
+        // Ambil transaksi utama (transaksi_id)
+        $this->aset = $link ? Transaksi::with(['client', 'kategori', 'details.barang'])->find($link->transaksi_id) : new Transaksi();
     }
 };
 ?>
@@ -74,7 +79,8 @@ new class extends Component {
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Total</p>
-                        <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
+                        <p class="font-semibold">Rp
+                            {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Type</p>
@@ -153,7 +159,8 @@ new class extends Component {
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Total</p>
-                        <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
+                        <p class="font-semibold">Rp
+                            {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <p class="mb-1 text-gray-500">Type</p>

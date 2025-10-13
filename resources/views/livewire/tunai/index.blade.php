@@ -62,16 +62,13 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        // ✅ Unlink semua transaksi yang punya linked_id = $id
-        Transaksi::where('linked_id', $id)->update(['linked_id' => null]);
+        // ✅ Hapus semua relasi di transaksi_links
+        \App\Models\TransaksiLink::where('transaksi_id', $id)->orWhere('linked_id', $id)->delete();
 
-        // ✅ Hapus semua detail dulu
-        $transaksi->details()->delete();
-
-        // ✅ Baru hapus transaksi utamanya
+        $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
 
-        $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
+        $this->warning("Transaksi $id dan semua detailnya berhasil dihapus" , position: 'toast-top');
     }
 
     public function headers(): array
@@ -176,7 +173,8 @@ new class extends Component {
         </x-table>
     </x-card>
 
-    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
+    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button
+        class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />

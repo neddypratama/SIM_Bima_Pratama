@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Transaksi extends Model
 {
     protected $table = 'transaksis';
-    protected $fillable = ['invoice', 'tanggal', 'name', 'type', 'total', 'user_id', 'client_id', 'kategori_id', 'linked_id'];
+    protected $fillable = ['invoice', 'tanggal', 'name', 'type', 'total', 'user_id', 'client_id', 'kategori_id'];
 
     public function user()
     {
@@ -31,16 +31,16 @@ class Transaksi extends Model
         return $this->belongsTo(Kategori::class);
     }
 
-    public function link(): BelongsTo
+    // di Transaksi.php
+    public function linked()
     {
-        return $this->belongsTo(Transaksi::class, 'linked_id');
+        return $this->hasMany(TransaksiLink::class, 'transaksi_id');
     }
 
-    /**
-     * Relasi kebalikan, transaksi ini punya transaksi lain yang terhubung.
-     */
-    public function linkKas(): HasOne
+    public function linkedTransaksis()
     {
-        return $this->hasOne(Transaksi::class, 'linked_id');
+        return $this->belongsToMany(Transaksi::class, 'transaksi_links', 'transaksi_id', 'linked_id');
     }
+
+
 }

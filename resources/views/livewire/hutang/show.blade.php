@@ -9,12 +9,13 @@ new class extends Component {
 
     public function mount(Transaksi $transaksi): void
     {
-        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang', 'user']);
+        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang']);
 
-        if ($this->transaksi->linked_id) {
-            $this->aset = Transaksi::with(['client', 'kategori', 'details.barang', 'user'])
-                ->find($this->transaksi->linked_id);
-        }
+        // Cari transaksi_link di mana transaksi ini adalah linked_id
+        $link = \App\Models\TransaksiLink::where('linked_id', $transaksi->id)->first();
+
+        // Ambil transaksi utama (transaksi_id)
+        $this->aset = $link ? Transaksi::with(['client', 'kategori', 'details.barang'])->find($link->transaksi_id) : new Transaksi();
     }
 };
 ?>

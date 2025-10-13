@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -113,7 +114,7 @@ new class extends Component {
             if ($barang) {
                 $this->details[$index]['max_qty'] = $barang->stok;
                 $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
-                $this->details[$index]['hpp'] = 0;
+                $this->details[$index]['hpp'] = (float) $barang->hpp;
             }
         }
 
@@ -219,7 +220,6 @@ new class extends Component {
                 'client_id' => $this->client_id,
                 'type' => 'Debit',
                 'total' => $totalTransaksi,
-                'linked_id' => $transaksi->id,
             ]);
 
             foreach ($detailData as $d) {
@@ -236,7 +236,11 @@ new class extends Component {
             'client_id' => $this->client_id,
             'type' => 'Kredit',
             'total' => $totalTransaksi,
-            'linked_id' => $transaksi->id ?? null,
+        ]);
+
+        TransaksiLink::create([
+            'transaksi_id' => $hpp->id,
+            'linked_id' => $stok->id,
         ]);
 
         foreach ($detailData as $d) {
@@ -317,24 +321,29 @@ new class extends Component {
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
                             <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
-                            <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value" prefix="Rp "
-                                money="IDR" />
+                            <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
+                                prefix="Rp " money="IDR" />
                             <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
                                 wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
                                 :max="$item['max_qty'] ?? null" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
-                            <x-input label="Harga Standart" :value="number_format($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)" readonly />
-                            <x-input label="HPP" wire:model.live="details.{{ $index }}.hpp" prefix="Rp "
-                                money="IDR" />
+                            <x-input label="Barang" :value="$pokok->firstWhere('id', $item['barang_id'])?->name ?? '-'" readonly />
+                            <x-input label="Harga Pokok (HPP)" :value="number_format(
+                                $item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0),
+                                0,
+                                ',',
+                                '.',
+                            )" prefix="Rp" readonly />
+
                             <x-input label="Qty" :value="$item['kuantitas'] ?? 0" readonly />
                             <x-input label="Total HPP" :value="number_format(
                                 ($item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0)) *
                                     ($item['kuantitas'] ?? 0),
                                 0,
-                                '.',
                                 ',',
+                                '.',
                             )" prefix="Rp" readonly />
                         </div>
                         <div class="flex justify-end">
