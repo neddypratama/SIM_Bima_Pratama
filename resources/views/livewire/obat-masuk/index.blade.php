@@ -12,6 +12,7 @@ use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Exports\PembelianObatExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 new class extends Component {
     use Toast;
@@ -28,6 +29,13 @@ new class extends Component {
     // ✅ Tambah tanggal untuk filter export
     public ?string $startDate = null;
     public ?string $endDate = null;
+
+    public $today;
+
+    public function mount(): void
+    {
+        $this->today = \Carbon\Carbon::today();
+    }
 
     public $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
 
@@ -161,18 +169,22 @@ new class extends Component {
     <!-- TABLE -->
     <x-card class="overflow-x-auto">
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="obat-masuk/{id}/edit?invoice={invoice}">
+            link="obat-masuk/{id}/show?invoice={invoice}">
             @scope('cell-kategori.name', $transaksi)
                 {{ $transaksi->kategori?->name ?? '-' }}
             @endscope
 
             @scope('actions', $transaksi)
                 <div class="flex">
+                    @if (Auth::user()->role_id == 1)
                     <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
                         wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                         class="btn-ghost btn-sm text-red-500" />
-                    <x-button icon="o-eye" link="/obat-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
+                    @endif
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                    <x-button icon="o-pencil" link="/obat-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                         class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
                 </div>
             @endscope
         </x-table>
