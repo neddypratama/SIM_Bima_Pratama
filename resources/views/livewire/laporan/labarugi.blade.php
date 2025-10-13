@@ -100,8 +100,8 @@ new class extends Component {
         <x-slot:actions>
             <x-button wire:click="export" icon="fas.download" primary>Export Excel</x-button>
             <div class="flex gap-4 items-end">
-                <x-input type="date" label="Dari Tanggal" wire:model="startDate" />
-                <x-input type="date" label="Sampai Tanggal" wire:model="endDate" />
+                <x-input type="date" label="Dari Tanggal" wire:model.live="startDate" />
+                <x-input type="date" label="Sampai Tanggal" wire:model.live="endDate" />
             </div>
         </x-slot:actions>
     </x-header>
