@@ -12,10 +12,17 @@ use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Exports\PembelianTrayExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 new class extends Component {
     use Toast;
     use WithPagination;
+
+    public $today;
+    public function mount(): void
+    {
+        $this->today = \Carbon\Carbon::today();
+    }
 
     public string $search = '';
     public bool $drawer = false;
@@ -23,7 +30,7 @@ new class extends Component {
     public int $filter = 0;
     public int $perPage = 10;
     public int $client_id = 0;
-    
+
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
     public ?string $startDate = null;
@@ -138,8 +145,8 @@ new class extends Component {
     <x-header title="Transaksi Pembelian Tray" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
-            <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-            <x-button label="Create" link="/tray-masuk/create" responsive icon="o-plus" class="btn-primary" />
+                <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
+                <x-button label="Create" link="/tray-masuk/create" responsive icon="o-plus" class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-header>
@@ -160,25 +167,31 @@ new class extends Component {
 
     <x-card class="overflow-x-auto">
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="tray-masuk/{id}/edit?invoice={invoice}">
+            link="tray-masuk/{id}/show?invoice={invoice}">
             @scope('cell-kategori.name', $transaksi)
                 {{ $transaksi->kategori?->name ?? '-' }}
             @endscope
 
             @scope('actions', $transaksi)
                 <div class="flex">
-                    <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
-                        wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
-                        class="btn-ghost btn-sm text-red-500" />
-                    <x-button icon="o-eye" link="/tray-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
-                        class="btn-ghost btn-sm text-yellow-500" />
+                    @if (Auth::user()->role_id == 1)
+                        <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-red-500" />
+                    @endif
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                        <x-button icon="o-pencil"
+                            link="/tray-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
                 </div>
             @endscope
         </x-table>
     </x-card>
 
     <!-- FILTER DRAWER -->
-    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
+    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button
+        class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />

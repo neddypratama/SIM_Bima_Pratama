@@ -96,7 +96,7 @@ new class extends Component {
     <x-header title="Neraca Saldo" separator>
         <x-slot:actions>
             <x-button wire:click="export" icon="fas.download" primary>Export Excel</x-button>
-            <div class="flex gap-4 items-end">
+            <div class="flex grid grid-cols-1 md:grid-cols-2 items-end">
                 <x-input type="date" label="Dari Tanggal" wire:model.live="startDate" />
                 <x-input type="date" label="Sampai Tanggal" wire:model.live="endDate" />
             </div>

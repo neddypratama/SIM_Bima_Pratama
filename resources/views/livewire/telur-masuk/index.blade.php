@@ -12,10 +12,17 @@ use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Exports\PembelianTelurExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 new class extends Component {
     use Toast;
     use WithPagination;
+
+    public $today;
+    public function mount(): void
+    {
+        $this->today = \Carbon\Carbon::today();
+    }
 
     public string $search = '';
     public bool $drawer = false;
@@ -165,23 +172,27 @@ new class extends Component {
 
     <!-- TABLE -->
     <x-card class="overflow-x-auto">
-            <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-                link="telur-masuk/{id}/edit?invoice={invoice}">
-                @scope('cell-kategori.name', $transaksi)
-                    {{ $transaksi->kategori?->name ?? '-' }}
-                @endscope
+        <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
+            link="telur-masuk/{id}/shi=ow?invoice={invoice}">
+            @scope('cell-kategori.name', $transaksi)
+                {{ $transaksi->kategori?->name ?? '-' }}
+            @endscope
 
-                @scope('actions', $transaksi)
+            @scope('actions', $transaksi)
                 <div class="flex">
-                        <x-button icon="o-eye"
-                            link="/telur-masuk/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
-                            class="btn-ghost btn-sm text-yellow-500" />
+                    @if (Auth::user()->role_id == 1)
                         <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
+                    @endif
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                        <x-button icon="o-pencil"
+                            link="/telur-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
                 </div>
-                @endscope
-            </x-table>
+            @endscope
+        </x-table>
     </x-card>
 
     <!-- DRAWER FILTER -->
@@ -201,7 +212,7 @@ new class extends Component {
     </x-drawer>
 
     <!-- MODAL EXPORT -->
-    <x-modal wire:model="exportModal" title="Export Data" separator >
+    <x-modal wire:model="exportModal" title="Export Data" separator>
         <div class="grid gap-4">
             <x-input label="Start Date" type="date" wire:model="startDate" />
             <x-input label="End Date" type="date" wire:model="endDate" />

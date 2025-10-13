@@ -13,10 +13,18 @@ use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Exports\PenjualanTrayExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 new class extends Component {
     use Toast;
     use WithPagination;
+
+    public $today;
+
+    public function mount(): void
+    {
+        $this->today = \Carbon\Carbon::today();
+    }
 
     public string $search = '';
     public bool $drawer = false;
@@ -196,12 +204,16 @@ new class extends Component {
 
             @scope('actions', $transaksi)
                 <div class="flex">
-                    <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
+                    @if (Auth::user()->role_id == 1)
+                         <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
                         wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                         class="btn-ghost btn-sm text-red-500" />
-                    <x-button icon="o-eye"
-                        link="/tray-keluar/{{ $transaksi->id }}/show?invoice={{ $transaksi->invoice }}"
-                        class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                        <x-button icon="o-pencil"
+                            link="/tray-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
                 </div>
             @endscope
         </x-table>
