@@ -57,7 +57,7 @@ new class extends Component {
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
                 'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
-                'hpp' => $detail->value,
+                'hpp' => Barang::find($detail->barang_id)->hpp,
             ];
         }
 
@@ -123,7 +123,6 @@ new class extends Component {
     public function save(): void
     {
         $this->validate([
-            'name' => 'required',
             'details' => 'required|array|min:1',
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
@@ -146,6 +145,8 @@ new class extends Component {
         $stokTransaksi = Transaksi::where('invoice', 'like', "%$inv")
             ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Telur'))
             ->first();
+
+        // dd($hppTransaksi, $stokTransaksi);
 
         $kategoriTelur = Kategori::where('name', 'Stok Telur')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
@@ -217,7 +218,7 @@ new class extends Component {
             $stokTransaksi->details()->delete();
 
             foreach ($detailData as $d) {
-                $stokTransaksi->details()->create(array_merge($d, ['transaksi_id' => $stokTransaksi->id, 'kategori_id' => $kategoriHpp->id]));
+                $stokTransaksi->details()->create(array_merge($d, ['transaksi_id' => $stokTransaksi->id, 'kategori_id' => $kategoriTelur->id]));
 
                 // kurangi stok sesuai kuantitas baru
                 $barang = Barang::find($d['barang_id']);

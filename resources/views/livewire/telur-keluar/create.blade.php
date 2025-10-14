@@ -163,6 +163,8 @@ new class extends Component {
         $kategoriTelur = Kategori::where('name', 'Stok Telur')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
 
+        // dd($kategoriTelur, $kategoriHpp);
+
         $totalTransaksi = 0;
         $detailData = [];
 
