@@ -33,9 +33,6 @@ new class extends Component {
     #[Rule('required')]
     public ?int $client_id = null;
 
-    #[Rule('required')]
-    public ?int $kategori_id = null;
-
     public ?string $tanggal = null;
 
     #[Rule('required|array|min:1')]
@@ -59,16 +56,7 @@ new class extends Component {
                     $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Pengeluaran%');
                 })
                 ->get(),
-            'clients' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'clients' => Client::where('type', 'like', '%Pedagang%')->get(),
         ];
     }
 
@@ -85,6 +73,7 @@ new class extends Component {
         if ($kategori) {
             if (empty($this->details)) {
                 $this->details[] = [
+                    'kategori_id' => null,
                     'barang_id' => null,
                     'value' => 0,
                     'kuantitas' => 1,
@@ -159,6 +148,7 @@ new class extends Component {
         $this->validate([
             'details.*.value' => 'required|numeric|min:0',
             'details.*.barang_id' => 'required|exists:barangs,id',
+            'details.*.kategori_id' => 'required|exists:kategoris,id',
             'details.*.kuantitas' => 'required|integer|min:1',
             'details.*.hpp' => 'required|numeric|min:0',
         ]);
@@ -181,7 +171,6 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'client_id' => $this->client_id,
             'type' => 'Kredit',
             'total' => $this->total,
@@ -190,15 +179,17 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $transaksi->id,
+                'kategori_id' => $item['kategori_id'] ?? null,
                 'value' => (int) $item['value'], // harga satuan
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)), // total harga (harga satuan * qty
             ]);
         }
 
         foreach ($this->details as $item) {
             $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
-                $q->whereHas('kategori', fn($q2) => $q2->where('name', 'Stok Telur'))->where('type', 'Debit');
+                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Telur'))->where('type', 'Debit');
             });
 
             $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
@@ -211,6 +202,7 @@ new class extends Component {
                 'barang_id' => $item['barang_id'],
                 'kuantitas' => $item['kuantitas'] ?? 1,
                 'value' => $item['hpp'] ?? $hargaSatuan,
+                'sub_total' => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)),
             ];
         }
 
@@ -227,7 +219,7 @@ new class extends Component {
             ]);
 
             foreach ($detailData as $d) {
-                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hpp->id]));
+                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hpp->id, 'kategori_id' => $kategoriHpp->id]));
             }
         }
 
@@ -236,25 +228,24 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $kategoriTelur->id,
             'client_id' => $this->client_id,
             'type' => 'Kredit',
             'total' => $totalTransaksi,
         ]);
-        
-        TransaksiLink::create([
-            'transaksi_id' => $hpp->id,
-            'linked_id' => $stok->id,
-        ]);
 
         foreach ($detailData as $d) {
-            DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id]));
+            DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id, 'kategori_id' => $kategoriTelur->id]));
 
             $barang = Barang::find($d['barang_id']);
             if ($barang) {
                 $barang->decrement('stok', $d['kuantitas']);
             }
         }
+
+        TransaksiLink::create([
+            'transaksi_id' => $hpp->id,
+            'linked_id' => $stok->id,
+        ]);
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur-keluar');
     }
@@ -302,12 +293,13 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Penjualan Telur Horn" />
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" />
-                        <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
-                            placeholder="Pilih Kategori" />
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <x-input label="Rincian Transaksi" wire:model="name"
+                                placeholder="Contoh: Penjualan Telur Ayam Ras" />
+                        </div>
+                        <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
+                            placeholder="Pilih Client" searchable single clearable />
                     </div>
                 </div>
             </div>
@@ -321,9 +313,11 @@ new class extends Component {
                 </div>
                 <div class="col-span-3 grid gap-3">
                     @foreach ($details as $index => $item)
+                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori" :options="$kategoris"
+                            placeholder="Pilih Kategori" />
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
-                            <x-select wire:model.lazy="details.{{ $index }}.barang_id" label="Barang"
-                                :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
+                            <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
+                                :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />
                             <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp " money="IDR" />
                             <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"

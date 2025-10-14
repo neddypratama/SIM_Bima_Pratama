@@ -109,9 +109,9 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $query = Transaksi::with('kategori')
+        $query = Transaksi::with('details.kategori')
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('kategori', fn($q) => $q->where('type', 'Pendapatan'));
+            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'));
 
         // Jika kategori tertentu dipilih
         if ($this->selectedKategoriPendapatan) {
@@ -162,9 +162,9 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $query = Transaksi::with('kategori')
+        $query = Transaksi::with('details.kategori')
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('kategori', fn($q) => $q->where('type', 'Pengeluaran'));
+            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'));
 
         // Jika kategori tertentu dipilih
         if ($this->selectedKategoriPengeluaran) {
@@ -353,21 +353,21 @@ new class extends Component {
 
     public function incomeTotal(): float
     {
-        return Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Pendapatan'))
+        return Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->sum('total');
     }
 
     public function expenseTotal(): int
     {
-        return Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Pengeluaran'))
+        return Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->sum('total');
     }
 
     public function assetTotal(): int
     {
-        $transaksis = Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Aset'))
+        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Aset'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -379,7 +379,7 @@ new class extends Component {
 
     public function liabiliatsTotal(): int
     {
-        $transaksis = Transaksi::whereHas('kategori', fn($q) => $q->where('type', 'Liabilitas'))
+        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Liabilitas'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 

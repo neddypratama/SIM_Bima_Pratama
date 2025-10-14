@@ -50,16 +50,7 @@ new class extends Component {
         return [
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'clients' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
         ];
     }
 
@@ -142,7 +133,6 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'client_id' => $this->client_id,
             'type' => 'Debit',
             'total' => $this->total,
@@ -151,9 +141,11 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $stok->id,
+                'kategori_id' => $this->kategori_id,
                 'value' => (int) $item['value'], // harga satuan
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => ((int) $item['value'] ?? 0) * ((int) $item['kuantitas'] ?? 1),
             ]);
 
             $barang = Barang::find($item['barang_id']);
@@ -242,8 +234,8 @@ new class extends Component {
                             <x-input label="Rincian Transaksi" wire:model="name"
                                 placeholder="Contoh: Pembelian Telur Ayam Ras" />
                         </div>
-                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" />
+                        <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
+                            placeholder="Pilih Client" searchable single clearable />
                     </div>
                 </div>
             </div>
@@ -259,11 +251,11 @@ new class extends Component {
                 <div class="col-span-3 grid gap-5">
                     @foreach ($details as $index => $item)
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
-                            <x-select wire:model.live="details.{{ $index }}.barang_id" label="Barang"
-                                :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" />
+                            <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
+                                :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
                             <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp" money="IDR" />
-                            <x-input label="Qty" wire:model.live="details.{{ $index }}.kuantitas"
+                            <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
                                 type="number" min="1" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>

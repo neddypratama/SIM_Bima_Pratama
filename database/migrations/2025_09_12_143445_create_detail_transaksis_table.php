@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::create('detail_transaksis', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaksi_id')->constrained('transaksis');
+            $table->foreignId('kategori_id')->constrained('kategoris');
             $table->foreignId('barang_id')->nullable()->constrained('barangs');
-            $table->integer('kuantitas')->nullable();
             $table->integer('value');
+            $table->integer('kuantitas')->nullable();
+            $table->integer('sub_total');
             $table->timestamps();
         });
     }
