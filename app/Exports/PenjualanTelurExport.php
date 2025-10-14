@@ -7,6 +7,7 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Illuminate\Database\Eloquent\Builder;
 
 class PenjualanTelurExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
 {
@@ -24,9 +25,9 @@ class PenjualanTelurExport implements FromCollection, WithHeadings, ShouldAutoSi
      */
     public function collection()
     {
-        return Transaksi::with(['client', 'kategori', 'details.barang', 'user'])
-            ->where('type', 'Debit')
-            ->whereHas('kategori', function ($q) {
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+            ->where('type', 'Kredit')
+            ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Telur%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
@@ -61,13 +62,15 @@ class PenjualanTelurExport implements FromCollection, WithHeadings, ShouldAutoSi
     {
         $rows = [];
 
+        // dd($transaksi);
+
         foreach ($transaksi->details as $detail) {
             $rows[] = [
                 $transaksi->invoice,
                 $transaksi->name,
                 $transaksi->tanggal,
                 $transaksi->client?->name ?? '-',
-                $transaksi->kategori?->name ?? '-',
+                $detail->kategori?->name ?? '-',
                 $detail->barang?->name ?? '-',
                 $detail->kuantitas,
                 $detail->value ?? 0,
