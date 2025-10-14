@@ -82,6 +82,14 @@ new class extends Component {
             'total' => $this->total,
         ]);
 
+        DetailTransaksi::create([
+            'transaksi_id' => $transaksi->id,
+            'kategori_id' => $this->kategori_id,
+            'value' => $this->total,
+            'kuantitas' => 1,
+            'sub_total' => $this->total,
+        ]);
+
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/lainnya');
     }
 };

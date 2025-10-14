@@ -178,6 +178,7 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'client_id' => $this->client_id,
+            'kategori_id' => $this->kategori_id,
             'tanggal' => $this->tanggal,
             'total' => $this->total,
             'type' => 'Debit',
@@ -190,7 +191,7 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $this->transaksi->id,
-                'kategori_id' => $this->kategori_id ?? null,
+                'kategori_id' => $this->kategori_id,
                 'value' => (int) $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,

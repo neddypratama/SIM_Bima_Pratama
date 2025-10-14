@@ -9,7 +9,7 @@ new class extends Component {
 
     public function mount(Transaksi $transaksi): void
     {
-        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang.satuan']);
+        $this->transaksi = $transaksi->load(['details.kategori', 'details.barang.satuan']);
     }
 };
 ?>
@@ -26,10 +26,6 @@ new class extends Component {
                     <p class="font-semibold">{{ $transaksi->invoice }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Kategori</p>
-                    <p class="font-semibold">{{ $transaksi->kategori?->name ?? '-' }}</p>
-                </div>
-                <div>
                     <p class="mb-3">Tanggal</p>
                     <p class="font-semibold">{{ \Carbon\Carbon::parse($transaksi->tanggal)->format('d-m-Y H:i') }}</p>
                 </div>
@@ -42,10 +38,6 @@ new class extends Component {
                 <div>
                     <p class="mb-3">Rincian Transaksi</p>
                     <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="mb-3">Nama Client</p>
-                    <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>

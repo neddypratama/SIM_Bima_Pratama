@@ -25,7 +25,7 @@ new class extends Component {
     #[Rule('required')]
     public ?int $user_id = null;
 
-    #[Rule('required')]
+    #[Rule('nullable')]
     public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
@@ -40,7 +40,7 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         // Ambil transaksi utama
-        $this->beban = Transaksi::with('kategori')->findOrFail($transaksi->id);
+        $this->beban = Transaksi::with('details.kategori')->findOrFail($transaksi->id);
 
         // Set data form
         $this->invoice = $this->beban->invoice;

@@ -86,15 +86,15 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-32'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-32'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-32'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-32'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-32'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'kategori:id,name,type'])
+            ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Debit')
-            ->whereHas('kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Sentrat%'))
+            ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Sentrat%'))
             ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
             ->orderBy(...array_values($this->sortBy))
@@ -117,14 +117,7 @@ new class extends Component {
             'transaksi' => $this->transaksi(),
             'client' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
-                ->get()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+                ->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -181,10 +174,10 @@ new class extends Component {
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
                     @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
-+                        <x-button icon="o-pencil"
-+                            link="/sentrat-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
-+                            class="btn-ghost btn-sm text-yellow-500" />
-+                    @endif
+                        <x-button icon="o-pencil"
+                            link="/sentrat-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
                 </div>
             @endscope
         </x-table>
@@ -195,8 +188,8 @@ new class extends Component {
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
-            <x-select-group placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
+            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
+                option-value="id" icon="o-user" placeholder-value="0" searchable single />
         </div>
 
         <x-slot:actions>
