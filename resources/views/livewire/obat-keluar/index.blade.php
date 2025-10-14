@@ -72,11 +72,16 @@ new class extends Component {
     {
         // Ambil transaksi utama berdasarkan $id
         $transaksi = Transaksi::findOrFail($id);
+        $inv = substr($transaksi->invoice, -4);
 
         // Ambil HPP & Stok berdasarkan linked_id = transaksi utama
-        $hpp = Transaksi::where('linked_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'HPP'))->first();
+        $hpp = Transaksi::where('invoice', 'like', "%$inv")
+            ->whereHas('details.kategori', fn($q) => $q->where('name', 'HPP'))
+            ->first();
 
-        $stok = Transaksi::where('linked_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Stok Obat-Obatan'))->first();
+        $stok = Transaksi::where('invoice', 'like', "%$inv")
+            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Obat-Obatan'))
+            ->first();
 
         // ✅ Kembalikan stok barang sebelum hapus detail stok
         if ($stok) {
@@ -88,13 +93,18 @@ new class extends Component {
             }
 
             $stok->details()->delete();
+            $stok->linked()->delete();
             $stok->delete();
         }
 
         if ($hpp) {
             $hpp->details()->delete();
+            $hpp->linked()->delete();
             $hpp->delete();
         }
+
+        // 🔥 Hapus relasi dari tabel transaksi_links terlebih dahulu
+        \DB::table('transaksi_links')->where('transaksi_id', $transaksi->id)->delete();
 
         $transaksi->details()->delete();
         $transaksi->delete();
@@ -104,15 +114,15 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-28'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-44'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-48'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-28'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-44'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'kategori:id,name,type'])
+            ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
-            ->whereHas('kategori', function (Builder $q) {
+            ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', '%Penjualan Obat%');
             })
             ->when($this->search, function (Builder $q) {
@@ -121,7 +131,6 @@ new class extends Component {
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
-            ->when($this->kategori_id, fn(Builder $q) => $q->where('kategori_id', $this->kategori_id))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -136,23 +145,13 @@ new class extends Component {
             if ($this->client_id != 0) {
                 $this->filter++;
             }
-            if ($this->kategori_id != 0) {
-                $this->filter++;
-            }
         }
 
         return [
             'transaksi' => $this->transaksi(),
             'client' => Client::where('type', 'like', '%Pedagang%')
                 ->orWhere('type', 'like', '%Peternak%')
-                ->get()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+                ->get(),
             'kategori' => Kategori::where('name', 'like', 'Penjualan Obat%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
@@ -223,11 +222,8 @@ new class extends Component {
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
 
-            <x-select-group placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
-
-            <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
+            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
+                single searchable />
         </div>
 
         <x-slot:actions>
