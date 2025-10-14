@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Transaksi;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -24,9 +25,9 @@ class PenjualanTrayExport implements FromCollection, WithHeadings, ShouldAutoSiz
      */
     public function collection()
     {
-        return Transaksi::with(['client', 'kategori', 'details.barang', 'user'])
-            ->where('type', 'Debit')
-            ->whereHas('kategori', function ($q) {
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+            ->where('type', 'Kredit')
+            ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Tray%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
@@ -60,6 +61,7 @@ class PenjualanTrayExport implements FromCollection, WithHeadings, ShouldAutoSiz
     public function map($transaksi): array
     {
         $rows = [];
+        // dd($transaksi);
 
         foreach ($transaksi->details as $detail) {
             $rows[] = [
@@ -67,7 +69,7 @@ class PenjualanTrayExport implements FromCollection, WithHeadings, ShouldAutoSiz
                 $transaksi->name,
                 $transaksi->tanggal,
                 $transaksi->client?->name ?? '-',
-                $transaksi->kategori?->name ?? '-',
+                $detail->kategori?->name ?? '-',
                 $detail->barang?->name ?? '-',
                 $detail->kuantitas,
                 $detail->value ?? 0,

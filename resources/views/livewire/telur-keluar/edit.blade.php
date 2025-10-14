@@ -57,7 +57,7 @@ new class extends Component {
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
                 'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
-                'hpp' => Barang::find($detail->barang_id)->hpp,
+                'hpp' => Barang::find($detail->barang_id)->hpp ?? 0,
             ];
         }
 
@@ -233,7 +233,6 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'client_id' => $this->client_id,
-            'kategori_id' => $this->kategori_id,
             'tanggal' => $this->tanggal,
             'total' => $this->total,
             'type' => 'Kredit',

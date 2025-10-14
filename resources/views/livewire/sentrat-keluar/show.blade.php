@@ -11,11 +11,11 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         // dd($transaksi->details());
-        $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang']);
+        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
         $this->aset = Transaksi::where('invoice', 'like', 'INV-%-STR-' . substr($transaksi->invoice, -4))->first();
-        $this->aset = $this->aset->load(['client', 'kategori', 'details.barang']);
+        $this->aset = $this->aset->load(['client', 'details.kategori', 'details.barang']);
         $this->hpp = Transaksi::where('invoice', 'like', 'INV-%-HPP-' . substr($transaksi->invoice, -4))->first();
-        $this->hpp = $this->hpp->load(['client', 'kategori', 'details.barang']);
+        $this->hpp = $this->hpp->load(['client', 'details.kategori', 'details.barang']);
     }
 };
 ?>
@@ -32,8 +32,8 @@ new class extends Component {
                     <p class="font-semibold">{{ $transaksi->invoice }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Kategori</p>
-                    <p class="font-semibold">{{ $transaksi->kategori?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">Tanggal</p>
@@ -46,12 +46,12 @@ new class extends Component {
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <p class="mb-3">Rincian Transaksi</p>
-                    <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
-                </div>
-                <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="mb-3">Alamat Client</p>
+                    <p class="font-semibold">{{ $transaksi->client?->alamat ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -82,8 +82,8 @@ new class extends Component {
                         <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Type</p>
-                        <p class="font-semibold">{{ $transaksi->type }}</p>
+                        <p class="mb-1 text-gray-500">Kategori</p>
+                        <p class="font-semibold">{{ $detail->kategori->name ?? '-' }}</p>
                     </div>
                 </div>
             @empty
@@ -111,8 +111,8 @@ new class extends Component {
                     <p class="font-semibold">{{ $aset->invoice }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Kategori</p>
-                    <p class="font-semibold">{{ $aset->kategori?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $aset->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">Tanggal</p>
@@ -124,13 +124,14 @@ new class extends Component {
         {{-- Informasi Client --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <p class="mb-3">Rincian Transaksi</p>
-                    <p class="font-semibold">{{ $aset->name ?? '-' }}</p>
-                </div>
+                
                 <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $aset->client?->name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="mb-3">Alamat Client</p>
+                    <p class="font-semibold">{{ $aset->client?->alamat ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -161,8 +162,8 @@ new class extends Component {
                         <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Type</p>
-                        <p class="font-semibold">{{ $aset->type }}</p>
+                        <p class="mb-1 text-gray-500">Kategori</p>
+                        <p class="font-semibold">{{ $detail->kategori->name ?? '-' }}</p>
                     </div>
                 </div>
             @empty
@@ -190,8 +191,8 @@ new class extends Component {
                     <p class="font-semibold">{{ $hpp->invoice }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Kategori</p>
-                    <p class="font-semibold">{{ $hpp->kategori?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $hpp->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">Tanggal</p>
@@ -203,13 +204,14 @@ new class extends Component {
         {{-- Informasi Client --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <p class="mb-3">Rincian Transaksi</p>
-                    <p class="font-semibold">{{ $hpp->name ?? '-' }}</p>
-                </div>
+                
                 <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $hpp->client?->name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="mb-3">Alamat Client</p>
+                    <p class="font-semibold">{{ $hpp->client?->alamat ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -240,8 +242,8 @@ new class extends Component {
                         <p class="font-semibold">Rp {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Type</p>
-                        <p class="font-semibold">{{ $hpp->type }}</p>
+                        <p class="mb-1 text-gray-500">Kategori</p>
+                        <p class="font-semibold">{{ $detail->kategori->name ?? '-' }}</p>
                     </div>
                 </div>
             @empty

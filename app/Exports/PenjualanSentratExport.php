@@ -3,10 +3,12 @@
 namespace App\Exports;
 
 use App\Models\Transaksi;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMapping;
+
 
 class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
 {
@@ -24,10 +26,10 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
      */
     public function collection()
     {
-        return Transaksi::with(['client', 'kategori', 'details.barang', 'user'])
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
-            ->whereHas('kategori', function ($q) {
-                $q->where('name', 'like', '%Penjualan Sentrat%');
+            ->whereHas('details.kategori', callback: function (Builder $q) {
+                $q->where('name', 'like', 'Penjualan Sentrat%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
@@ -67,7 +69,7 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
                 $transaksi->name,
                 $transaksi->tanggal,
                 $transaksi->client?->name ?? '-',
-                $transaksi->kategori?->name ?? '-',
+                $detail->kategori?->name ?? '-',
                 $detail->barang?->name ?? '-',
                 $detail->kuantitas,
                 $detail->value ?? 0,
