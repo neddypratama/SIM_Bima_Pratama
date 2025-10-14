@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
 use App\Models\Kategori;
 use App\Models\User;
 use Mary\Traits\Toast;
@@ -26,22 +27,28 @@ new class extends Component {
     public ?int $user_id = null;
 
     #[Rule('required')]
+    public ?string $type = null;
+
+    #[Rule('required')]
     public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
+
+    public array $details = [];
 
     public function with(): array
     {
         return [
             'users' => User::all(),
             'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->get(),
+            'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
         ];
     }
 
     public function mount(Transaksi $transaksi): void
     {
         // Ambil transaksi utama
-        $this->beban = Transaksi::with('kategori')->findOrFail($transaksi->id);
+        $this->beban = Transaksi::with('details.kategori')->findOrFail($transaksi->id);
 
         // Set data form
         $this->invoice = $this->beban->invoice;
@@ -49,8 +56,17 @@ new class extends Component {
         $this->name = $this->beban->name;
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
-        $this->kategori_id = $this->beban->kategori_id;
+        $this->type = $this->beban->type;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
+
+        foreach ($transaksi->details as $detail) {
+            $this->details[] = [
+                'kategori_id' => $detail->kategori_id,
+                'sub_total' => $detail->sub_total,
+            ];
+
+            $this->kategori_id = $detail->kategori_id;
+        }
     }
 
     public function save(): void
@@ -62,8 +78,16 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'total' => $this->total,
+        ]);
+
+        $this->beban->details()->delete();
+        DetailTransaksi::create([
+            'transaksi_id' => $this->beban->id,
+            'kategori_id' => $this->kategori_id,
+            'kuantitas' => null,
+            'value' => null,
+            'sub_total' => $this->total,
         ]);
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/beban');
@@ -89,12 +113,15 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="col-span-2">
-                            <x-input label="Rincian" wire:model="name" />
+                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
                         </div>
                         <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                             placeholder="Pilih Kategori" />
                     </div>
-                    <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
+                        <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
+                    </div>
                 </div>
             </div>
         </x-card>

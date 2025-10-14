@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Client;
@@ -72,13 +73,11 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        // ✅ Unlink semua transaksi yang punya linked_id = $id
-        Transaksi::where('linked_id', $id)->update(['linked_id' => null]);
+        $link = TransaksiLink::where('linked_id', $id)->first();
+        $link?->delete();
 
-        // ✅ Hapus semua detail dulu
-        $transaksi->details()->delete();
-
-        // ✅ Baru hapus transaksi utamanya
+        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
+        $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
@@ -86,14 +85,14 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-24'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'kategori:id,name,type'])
-            ->whereHas('kategori', function (Builder $q) {
+            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
             })
             ->when($this->search, function (Builder $q) {
@@ -102,7 +101,6 @@ new class extends Component {
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
-            ->when($this->kategori_id, fn(Builder $q) => $q->where('kategori_id', $this->kategori_id))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -124,16 +122,7 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
-            'client' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'client' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
             'kategori' => Kategori::where('type', 'Pengeluaran')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
@@ -207,11 +196,9 @@ new class extends Component {
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
 
-            <x-select-group placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
-
-            <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
+            {{-- ✅ Filter User --}}
+            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
+                single searchable />
         </div>
 
         <x-slot:actions>

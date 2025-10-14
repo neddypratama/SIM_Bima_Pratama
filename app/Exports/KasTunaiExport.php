@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Transaksi;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -24,8 +25,11 @@ class KasTunaiExport implements FromCollection, WithHeadings, ShouldAutoSize, Wi
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'kategori:id,name,type', 'user:id,name'])
-            ->whereHas('kategori', fn($q) => $q->where('name', 'like', 'Kas Tunai'))
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+            ->where('type', 'Kredit')
+            ->whereHas('details.kategori', callback: function (Builder $q) {
+                $q->where('name', 'like', '%Tunai%');
+            })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')
@@ -59,7 +63,7 @@ class KasTunaiExport implements FromCollection, WithHeadings, ShouldAutoSize, Wi
             $transaksi->name,
             $transaksi->tanggal,
             $transaksi->client?->name ?? '-',
-            $transaksi->kategori?->name ?? '-',
+            $detail->kategori?->name ?? '-',
             $transaksi->total,
             $transaksi->user->name,
             $transaksi->type === 'Debit' ? 'Pemasukan' : 'Pengeluaran',

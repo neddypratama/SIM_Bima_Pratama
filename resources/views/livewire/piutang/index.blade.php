@@ -82,14 +82,14 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-24'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'kategori:id,name,type'])
-            ->whereHas('kategori', function (Builder $q) {
+            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('type', 'like', '%Aset%')->Where('name', 'like', '%Piutang%');
             })
             ->when($this->search, function (Builder $q) {
@@ -98,7 +98,6 @@ new class extends Component {
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
-            ->when($this->kategori_id, fn(Builder $q) => $q->where('kategori_id', $this->kategori_id))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -113,21 +112,11 @@ new class extends Component {
             if ($this->client_id != 0) {
                 $this->filter++;
             }
-            if ($this->kategori_id != 0) {
-                $this->filter++;
-            }
         }
 
         return [
             'transaksi' => $this->transaksi(),
-            'client' => Client::all()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'client' => Client::all(),
             'kategori' => Kategori::where('name', 'like', 'Piutang%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
@@ -200,11 +189,9 @@ new class extends Component {
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
 
-            <x-select-group placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
-
-            <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
+            {{-- ✅ Filter User --}}
+            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
+                single searchable />
         </div>
 
         <x-slot:actions>

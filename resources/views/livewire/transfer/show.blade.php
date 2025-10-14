@@ -8,19 +8,16 @@ new class extends Component {
     public Transaksi $aset;
 
     public function mount(Transaksi $transaksi): void
-{
-    $this->transaksi = $transaksi->load(['client', 'kategori', 'details.barang']);
+    {
+        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
 
-    // Cari transaksi_link di mana transaksi ini adalah linked_id
-    $link = \App\Models\TransaksiLink::where('linked_id', $transaksi->id)->first();
+        // Cari transaksi_link di mana transaksi ini adalah linked_id
+        $link = \App\Models\TransaksiLink::where('linked_id', $transaksi->id)->first();
 
-    // Ambil transaksi utama (transaksi_id)
-    $this->aset = $link
-        ? Transaksi::with(['client', 'kategori', 'details.barang'])->find($link->transaksi_id)
-        : new Transaksi();
-}
+        // Ambil transaksi utama (transaksi_id)
+        $this->aset = $link ? Transaksi::with(['client', 'details.kategori', 'details.barang'])->find($link->transaksi_id) : new Transaksi();
+    }
 };
-
 ?>
 
 <div>
@@ -35,8 +32,8 @@ new class extends Component {
                     <p class="font-semibold">{{ $transaksi->invoice }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Kategori</p>
-                    <p class="font-semibold">{{ $transaksi->kategori?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">Tanggal</p>
@@ -48,13 +45,14 @@ new class extends Component {
         {{-- Informasi Client --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <p class="mb-3">Rincian Transaksi</p>
-                    <p class="font-semibold">{{ $transaksi->name ?? '-' }}</p>
-                </div>
+
                 <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="mb-3">Alamat Client</p>
+                    <p class="font-semibold">{{ $transaksi->client?->alamat ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -66,7 +64,7 @@ new class extends Component {
         {{-- Detail Barang --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <p class="mb-3 font-semibold">Detail Barang</p>
-            @forelse ($aset->details as $detail)
+            @forelse ($transaksi->details as $detail)
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3 rounded-lg p-5 ">
                     <div>
                         <p class="mb-1 text-gray-500">Barang</p>
@@ -86,8 +84,8 @@ new class extends Component {
                             {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Type</p>
-                        <p class="font-semibold">{{ $transaksi->type }}</p>
+                        <p class="mb-1 text-gray-500">Kategori</p>
+                        <p class="font-semibold">{{ $detail->kategori?->name ?? '-' }}</p>
                     </div>
                 </div>
             @empty
@@ -107,7 +105,7 @@ new class extends Component {
     <x-header title="Detail {{ $aset->invoice }}" separator progress-indicator />
 
     <x-card>
-        {{-- Informasi aset --}}
+        {{-- Informasi Transaksi --}}
         <div class="p-7 mt-2 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
@@ -115,8 +113,8 @@ new class extends Component {
                     <p class="font-semibold">{{ $aset->invoice }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Kategori</p>
-                    <p class="font-semibold">{{ $aset->kategori?->name ?? '-' }}</p>
+                    <p class="mb-3">Rincian Transaksi</p>
+                    <p class="font-semibold">{{ $aset->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">Tanggal</p>
@@ -128,13 +126,14 @@ new class extends Component {
         {{-- Informasi Client --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <p class="mb-3">Rincian aset</p>
-                    <p class="font-semibold">{{ $aset->name ?? '-' }}</p>
-                </div>
+
                 <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $aset->client?->name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="mb-3">Alamat Client</p>
+                    <p class="font-semibold">{{ $aset->client?->alamat ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="mb-3">User</p>
@@ -160,19 +159,18 @@ new class extends Component {
                         <p class="mb-1 text-gray-500">Harga</p>
                         <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
                     </div>
-
                     <div>
                         <p class="mb-1 text-gray-500">Total</p>
                         <p class="font-semibold">Rp
                             {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
                     </div>
                     <div>
-                        <p class="mb-1 text-gray-500">Type</p>
-                        <p class="font-semibold">{{ $aset->type }}</p>
+                        <p class="mb-1 text-gray-500">Kategori</p>
+                        <p class="font-semibold">{{ $detail->kategori->name }}</p>
                     </div>
                 </div>
             @empty
-                <p class="text-gray-500 text-sm">Tidak ada detail barang untuk aset ini.</p>
+                <p class="text-gray-500 text-sm">Tidak ada detail barang untuk transaksi ini.</p>
             @endforelse
         </div>
 
@@ -186,8 +184,7 @@ new class extends Component {
     </x-card>
 
     <div class="mt-6">
-        <x-button label="Kembali" link="/transfer
+        <x-button label="Kembali" link="/tunai
         " />
     </div>
-
 </div>

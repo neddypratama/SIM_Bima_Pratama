@@ -30,6 +30,9 @@ new class extends Component {
     #[Rule('required')]
     public ?int $kategori_id = null;
 
+    #[Rule('required')]
+    public ?string $type = null;
+
     public ?string $tanggal = null;
 
     public array $details = [];
@@ -45,6 +48,7 @@ new class extends Component {
         return [
             'users' => User::all(),
             'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->get(),
+            'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
         ];
     }
 
@@ -75,11 +79,14 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'client_id' => null,
-            'type' => 'Debit',
+            'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => null,
+        ]);
+        DetailTransaksi::create([
+            'transaksi_id' => $beban->id,
+            'kategori_id' => $this->kategori_id,
+            'sub_total' => $this->total,
         ]);
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/beban');
@@ -105,12 +112,15 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="col-span-2">
-                            <x-input label="Rincian" wire:model="name" />
+                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
                         </div>
                         <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                             placeholder="Pilih Kategori" />
                     </div>
-                    <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
+                        <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
+                    </div>
                 </div>
             </div>
         </x-card>

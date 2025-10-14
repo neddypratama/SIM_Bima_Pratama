@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\User;
@@ -69,9 +70,10 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        // ✅ Hapus semua relasi di transaksi_links
-        \App\Models\TransaksiLink::where('transaksi_id', $id)->orWhere('linked_id', $id)->delete();
-
+        $link = TransaksiLink::where('linked_id', $id)->first();
+        $link?->delete();
+        
+        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
         $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
 
@@ -80,14 +82,14 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-24'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'kategori:id,name,type'])
-            ->whereHas('kategori', function ($q) {
+            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->whereHas('details.kategori', function ($q) {
                 $q->where('name', 'like', 'Bank %');
             })
             ->when($this->search, function (Builder $q) {
