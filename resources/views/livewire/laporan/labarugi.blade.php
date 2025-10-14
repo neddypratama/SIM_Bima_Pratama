@@ -23,7 +23,6 @@ new class extends Component {
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
         $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
-
         $this->generateReport();
     }
 
@@ -47,32 +46,52 @@ new class extends Component {
         $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name');
         $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name');
 
-        // Ambil semua transaksi pendapatan
-        $pendapatan = Transaksi::with('kategori')
-            ->whereHas('kategori', fn($q) => $q->where('type', 'Pendapatan'))
+        // === Pendapatan ===
+        $pendapatan = Transaksi::with('details.kategori')
+            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [$start, $end])
+            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0)) // hanya transaksi dengan sub_total > 0
             ->get()
-            ->groupBy(fn($trx) => $trx->kategori->name ?? 'Tanpa Kategori')
-            ->map(fn($group) => $group->sum('total'));
+            ->flatMap(fn($trx) => $trx->details)
+            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type === 'Pendapatan')
+            ->groupBy(fn($detail) => $detail->kategori->name)
+            ->map(fn($group) => $group->sum('sub_total'));
 
-        // Ambil semua transaksi pengeluaran
-        $pengeluaran = Transaksi::with('kategori')
-            ->whereHas('kategori', fn($q) => $q->where('type', 'Pengeluaran'))
+        // === Pengeluaran ===
+        $pengeluaran = Transaksi::with('details.kategori')
+            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [$start, $end])
+            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get()
-            ->groupBy(fn($trx) => $trx->kategori->name ?? 'Tanpa Kategori')
-            ->map(fn($group) => $group->sum('total'));
+            ->flatMap(fn($trx) => $trx->details)
+            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type === 'Pengeluaran')
+            ->groupBy(fn($detail) => $detail->kategori->name)
+            ->map(fn($group) => $group->sum('sub_total'));
 
-        // Hitung beban pajak khusus kategori Beban Pajak
-        $this->bebanPajak = Transaksi::with('kategori')
-            ->whereHas('kategori', fn($q) => $q->where('type', 'Pengeluaran')->where('name', 'Beban Pajak'))
+        // === Beban Pajak ===
+        $this->bebanPajak = Transaksi::with('details.kategori')
+            ->whereHas('details.kategori', fn($q) => 
+                $q->where('type', 'Pengeluaran')->where('name', 'Beban Pajak')
+            )
             ->whereBetween('tanggal', [$start, $end])
-            ->sum('total');
+            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
+            ->get()
+            ->flatMap(fn($trx) => $trx->details)
+            ->filter(fn($detail) => 
+                $detail->kategori && 
+                $detail->kategori->type === 'Pengeluaran' && 
+                $detail->kategori->name === 'Beban Pajak'
+            )
+            ->sum('sub_total');
 
-        // Pastikan semua kategori tetap ada meskipun 0
-        $this->pendapatanData = $kategoriPendapatan->mapWithKeys(fn($name) => [$name => $pendapatan[$name] ?? 0])->toArray();
+        // === Pastikan semua kategori tetap muncul ===
+        $this->pendapatanData = $kategoriPendapatan->mapWithKeys(fn($name) => [
+            $name => $pendapatan[$name] ?? 0
+        ])->toArray();
 
-        $this->pengeluaranData = $kategoriPengeluaran->mapWithKeys(fn($name) => [$name => $pengeluaran[$name] ?? 0])->toArray();
+        $this->pengeluaranData = $kategoriPengeluaran->mapWithKeys(fn($name) => [
+            $name => $pengeluaran[$name] ?? 0
+        ])->toArray();
     }
 
     public function with()

@@ -18,28 +18,28 @@ class KategoriSeeder extends Seeder
             // PENDAPATAN
             // ======================
             [
-                'name' => 'Penjualan telur Bebek',
+                'name' => 'Penjualan Telur Bebek',
                 'deskripsi' => 'Kategori untuk dari penjualan bebek.',
                 'type' => 'Pendapatan',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Penjualan telur Horn',
+                'name' => 'Penjualan Telur Horn',
                 'deskripsi' => 'Kategori untuk dari penjualan horn.',
                 'type' => 'Pendapatan',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Penjualan telur Arab',
+                'name' => 'Penjualan Telur Arab',
                 'deskripsi' => 'Kategori untuk dari penjualan arab.',
                 'type' => 'Pendapatan',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Penjualan telur Puyuh',
+                'name' => 'Penjualan Telur Puyuh',
                 'deskripsi' => 'Kategori untuk dari penjualan puyuh.',
                 'type' => 'Pendapatan',
                 'created_at' => now(),
@@ -129,20 +129,6 @@ class KategoriSeeder extends Seeder
             [
                 'name' => 'Beban TAL',
                 'deskripsi' => 'Kategori untuk beban TAL.',
-                'type' => 'Pengeluaran',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Pembelian Obat-Obatan',
-                'deskripsi' => 'Kategori untuk pembelian obat-obatan.',
-                'type' => 'Pengeluaran',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Pembelian Tray',
-                'deskripsi' => 'Kategori untuk pembelian tray.',
                 'type' => 'Pengeluaran',
                 'created_at' => now(),
                 'updated_at' => now(),

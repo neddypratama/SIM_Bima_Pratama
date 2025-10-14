@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
 use App\Models\Kategori;
 use App\Models\User;
 use Mary\Traits\Toast;
@@ -30,6 +31,8 @@ new class extends Component {
 
     public ?string $tanggal = null;
 
+    public array $details = [];
+
     public function with(): array
     {
         return [
@@ -47,8 +50,16 @@ new class extends Component {
         $this->name = $this->beban->name;
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
-        $this->kategori_id = $this->beban->kategori_id;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
+
+        foreach ($transaksi->details as $detail) {
+            $this->details[] = [
+                'kategori_id' => $detail->kategori_id,
+                'sub_total' => $detail->sub_total,
+            ];
+
+            $this->kategori_id = $detail->kategori_id;
+        }
     }
 
     public function save(): void
@@ -60,8 +71,17 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'total' => $this->total,
+        ]);
+
+        $this->beban->details()->delete();
+
+        DetailTransaksi::create([
+            'transaksi_id' => $this->beban->id,
+            'kategori_id' => $this->kategori_id,
+            'value' => null,
+            'kuantitas' => null,
+            'sub_total' => $this->total,
         ]);
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/lainnya');
@@ -75,11 +95,11 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />

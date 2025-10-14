@@ -43,28 +43,63 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $kategoris = Kategori::all();
-
+        // Reset data
         $this->neracaPendapatan = [];
         $this->neracaPengeluaran = [];
         $this->neracaAset = [];
         $this->neracaLiabilitas = [];
 
-        foreach ($kategoris as $kategori) {
-            $transaksis = Transaksi::where('kategori_id', $kategori->id)
-                ->whereBetween('tanggal', [$start, $end])
-                ->get();
+        // Ambil transaksi dengan details & kategori terkait
+        $transaksis = Transaksi::with(['details.kategori'])
+            ->whereBetween('tanggal', [$start, $end])
+            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
+            ->get();
 
-            $totalDebit = $transaksis->filter(fn($trx) => strtolower($trx->type) == 'debit')->sum('total');
-            $totalKredit = $transaksis->filter(fn($trx) => strtolower($trx->type) == 'kredit')->sum('total');
+        // Flatten semua detail ke satu collection
+        $details = $transaksis
+            ->flatMap(
+                fn($trx) => $trx->details->map(
+                    fn($detail) => [
+                        'kategori' => $detail->kategori?->name,
+                        'type_kategori' => $detail->kategori?->type,
+                        'type_transaksi' => strtolower($trx->type), // debit/kredit
+                        'sub_total' => $detail->sub_total ?? 0,
+                    ],
+                ),
+            )
+            ->filter(fn($d) => $d['kategori']);
 
-            $row = [
-                'kategori' => $kategori->name,
-                'debit' => $totalDebit,
-                'kredit' => $totalKredit,
+        // Group hasil transaksi per kategori
+        $grouped = $details->groupBy('kategori')->map(function ($items, $kategori) {
+            $first = $items->first();
+            $debit = $items->where('type_transaksi', 'debit')->sum('sub_total');
+            $kredit = $items->where('type_transaksi', 'kredit')->sum('sub_total');
+
+            return [
+                'kategori' => $kategori,
+                'type' => $first['type_kategori'],
+                'debit' => $debit,
+                'kredit' => $kredit,
             ];
+        });
 
-            match ($kategori->type) {
+        // 🔹 Ambil semua kategori dari database
+        $allKategoris = Kategori::select('name', 'type')->get();
+
+        // 🔹 Gabungkan hasil transaksi dengan kategori yang tidak punya transaksi
+        $complete = $allKategoris->map(function ($kategori) use ($grouped) {
+            $data = $grouped[$kategori->name] ?? null;
+            return [
+                'kategori' => $kategori->name,
+                'type' => $kategori->type,
+                'debit' => $data['debit'] ?? 0,
+                'kredit' => $data['kredit'] ?? 0,
+            ];
+        });
+
+        // 🔹 Pisahkan berdasarkan tipe kategori
+        foreach ($complete as $row) {
+            match ($row['type']) {
                 'Pendapatan' => ($this->neracaPendapatan[] = $row),
                 'Pengeluaran' => ($this->neracaPengeluaran[] = $row),
                 'Aset' => ($this->neracaAset[] = $row),

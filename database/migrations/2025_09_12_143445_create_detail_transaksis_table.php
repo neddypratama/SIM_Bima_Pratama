@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('transaksi_id')->constrained('transaksis');
             $table->foreignId('kategori_id')->constrained('kategoris');
             $table->foreignId('barang_id')->nullable()->constrained('barangs');
-            $table->integer('value');
+            $table->integer('value')->nullable();
             $table->integer('kuantitas')->nullable();
             $table->integer('sub_total');
             $table->timestamps();

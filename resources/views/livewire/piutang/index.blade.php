@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Client;
@@ -71,9 +72,10 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        // ✅ Hapus semua relasi di transaksi_links
-        \App\Models\TransaksiLink::where('transaksi_id', $id)->orWhere('linked_id', $id)->delete();
-
+        $link = TransaksiLink::where('linked_id', $id)->first();
+        $link?->delete();
+        
+        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
         $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
 

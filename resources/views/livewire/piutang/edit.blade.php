@@ -56,12 +56,11 @@ new class extends Component {
                 })
                 ->get()
                 ->filter(function ($t) {
-                    // Hitung total transaksi yang sudah terhubung
                     $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
                     $sisa = $t->total - $totalLinked;
 
-                    // Hanya tampilkan jika masih ada sisa
-                    return $sisa > 0;
+                    // akses this->transaksi dari closure dengan use()
+                    return $sisa > 0 || $t->id === $this->piutang->linked->first()?->linked_id;
                 })
                 ->values(),
 
@@ -72,7 +71,7 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         $this->piutang = $transaksi;
-        
+
         // Set field dasar
         $this->invoice = $this->piutang->invoice;
         $this->name = $this->piutang->name;
@@ -96,6 +95,8 @@ new class extends Component {
 
     public function save(): void
     {
+        $this->validate();
+
         $tunai = $this->piutang;
 
         $this->client_id = Transaksi::find($this->linked_id)->client_id;
@@ -150,12 +151,12 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
 
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -166,7 +167,24 @@ new class extends Component {
                         <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
                             placeholder="Pilih Tipe" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" />
+                            single searchable clearable label="Client">
+                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                                <x-list-item :item="$clients" sub-value="invoice">
+                                    <x-slot:avatar>
+                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                    </x-slot:avatar>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                    </x-slot:actions>
+                                </x-list-item>
+                            @endscope
+
+                            {{-- Tampilan ketika sudah dipilih --}}
+                            @scope('selection', $clients)
+                                {{ $clients->name . ' | ' . $clients->type }}
+                            @endscope
+                        </x-choices-offline>
                         <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                             placeholder="Pilih Kategori" />
                     </div>
@@ -176,12 +194,12 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
                 </div>
 
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     @if ($type == 'Debit')
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="col-span-2">
@@ -211,7 +229,7 @@ new class extends Component {
 
                                     {{-- Tampilan ketika sudah dipilih --}}
                                     @scope('selection', $transaksi)
-                                        {{ $transaksi->invoice . ' | ' . $transaksi->total . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
+                                        {{ $transaksi->invoice . ' | ' . 'Rp ' . number_format($transaksi->total, 0, ',', '.') . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
                                     @endscope
                                 </x-choices-offline>
                             </div>

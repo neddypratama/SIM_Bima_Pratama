@@ -57,7 +57,7 @@ new class extends Component {
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
                 'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
-                'hpp' => Barang::find($detail->barang_id)->hpp ?? 0,
+                'hpp' => Barang::find($detail->barang_id)->hpp,
             ];
         }
 
@@ -80,6 +80,31 @@ new class extends Component {
 
     public function updatedDetails($value, $key): void
     {
+        // --- Jika kategori dipilih ---
+        if (str_ends_with($key, '.kategori_id')) {
+            $index = (int) explode('.', $key)[0];
+            $kategori = Kategori::find($value);
+
+            if ($kategori) {
+                // Ambil nama setelah kata "Penjualan"
+                $jenisNama = trim(preg_replace('/^Penjualan\s*/i', '', $kategori->name));
+
+                // Filter barang yang memiliki jenis dengan nama tersebut
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', function ($q) use ($jenisNama) {
+                    $q->where('name', 'like', "%{$jenisNama}%");
+                })
+                    ->get()
+                    ->map(
+                        fn($barang) => [
+                            'id' => $barang->id,
+                            'name' => $barang->name,
+                        ],
+                    )
+                    ->toArray();
+            }
+        }
+
+        // --- Jika barang dipilih ---
         if (str_ends_with($key, '.barang_id')) {
             $index = (int) explode('.', $key)[0];
             $barang = Barang::find($value);
@@ -90,16 +115,18 @@ new class extends Component {
             }
         }
 
+        // --- Jika qty diubah ---
         if (str_ends_with($key, '.kuantitas')) {
             $index = (int) explode('.', $key)[0];
             $qty = (int) ($value ?: 1);
             $maxQty = $this->details[$index]['max_qty'] ?? null;
             if ($maxQty !== null && $qty > $maxQty) {
-                $qty = $maxQty; // ✅ batasi qty sesuai stok
+                $qty = $maxQty;
             }
             $this->details[$index]['kuantitas'] = $qty;
         }
 
+        // --- Update total jika ada perubahan harga/qty/hpp ---
         if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas') || str_ends_with($key, '.hpp')) {
             $this->calculateTotal();
         }
@@ -287,11 +314,11 @@ new class extends Component {
 
     <x-form wire:submit="save">
         <x-card>
-            <div class="grid lg:grid-cols-5 gap-4">
+            <div class="grid lg:grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -302,8 +329,25 @@ new class extends Component {
                             <x-input label="Rincian Transaksi" wire:model="name"
                                 placeholder="Contoh: Penjualan Telur Ayam Ras" />
                         </div>
-                        <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" searchable single clearable />
+                        <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
+                            single searchable clearable label="Client">
+                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                                <x-list-item :item="$clients" sub-value="invoice">
+                                    <x-slot:avatar>
+                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                    </x-slot:avatar>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                    </x-slot:actions>
+                                </x-list-item>
+                            @endscope
+
+                            {{-- Tampilan ketika sudah dipilih --}}
+                            @scope('selection', $clients)
+                                {{ $clients->name . ' | ' . $clients->type }}
+                            @endscope
+                        </x-choices-offline>
                     </div>
                 </div>
             </div>
@@ -311,11 +355,11 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
                         <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
                             :options="$kategoris" placeholder="Pilih Kategori" />

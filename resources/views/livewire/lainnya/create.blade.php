@@ -77,7 +77,6 @@ new class extends Component {
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'type' => 'Kredit',
             'total' => $this->total,
         ]);
@@ -85,8 +84,8 @@ new class extends Component {
         DetailTransaksi::create([
             'transaksi_id' => $transaksi->id,
             'kategori_id' => $this->kategori_id,
-            'value' => $this->total,
-            'kuantitas' => 1,
+            'value' => null,
+            'kuantitas' => null,
             'sub_total' => $this->total,
         ]);
 
@@ -101,11 +100,11 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />

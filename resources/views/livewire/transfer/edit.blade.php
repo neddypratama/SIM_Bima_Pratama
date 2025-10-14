@@ -206,7 +206,7 @@ new class extends Component {
 
                                 {{-- Tampilan ketika sudah dipilih --}}
                                 @scope('selection', $transaksi)
-                                    {{ $transaksi->invoice . ' | ' . $transaksi->total . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
+                                    {{ $transaksi->invoice . ' | ' . 'Rp ' . number_format($transaksi->total, 0, ',', '.') . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
                                 @endscope
                             </x-choices-offline>
                         </div>

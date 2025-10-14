@@ -109,28 +109,27 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $query = Transaksi::with('details.kategori')
+        $query = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'));
 
-        // Jika kategori tertentu dipilih
+        // Jika kategori tertentu dipilih (berdasarkan kategori di detail)
         if ($this->selectedKategoriPendapatan) {
-            $query->where('kategori_id', $this->selectedKategoriPendapatan);
+            $query->whereHas('details', function ($q) {
+                $q->where('kategori_id', $this->selectedKategoriPendapatan);
+            });
         }
 
         $transactions = $query->orderBy('tanggal')->get();
 
-        // Kelompokkan per tanggal
         $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
 
-        // Buat array tanggal unik
         $dates = collect();
         $period = \Carbon\CarbonPeriod::create($start, $end);
         foreach ($period as $date) {
             $dates->push($date->format('Y-m-d'));
         }
 
-        // Siapkan data pendapatan
         $incomeData = [];
         foreach ($dates as $date) {
             $dayTransactions = $grouped->get($date, collect());
@@ -138,7 +137,6 @@ new class extends Component {
             $incomeData[] = $income;
         }
 
-        // Buat chart
         $this->pendapatanChart = [
             'type' => 'line',
             'data' => [
@@ -162,36 +160,33 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $query = Transaksi::with('details.kategori')
+        $query = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'));
 
-        // Jika kategori tertentu dipilih
         if ($this->selectedKategoriPengeluaran) {
-            $query->where('kategori_id', $this->selectedKategoriPengeluaran);
+            $query->whereHas('details', function ($q) {
+                $q->where('kategori_id', $this->selectedKategoriPengeluaran);
+            });
         }
 
         $transactions = $query->orderBy('tanggal')->get();
 
-        // Kelompokkan per tanggal
         $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
 
-        // Buat array tanggal unik
         $dates = collect();
         $period = \Carbon\CarbonPeriod::create($start, $end);
         foreach ($period as $date) {
             $dates->push($date->format('Y-m-d'));
         }
 
-        // Siapkan data Pengeluaran
-        $incomeData = [];
+        $expenseData = [];
         foreach ($dates as $date) {
             $dayTransactions = $grouped->get($date, collect());
-            $income = $dayTransactions->sum('total');
-            $incomeData[] = $income;
+            $expense = $dayTransactions->sum('total');
+            $expenseData[] = $expense;
         }
 
-        // Buat chart
         $this->pengeluaranChart = [
             'type' => 'line',
             'data' => [
@@ -199,7 +194,7 @@ new class extends Component {
                 'datasets' => [
                     [
                         'label' => $this->selectedKategoriPengeluaran ? 'Pengeluaran: ' . Kategori::find($this->selectedKategoriPengeluaran)?->name : 'Semua Pengeluaran',
-                        'data' => $incomeData,
+                        'data' => $expenseData,
                         'borderColor' => '#F44336',
                         'backgroundColor' => 'rgba(244, 67, 54, 0.2)',
                         'fill' => true,

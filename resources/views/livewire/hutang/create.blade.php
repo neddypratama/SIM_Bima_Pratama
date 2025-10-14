@@ -51,49 +51,23 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'clients' => Client::all()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group
-                            ->map(
-                                fn($c) => [
-                                    'id' => $c->id,
-                                    'name' => $c->name,
-                                ],
-                            )
-                            ->values()
-                            ->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'clients' => Client::all(),
             'kategoris' => Kategori::where('type', 'like', '%Liabilitas%')->orWhere('name', 'like', '%Hutang%')->get(),
             'optionType' => [['id' => 'Kredit', 'name' => 'Hutang Bertambah'], ['id' => 'Debit', 'name' => 'Hutang Berkurang']],
-            'transaksi' => Transaksi::with(['client:id,name', 'kategori:id,name,type', 'linked.linkedTransaksi'])
-                ->whereHas('kategori', function ($q) {
+            'transaksiOptions' => Transaksi::with(['client:id,name', 'details.kategori:id,name,type', 'linked.linkedTransaksi'])
+                ->whereHas('details.kategori', function ($q) {
                     $q->where('type', 'not like', '%Kas%')->where('name', 'not like', '%Bank%')->where('type', 'like', '%Aset%');
                 })
                 ->get()
                 ->filter(function ($t) {
+                    // Hitung total transaksi yang sudah terhubung
                     $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
-                    return $t->linked->isEmpty() || ($t->total - $totalLinked) > 0;
+                    $sisa = $t->total - $totalLinked;
+
+                    // Hanya tampilkan jika masih ada sisa
+                    return $sisa > 0;
                 })
-                ->groupBy(fn($t) => $t->kategori->type ?? 'Tanpa Kategori')
-                ->mapWithKeys(
-                    fn($group, $label) => [
-                        $label => $group
-                            ->map(
-                                fn($t) => [
-                                    'id' => $t->id,
-                                    'name' => "{$t->invoice} | {$t->name} | Rp " . number_format($t->total - $t->linked->sum(fn($l) => $l->linkedTransaksi->total)) . ' | ' . ($t->client->name ?? 'Tanpa Client'),
-                                    'total_linked' => $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0),
-                                ],
-                            )
-                            ->values()
-                            ->toArray(),
-                    ],
-                )
-                ->toArray(),
+                ->values(),
         ];
     }
 
@@ -115,33 +89,42 @@ new class extends Component {
 
     public function save(): void
     {
+        // ✅ Validasi seluruh input sekaligus
         $this->validate();
 
-        if ($this->linked_id != null) {
-            $this->client_id = Transaksi::findOrFail($this->linked_id)->client_id;
-        }
+        $this->client_id = Transaksi::find($this->linked_id)->client_id;
 
-        $beban = Transaksi::create([
+        $tunai = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'client_id' => $this->client_id,
             'type' => $this->type,
             'total' => $this->total,
-            'linked_id' => $this->linked_id ?? null,
         ]);
 
-        TransaksiLink::create([
-            'transaksi_id' => $this->linked_id,
-            'linked_id' => $beban->id,
+        DetailTransaksi::create([
+            'transaksi_id' => $tunai->id,
+            'kategori_id' => $this->kategori_id,
+            'kuantitas' => null,
+            'value' => null,
+            'sub_total' => $this->total,
         ]);
 
-        TransaksiLink::create([
-            'transaksi_id' => $beban->id ,
-            'linked_id' => $this->linked_id,
-        ]);
+        if ($this->linked_id != null) {
+            # code...
+            TransaksiLink::create([
+                'transaksi_id' => $this->linked_id,
+                'linked_id' => $tunai->id,
+            ]);
+
+            TransaksiLink::create([
+                'transaksi_id' => $tunai->id,
+                'linked_id' => $this->linked_id,
+            ]);
+        }
+
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/hutang');
     }
 };
@@ -153,23 +136,40 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
 
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Titipan Pak Agus"/>
+                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Titipan Pak Agus" />
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
                             placeholder="Pilih Tipe" />
-                        <x-select-group wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" />
+                        <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
+                            single searchable clearable label="Client">
+                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                                <x-list-item :item="$clients" sub-value="invoice">
+                                    <x-slot:avatar>
+                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                    </x-slot:avatar>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                    </x-slot:actions>
+                                </x-list-item>
+                            @endscope
+
+                            {{-- Tampilan ketika sudah dipilih --}}
+                            @scope('selection', $clients)
+                                {{ $clients->name . ' | ' . $clients->type }}
+                            @endscope
+                        </x-choices-offline>
                         <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                             placeholder="Pilih Kategori" />
                     </div>
@@ -179,24 +179,56 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
                 </div>
 
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     @if ($type == 'Kredit')
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="col-span-2">
-                                <x-select-group wire:model="linked_id" label="Relasi Transaksi" :options="$transaksi"
-                                    placeholder="Pilih Transaksi" />
-                            </div>
+                                <x-choices-offline label="Pilih Transaksi" wire:model="linked_id" :options="$transaksiOptions"
+                                    placeholder="Cari atau pilih transaksi" searchable clearable single>
+                                    {{-- Tampilan item di dropdown --}}
+                                    @scope('item', $transaksi)
+                                        <x-list-item :item="$transaksi" sub-value="invoice">
+                                            <x-slot:avatar>
+                                                <x-icon name="fas.receipt" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                            </x-slot:avatar>
+                                            <x-slot:actions>
+                                                @php
+                                                    // Hitung total transaksi yang sudah terhubung
+                                                    $totalLinked = $transaksi->linked->sum(
+                                                        fn($l) => $l->linkedTransaksi->total ?? 0,
+                                                    );
+                                                    $sisa = $transaksi->total - $totalLinked;
+                                                @endphp
 
+                                                <x-badge :value="'Rp ' . number_format($sisa, 0, ',', '.')" class="badge-soft badge-primary badge-sm" />
+                                                <x-badge :value="$transaksi->client?->name ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                            </x-slot:actions>
+                                        </x-list-item>
+                                    @endscope
+
+                                    {{-- Tampilan ketika sudah dipilih --}}
+                                    @scope('selection', $transaksi)
+                                        @php
+                                            // Hitung total transaksi yang sudah terhubung
+                                            $totalLinked = $transaksi->linked->sum(
+                                                fn($l) => $l->linkedTransaksi->total ?? 0,
+                                            );
+                                            $sisa = $transaksi->total - $totalLinked;
+                                        @endphp
+                                        {{ $transaksi->invoice . ' | ' . 'Rp ' . number_format($sisa, 0, ',', '.') . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
+                                    @endscope
+                                </x-choices-offline>
+                            </div>
                             <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
                         </div>
                     @else
                         <div class="grid grid-cols-1 gap-4">
-
                             <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
                         </div>
                     @endif

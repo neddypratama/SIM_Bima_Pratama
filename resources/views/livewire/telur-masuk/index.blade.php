@@ -21,7 +21,7 @@ new class extends Component {
     public $today;
     public function mount(): void
     {
-        $this->today = \Carbon\Carbon::today();
+        $this->today = Carbon::today();
     }
 
     public string $search = '';

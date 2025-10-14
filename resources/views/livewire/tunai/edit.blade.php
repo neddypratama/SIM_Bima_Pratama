@@ -150,11 +150,11 @@ new class extends Component {
         <!-- SECTION: Basic Info -->
         {{-- {{ dd($transaksi) }} --}}
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -173,11 +173,11 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="col-span-2">
                             <x-choices-offline label="Pilih Transaksi" wire:model="linked_id" :options="$listTransaksi"
@@ -206,7 +206,7 @@ new class extends Component {
 
                                 {{-- Tampilan ketika sudah dipilih --}}
                                 @scope('selection', $transaksi)
-                                    {{ $transaksi->invoice . ' | ' . $transaksi->total . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
+                                    {{ $transaksi->invoice . ' | ' . 'Rp ' . number_format($transaksi->total, 0, ',', '.') . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
                                 @endscope
                             </x-choices-offline>
 

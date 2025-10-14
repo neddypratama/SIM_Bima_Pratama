@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -58,6 +59,7 @@ new class extends Component {
                 'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
                 'hpp' => Barang::find($detail->barang_id)->hpp ?? 0,
             ];
+            $this->kategori_id = $detail->kategori_id;
         }
 
         $kategori = Kategori::where('name', 'Stok Tray')->first();
@@ -125,8 +127,8 @@ new class extends Component {
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
             'details.*.kuantitas' => 'required|integer|min:1',
-            'details.*.kategori_id' => 'required|exists:kategoris,id',
         ]);
+
 
         foreach ($this->details as $i => $item) {
             if ($item['max_qty'] !== null && $item['kuantitas'] > $item['max_qty']) {
@@ -143,6 +145,7 @@ new class extends Component {
         $stokTransaksi = Transaksi::where('invoice', 'like', "%$inv")
             ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Tray'))
             ->first();
+
 
         $kategoriTelur = Kategori::where('name', 'Stok Tray')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
@@ -239,13 +242,14 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $this->transaksi->id,
-                'kategori_id' => $item['kategori_id'],
+                'kategori_id' => $this->kategori_id,
                 'barang_id' => $item['barang_id'],
                 'value' => $item['value'],
                 'kuantitas' => $item['kuantitas'],
                 'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 0),
             ]);
         }
+
         $this->success('Transaksi berhasil diupdate!', redirectTo: '/tray-keluar');
     }
 
@@ -284,11 +288,11 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="grid lg:grid-cols-6 gap-4">
+            <div class="grid lg:grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-4 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -298,8 +302,25 @@ new class extends Component {
                         <div class="sm:col-span-2">
                             <x-input label="Rincian Transaksi" wire:model="name" placeholder="Contoh: Penjualan Tray" />
                         </div>
-                        <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" searchable single clearable />
+                        <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
+                            single searchable clearable label="Client" >
+                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                                <x-list-item :item="$clients" sub-value="invoice">
+                                <x-slot:avatar>
+                                    <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                </x-slot:avatar>
+                                <x-slot:actions>
+                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                </x-slot:actions>
+                                </x-list-item>
+                            @endscope
+
+                            {{-- Tampilan ketika sudah dipilih --}}
+                            @scope('selection', $clients)
+                                {{ $clients->name . ' | ' .  $clients->type}}
+                            @endscope
+                        </x-choices-offline>
                     </div>
                 </div>
             </div>
@@ -307,11 +328,11 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="lg:grid grid-cols-6 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
                 </div>
-                <div class="col-span-4 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
@@ -348,8 +369,8 @@ new class extends Component {
                     @endforeach
 
                     <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
-                        <!-- <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
-                            class="btn-primary" /> -->
+                        <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
+                            class="btn-primary" />
                         <x-input label="Total Pembayaran" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
                     </div>
                 </div>

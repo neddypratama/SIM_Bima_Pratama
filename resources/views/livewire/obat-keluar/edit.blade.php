@@ -246,7 +246,7 @@ new class extends Component {
                 'barang_id' => $item['barang_id'],
                 'value' => $item['value'],
                 'kuantitas' => $item['kuantitas'],
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+                'sub_total' => ($item['hpp'] ?? 0) * ($item['kuantitas'] ?? 1),
             ]);
         }
         $this->success('Transaksi berhasil diupdate!', redirectTo: '/obat-keluar');

@@ -229,12 +229,12 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="grid lg:grid-cols-5 gap-4">
+            <div class="grid lg:grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
 
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -256,12 +256,12 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="grid lg:grid-cols-5 gap-4">
+            <div class="grid lg:grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Barang" subtitle="Tambah barang ke transaksi" size="text-2xl" />
                 </div>
 
-                <div class="col-span-3 grid gap-5">
+                <div class="col-span-6 grid gap-5">
                     @foreach ($details as $index => $item)
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
