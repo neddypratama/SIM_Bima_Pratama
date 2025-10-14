@@ -350,8 +350,8 @@ new class extends Component {
                     @endforeach
 
                     <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
-                        <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
-                            class="btn-primary" />
+                        <!-- <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
+                            class="btn-primary" /> -->
                         <x-input label="Total Pembayaran" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
                     </div>
                 </div>

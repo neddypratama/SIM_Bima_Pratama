@@ -124,7 +124,6 @@ new class extends Component {
         {{-- Informasi Client --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                
                 <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $aset->client?->name ?? '-' }}</p>
@@ -204,7 +203,6 @@ new class extends Component {
         {{-- Informasi Client --}}
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                
                 <div>
                     <p class="mb-3">Nama Client</p>
                     <p class="font-semibold">{{ $hpp->client?->name ?? '-' }}</p>
