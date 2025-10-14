@@ -18,7 +18,7 @@ class Client extends Model
     public function getBonAttribute(): float
     {
         $transaksi = $this->transaksi()
-            ->whereHas('kategori', fn($q) => $q->where('name', 'like', 'Piutang%'))
+            ->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'))
             ->get();
 
         $totalDebit  = $transaksi->where('type', 'Debit')->sum('total');
@@ -30,7 +30,7 @@ class Client extends Model
     public function getTitipanAttribute(): float
     {
         $transaksi = $this->transaksi()
-            ->whereHas('kategori', fn($q) => $q->where('name', 'like', 'Hutang%'))
+            ->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'))
             ->get();
 
         $totalDebit  = $transaksi->where('type', 'Debit')->sum('total');
