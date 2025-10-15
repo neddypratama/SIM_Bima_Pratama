@@ -52,8 +52,9 @@ new class extends Component {
 
         switch ($this->period) {
             case 'today':
-                $this->startDate = $now->copy()->startOfDay();
-                $this->endDate = $now->copy()->endOfDay();
+                // Dari jam 06:00 sampai sekarang
+                $this->startDate = $now->copy()->startOfDay()->addHours(6);
+                $this->endDate = $now->copy(); // jam sekarang
                 break;
             case 'week':
                 $this->startDate = $now->copy()->startOfWeek();
@@ -106,41 +107,48 @@ new class extends Component {
 
     public function chartPendapatan()
     {
-        $start = Carbon::parse($this->startDate)->startOfDay();
-        $end = Carbon::parse($this->endDate)->endOfDay();
+        $start = Carbon::parse($this->startDate);
+        $end = Carbon::parse($this->endDate);
 
         $query = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'));
 
-        // Jika kategori tertentu dipilih (berdasarkan kategori di detail)
         if ($this->selectedKategoriPendapatan) {
-            $query->whereHas('details', function ($q) {
-                $q->where('kategori_id', $this->selectedKategoriPendapatan);
-            });
+            $query->whereHas('details', fn($q) => $q->where('kategori_id', $this->selectedKategoriPendapatan));
         }
 
         $transactions = $query->orderBy('tanggal')->get();
 
-        $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
-
-        $dates = collect();
-        $period = \Carbon\CarbonPeriod::create($start, $end);
-        foreach ($period as $date) {
-            $dates->push($date->format('Y-m-d'));
-        }
-
+        $labels = [];
         $incomeData = [];
-        foreach ($dates as $date) {
-            $dayTransactions = $grouped->get($date, collect());
-            $income = $dayTransactions->sum('total');
-            $incomeData[] = $income;
+
+        if ($this->period === 'today') {
+            // per jam: 0 - 23
+            for ($h = 0; $h <= 23; $h++) {
+                $labels[] = str_pad($h, 2, '0', STR_PAD_LEFT) . ':00';
+                $hourTransactions = $transactions->filter(fn($trx) => Carbon::parse($trx->tanggal)->hour == $h);
+                $totalDebit = $hourTransactions->where('type', 'Debit')->sum('total');
+                $totalKredit = $hourTransactions->where('type', 'Kredit')->sum('total');
+                $incomeData[] = $totalKredit - $totalDebit;
+            }
+        } else {
+            // per hari
+            $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
+            $periodRange = \Carbon\CarbonPeriod::create($start, $end);
+            foreach ($periodRange as $date) {
+                $labels[] = $date->format('Y-m-d');
+                $dayTransactions = $grouped->get($date->format('Y-m-d'), collect());
+                $totalDebit = $dayTransactions->where('type', 'Debit')->sum('total');
+                $totalKredit = $dayTransactions->where('type', 'Kredit')->sum('total');
+                $incomeData[] = $totalKredit - $totalDebit;
+            }
         }
 
         $this->pendapatanChart = [
             'type' => 'line',
             'data' => [
-                'labels' => $dates->toArray(),
+                'labels' => $labels,
                 'datasets' => [
                     [
                         'label' => $this->selectedKategoriPendapatan ? 'Pendapatan: ' . Kategori::find($this->selectedKategoriPendapatan)?->name : 'Semua Pendapatan',
@@ -157,40 +165,46 @@ new class extends Component {
 
     public function chartPengeluaran()
     {
-        $start = Carbon::parse($this->startDate)->startOfDay();
-        $end = Carbon::parse($this->endDate)->endOfDay();
+        $start = Carbon::parse($this->startDate);
+        $end = Carbon::parse($this->endDate);
 
         $query = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'));
 
         if ($this->selectedKategoriPengeluaran) {
-            $query->whereHas('details', function ($q) {
-                $q->where('kategori_id', $this->selectedKategoriPengeluaran);
-            });
+            $query->whereHas('details', fn($q) => $q->where('kategori_id', $this->selectedKategoriPengeluaran));
         }
 
         $transactions = $query->orderBy('tanggal')->get();
 
-        $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
-
-        $dates = collect();
-        $period = \Carbon\CarbonPeriod::create($start, $end);
-        foreach ($period as $date) {
-            $dates->push($date->format('Y-m-d'));
-        }
-
+        $labels = [];
         $expenseData = [];
-        foreach ($dates as $date) {
-            $dayTransactions = $grouped->get($date, collect());
-            $expense = $dayTransactions->sum('total');
-            $expenseData[] = $expense;
+
+        if ($this->period === 'today') {
+            for ($h = 0; $h <= 23; $h++) {
+                $labels[] = str_pad($h, 2, '0', STR_PAD_LEFT) . ':00';
+                $hourTransactions = $transactions->filter(fn($trx) => Carbon::parse($trx->tanggal)->hour == $h);
+                $totalDebit = $hourTransactions->where('type', 'Debit')->sum('total');
+                $totalKredit = $hourTransactions->where('type', 'Kredit')->sum('total');
+                $expenseData[] = $totalDebit - $totalKredit;
+            }
+        } else {
+            $grouped = $transactions->groupBy(fn($trx) => Carbon::parse($trx->tanggal)->format('Y-m-d'));
+            $periodRange = \Carbon\CarbonPeriod::create($start, $end);
+            foreach ($periodRange as $date) {
+                $labels[] = $date->format('Y-m-d');
+                $dayTransactions = $grouped->get($date->format('Y-m-d'), collect());
+                $totalDebit = $dayTransactions->where('type', 'Debit')->sum('total');
+                $totalKredit = $dayTransactions->where('type', 'Kredit')->sum('total');
+                $expenseData[] = $totalDebit - $totalKredit;
+            }
         }
 
         $this->pengeluaranChart = [
             'type' => 'line',
             'data' => [
-                'labels' => $dates->toArray(),
+                'labels' => $labels,
                 'datasets' => [
                     [
                         'label' => $this->selectedKategoriPengeluaran ? 'Pengeluaran: ' . Kategori::find($this->selectedKategoriPengeluaran)?->name : 'Semua Pengeluaran',
@@ -346,18 +360,28 @@ new class extends Component {
         ];
     }
 
-    public function incomeTotal(): float
+    public function incomeTotal(): int
     {
-        return Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
+        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->sum('total');
+            ->get();
+
+        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
+        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
+
+        return $totalKredit - $totalDebit;
     }
 
     public function expenseTotal(): int
     {
-        return Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
+        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->sum('total');
+            ->get();
+
+        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
+        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
+
+        return $totalDebit - $totalKredit;
     }
 
     public function assetTotal(): int
