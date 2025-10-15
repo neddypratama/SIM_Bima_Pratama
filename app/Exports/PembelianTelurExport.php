@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Transaksi;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -24,11 +25,9 @@ class PembelianTelurExport implements FromCollection, WithHeadings, ShouldAutoSi
      */
     public function collection()
     {
-        return Transaksi::with(['client', 'details.kategori', 'details.barang', 'user'])
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Debit')
-            ->whereHas('details.kategori', function ($q) {
-                $q->where('name', 'like', '%Stok Telur%');
-            })
+            ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Telur%'))
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')

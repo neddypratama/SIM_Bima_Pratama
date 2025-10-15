@@ -105,14 +105,16 @@
                     @endif
                 </x-menu-sub>
 
-                @if (in_array(auth()->user()->role_id, [1, 4]))
-                    <x-menu-sub title="Pakan & Obat" icon="fas.flask">
+                <x-menu-sub title="Pakan & Obat" icon="fas.flask">
+                    @if (in_array(auth()->user()->role_id, [1, 4, 6]))
                         <x-menu-item title="Pembelian Sentrat" icon="fas.cart-plus" link="/sentrat-masuk" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 4]))
                         <x-menu-item title="Penjualan Sentrat" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
                         <x-menu-item title="Pembelian Obat" icon="fas.cart-plus" link="/obat-masuk" />
                         <x-menu-item title="Penjualan Obat" icon="fas.file-invoice-dollar" link="/obat-keluar" />
-                    </x-menu-sub>
-                @endif
+                    @endif
+                </x-menu-sub>
 
                 <x-menu-sub title="Kas" icon="fas.building-columns">
                     @if (in_array(auth()->user()->role_id, [1, 5]))
@@ -130,7 +132,7 @@
                     </x-menu-sub>
                 @endif
 
-                @if (in_array(auth()->user()->role_id, [1, 5]))
+                @if (in_array(auth()->user()->role_id, [1, 5, 6]))
                     <x-menu-sub title="Piutang & Hutang" icon="fas.money-bill-transfer">
                         <x-menu-item title="Piutang" icon="fas.money-bill-wave" link="/piutang" />
                         <x-menu-item title="Hutang" icon="fas.money-bill-wave" link="/hutang" />

@@ -26,9 +26,8 @@ class KasTunaiExport implements FromCollection, WithHeadings, ShouldAutoSize, Wi
     public function collection()
     {
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
-            ->where('type', 'Kredit')
-            ->whereHas('details.kategori', callback: function (Builder $q) {
-                $q->where('name', 'like', '%Tunai%');
+            ->whereHas('details.kategori', function ($q) {
+                $q->where('name', 'like', 'Kas Tunai');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
@@ -58,15 +57,21 @@ class KasTunaiExport implements FromCollection, WithHeadings, ShouldAutoSize, Wi
      */
     public function map($transaksi): array
     {
-        return [
-            $transaksi->invoice,
-            $transaksi->name,
-            $transaksi->tanggal,
-            $transaksi->client?->name ?? '-',
-            $detail->kategori?->name ?? '-',
-            $transaksi->total,
-            $transaksi->user->name,
-            $transaksi->type === 'Debit' ? 'Pemasukan' : 'Pengeluaran',
-        ];
+        $rows = [];
+
+        foreach ($transaksi->details as $detail) {
+            $rows[] = [
+                $transaksi->invoice,
+                $transaksi->name,
+                $transaksi->tanggal,
+                $transaksi->client?->name ?? '-',
+                $detail->kategori?->name ?? '-',
+                $transaksi->total,
+                $transaksi->user->name,
+                $transaksi->type == 'Debit' ? 'Kas Bertambah' : 'Kas Berkurang'
+            ];
+        }
+
+        return $rows;
     }
 }

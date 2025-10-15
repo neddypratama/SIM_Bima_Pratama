@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Transaksi;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -24,8 +25,11 @@ class PendapatanLainnyaExport implements FromCollection, WithHeadings, ShouldAut
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'kategori:id,name,type', 'user:id,name'])
-            ->whereHas('kategori', fn($q) => $q->where('name', 'like', 'Penjualan Lainnya'))
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+            ->where('type', 'Kredit')
+            ->whereHas('details.kategori', function (Builder $q) {
+                $q->where('name', 'like', '%Lain-Lain%');
+            })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')
@@ -52,13 +56,19 @@ class PendapatanLainnyaExport implements FromCollection, WithHeadings, ShouldAut
      */
     public function map($transaksi): array
     {
-        return [
-            $transaksi->invoice,
-            $transaksi->name,
-            $transaksi->tanggal,
-            $transaksi->kategori?->name ?? '-',
-            $transaksi->total,
-            $transaksi->user->name,
+        $rows = [];
+
+        foreach ($transaksi->details as $detail) {
+            $rows[] = [
+                $transaksi->invoice,
+                $transaksi->name,
+                $transaksi->tanggal,
+                $detail->kategori?->name ?? '-',
+                $transaksi->total,
+                $transaksi->user->name,
         ];
+        }
+
+        return $rows;
     }
 }

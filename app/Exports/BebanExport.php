@@ -26,9 +26,8 @@ class BebanExport implements FromCollection, WithHeadings, ShouldAutoSize, WithM
     public function collection()
     {
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
-            ->where('type', 'Kredit')
-            ->whereHas('details.kategori', callback: function (Builder $q) {
-                $q->where('name', 'like', '%Tunai%');
+            ->whereHas('details.kategori', function (Builder $q) {
+                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
@@ -57,14 +56,17 @@ class BebanExport implements FromCollection, WithHeadings, ShouldAutoSize, WithM
      */
     public function map($transaksi): array
     {
-        return [
-            $transaksi->invoice,
-            $transaksi->name,
-            $transaksi->tanggal,
-            $transaksi->client?->name ?? '-',
-            $detail->kategori?->name ?? '-',
-            $transaksi->total,
-            $transaksi->user->name,
-        ];
+        foreach ($transaksi->details as $detail) {
+            $rows[] = [
+                $transaksi->invoice,
+                $transaksi->name,
+                $transaksi->tanggal,
+                $transaksi->client?->name ?? '-',
+                $detail->kategori?->name ?? '-',
+                $transaksi->total,
+                $transaksi->user->name,
+            ];
+        }
+        return $rows;
     }
 }

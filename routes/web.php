@@ -57,11 +57,6 @@ Route::middleware('auth')->group(function() {
 
     // User Pakan dan Obat
     Route::middleware('role:1,4')->group(function () {
-        Volt::route('/sentrat-masuk', 'sentrat-masuk.index');
-        Volt::route('/sentrat-masuk/create', 'sentrat-masuk.create');
-        Volt::route('/sentrat-masuk/{transaksi}/edit', 'sentrat-masuk.edit');
-        Volt::route('/sentrat-masuk/{transaksi}/show', 'sentrat-masuk.show');
-    
         Volt::route('/sentrat-keluar', 'sentrat-keluar.index');
         Volt::route('/sentrat-keluar/create', 'sentrat-keluar.create');
         Volt::route('/sentrat-keluar/{transaksi}/edit', 'sentrat-keluar.edit');
@@ -84,8 +79,9 @@ Route::middleware('auth')->group(function() {
         Volt::route('/tunai/create', 'tunai.create');
         Volt::route('/tunai/{transaksi}/edit', 'tunai.edit');
         Volt::route('/tunai/{transaksi}/show', 'tunai.show');
+    });
 
-        // User Piutang dan Hutang Pegawai, Peternak, dan Pedagang
+    Route::middleware('role:1,5,6')->group(function () {
         Volt::route('/piutang', 'piutang.index');
         Volt::route('/piutang/create', 'piutang.create');
         Volt::route('/piutang/{transaksi}/edit', 'piutang.edit');
@@ -120,6 +116,13 @@ Route::middleware('auth')->group(function() {
         Volt::route('/tray-keluar/create', 'tray-keluar.create');
         Volt::route('/tray-keluar/{transaksi}/edit', 'tray-keluar.edit');
         Volt::route('/tray-keluar/{transaksi}/show', 'tray-keluar.show');
+    });
+
+    Route::middleware('role:1,4,6')->group(function () {
+        Volt::route('/sentrat-masuk', 'sentrat-masuk.index');
+        Volt::route('/sentrat-masuk/create', 'sentrat-masuk.create');
+        Volt::route('/sentrat-masuk/{transaksi}/edit', 'sentrat-masuk.edit');
+        Volt::route('/sentrat-masuk/{transaksi}/show', 'sentrat-masuk.show');
     });
 
     // User Kas Tunai dan Kas Bank pendapatan lainnya dan beban

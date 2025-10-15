@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Transaksi;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -24,8 +25,10 @@ class HutangExport implements FromCollection, WithHeadings, ShouldAutoSize, With
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'kategori:id,name,type', 'user:id,name'])
-            ->whereHas('kategori', fn($q) => $q->where('type', 'like', 'Liabilitas'))
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+            ->whereHas('details.kategori', function (Builder $q) {
+                $q->where('type', 'like', '%Liabilitas%');
+            })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')
@@ -54,15 +57,21 @@ class HutangExport implements FromCollection, WithHeadings, ShouldAutoSize, With
      */
     public function map($transaksi): array
     {
-        return [
-            $transaksi->invoice,
-            $transaksi->name,
-            $transaksi->tanggal,
-            $transaksi->client?->name ?? '-',
-            $transaksi->kategori?->name ?? '-',
-            $transaksi->total,
-            $transaksi->user->name,
-            $transaksi->type === 'Debit' ? 'Hutang Berkurang' : 'Hutang Bertambah',
-        ];
+       $rows = [];
+
+        foreach ($transaksi->details as $detail) {
+            $rows[] = [
+                $transaksi->invoice,
+                $transaksi->name,
+                $transaksi->tanggal,
+                $transaksi->client?->name ?? '-',
+                $detail->kategori?->name ?? '-',
+                $transaksi->total,
+                $transaksi->user->name,
+                $transaksi->type == 'Kredit' ? 'Hutang Bertambah' : 'Hutang Berkurang'
+            ];
+        }
+
+        return $rows;
     }
 }
