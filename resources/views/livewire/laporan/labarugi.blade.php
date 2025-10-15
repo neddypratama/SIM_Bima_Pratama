@@ -46,52 +46,60 @@ new class extends Component {
         $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name');
         $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name');
 
-        // === Pendapatan ===
+        // == Pendapatan ==
         $pendapatan = Transaksi::with('details.kategori')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0)) // hanya transaksi dengan sub_total > 0
             ->get()
             ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type === 'Pendapatan')
+            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type == 'Pendapatan')
             ->groupBy(fn($detail) => $detail->kategori->name)
-            ->map(fn($group) => $group->sum('sub_total'));
+            ->map(function ($group) {
+                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total');
+                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total');
+                return $kredit - $debit;
+            });
 
-        // === Pengeluaran ===
+        // == Pengeluaran ==
         $pengeluaran = Transaksi::with('details.kategori')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get()
             ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type === 'Pengeluaran')
+            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type == 'Pengeluaran')
             ->groupBy(fn($detail) => $detail->kategori->name)
-            ->map(fn($group) => $group->sum('sub_total'));
+            ->map(function ($group) {
+                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total');
+                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total');
+                return $debit - $kredit;
+            });
 
-        // === Beban Pajak ===
+        // == Beban Pajak ==
         $this->bebanPajak = Transaksi::with('details.kategori')
-            ->whereHas('details.kategori', fn($q) => 
-                $q->where('type', 'Pengeluaran')->where('name', 'Beban Pajak')
-            )
+            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran')->where('name', 'Beban Pajak'))
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get()
             ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($detail) => 
-                $detail->kategori && 
-                $detail->kategori->type === 'Pengeluaran' && 
-                $detail->kategori->name === 'Beban Pajak'
-            )
+            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type == 'Pengeluaran' && $detail->kategori->name == 'Beban Pajak')
             ->sum('sub_total');
 
-        // === Pastikan semua kategori tetap muncul ===
-        $this->pendapatanData = $kategoriPendapatan->mapWithKeys(fn($name) => [
-            $name => $pendapatan[$name] ?? 0
-        ])->toArray();
+        // == Pastikan semua kategori tetap muncul ==
+        $this->pendapatanData = $kategoriPendapatan
+            ->mapWithKeys(
+                fn($name) => [
+                    $name => $pendapatan[$name] ?? 0,
+                ],
+            )
+            ->toArray();
 
-        $this->pengeluaranData = $kategoriPengeluaran->mapWithKeys(fn($name) => [
-            $name => $pengeluaran[$name] ?? 0
-        ])->toArray();
+        $this->pengeluaranData = $kategoriPengeluaran
+            ->mapWithKeys(
+                fn($name) => [
+                    $name => $pengeluaran[$name] ?? 0,
+                ],
+            )
+            ->toArray();
+
     }
 
     public function with()

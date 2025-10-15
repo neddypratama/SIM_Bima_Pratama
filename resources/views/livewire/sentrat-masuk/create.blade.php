@@ -49,9 +49,7 @@ new class extends Component {
         return [
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'clients' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get(),
+            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
         ];
     }
 
@@ -217,11 +215,11 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -229,10 +227,27 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="col-span-2">
-                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Pembelian Sentrat"/>
+                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Pembelian Sentrat" />
                         </div>
-                        <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" searchable single clearable />
+                        <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
+                            single searchable clearable label="Client">
+                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                                <x-list-item :item="$clients" sub-value="invoice">
+                                    <x-slot:avatar>
+                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                    </x-slot:avatar>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                    </x-slot:actions>
+                                </x-list-item>
+                            @endscope
+
+                            {{-- Tampilan ketika sudah dipilih --}}
+                            @scope('selection', $clients)
+                                {{ $clients->name . ' | ' . $clients->type }}
+                            @endscope
+                        </x-choices-offline>
                     </div>
                 </div>
             </div>
@@ -240,17 +255,17 @@ new class extends Component {
 
         <!-- SECTION: Detail Items -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
-                            <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value" prefix="Rp "
-                                money="IDR" />
+                            <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
+                                prefix="Rp " money="IDR" />
                             <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
                                 type="number" min="1" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
@@ -272,9 +287,9 @@ new class extends Component {
 
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2 justify-end">
-            <x-button spinner label="Cancel" link="/sentrat-masuk" />
-            <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
-                class="btn-primary" />
+                <x-button spinner label="Cancel" link="/sentrat-masuk" />
+                <x-button spinner label="Create" icon="o-paper-airplane" spinner="save" type="submit"
+                    class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-form>

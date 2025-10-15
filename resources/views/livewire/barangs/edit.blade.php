@@ -19,13 +19,13 @@ new class extends Component {
     public string $name = '';
 
     #[Rule('required|integer')]
-    public int $stok;
+    public ?int $stok = 0;
 
     #[Rule('required|exists:jenis_barangs,id')]
     public ?int $jenis_id = null;
 
     #[Rule('required|integer')]
-    public int $hpp;
+    public ?int $hpp = 0;
 
     public function with(): array
     {

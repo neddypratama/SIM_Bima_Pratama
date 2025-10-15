@@ -99,7 +99,35 @@ new class extends Component {
 
         $tunai = $this->hutang;
 
-        $this->client_id = Transaksi::find($this->linked_id)->client_id;
+        $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
+
+        $kategoriHutang = ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang'];
+        $oldKategori = $this->hutang->details->first()->kategori->name ?? null;
+        $oldClientId = $this->hutang->client_id;
+        $oldType = $this->hutang->type;
+        $oldTotal = $this->hutang->total;
+        $kategoriBaru = Kategori::find($this->kategori_id)->name ?? null;
+
+        if (in_array($oldKategori, $kategoriHutang) && $oldClientId) {
+            $clientLama = Client::find($oldClientId);
+            if ($clientLama) {
+                if ($oldType == 'Kredit') {
+                    $clientLama->decrement('bon', $oldTotal);
+                } else {
+                    $clientLama->increment('bon', $oldTotal);
+                }
+            }
+        }
+
+        // Jika sekarang termasuk kategori hutang → terapkan perubahan baru
+        if (in_array($kategoriBaru, $kategoriHutang) && $this->client_id) {
+            $clientBaru = Client::findOrFail($this->client_id);
+            if ($this->type == 'Kredit') {
+                $clientBaru->increment('bon', $this->total);
+            } else {
+                $clientBaru->decrement('bon', $this->total);
+            }
+        }
 
         // Update transaksi utama
         $tunai->update([
@@ -122,7 +150,9 @@ new class extends Component {
         ]);
 
         $link = TransaksiLink::where('linked_id', $tunai->id)->first();
-        $link->delete();
+        if ($link) {
+            $link->delete();
+        }
 
         // Hapus link lama
         $tunai->linked()->delete();

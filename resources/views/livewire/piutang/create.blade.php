@@ -95,7 +95,19 @@ new class extends Component {
         // ✅ Validasi seluruh input sekaligus
         $this->validate();
 
-        $this->client_id = Transaksi::find($this->linked_id)->client_id;
+        $kategori = Kategori::find($this->kategori_id);
+        $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
+        if (in_array($kategori->name, ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'])) {
+            if ($this->client_id) {
+                $client = Client::findOrFail($this->client_id);
+                if ($this->type == 'Debit') {
+                    // dd($this->client_id, $kategori->name, $this->type, $this->total);
+                    $client->increment('bon', $this->total);
+                } else {
+                    $client->decrement('bon', $this->total);
+                }
+            }
+        }
 
         $tunai = Transaksi::create([
             'invoice' => $this->invoice,
@@ -114,6 +126,8 @@ new class extends Component {
             'value' => null,
             'sub_total' => $this->total,
         ]);
+
+        
 
         if ($this->linked_id != null) {
             # code...
@@ -155,22 +169,22 @@ new class extends Component {
                         <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
                             placeholder="Pilih Tipe" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" >
+                            single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                <x-slot:avatar>
-                                    <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                </x-slot:avatar>
-                                <x-slot:actions>
-                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+                                    <x-slot:avatar>
+                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                    </x-slot:avatar>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
 
-                                </x-slot:actions>
+                                    </x-slot:actions>
                                 </x-list-item>
                             @endscope
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' .  $clients->type}}
+                                {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
                         <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"

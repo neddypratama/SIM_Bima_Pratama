@@ -92,7 +92,19 @@ new class extends Component {
         // ✅ Validasi seluruh input sekaligus
         $this->validate();
 
-        $this->client_id = Transaksi::find($this->linked_id)->client_id;
+        $kategori = Kategori::find($this->kategori_id);
+        $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
+        if (in_array($kategori->name, ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang'])) {
+            if ($this->client_id) {
+                $client = Client::findOrFail($this->client_id);
+                if ($this->type == 'Kredit') {
+                    // dd($this->client_id, $kategori->name, $this->type, $this->total);
+                    $client->increment('bon', $this->total);
+                } else {
+                    $client->decrement('bon', $this->total);
+                }
+            }
+        }
 
         $tunai = Transaksi::create([
             'invoice' => $this->invoice,

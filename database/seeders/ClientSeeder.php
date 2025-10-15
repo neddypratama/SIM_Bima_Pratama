@@ -83,6 +83,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Melati No. ' . rand(1, 50),
                 'type' => 'Peternak',
                 'keterangan' => 'Elf',
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -95,6 +97,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Kenanga No. ' . rand(1, 50),
                 'type' => 'Peternak',
                 'keterangan' => 'Kuning',
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -107,6 +111,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Mawar No. ' . rand(1, 50),
                 'type' => 'Peternak',
                 'keterangan' => 'Merah',
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -119,6 +125,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Dahlia No. ' . rand(1, 50),
                 'type' => 'Peternak',
                 'keterangan' => 'Rumah',
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -131,6 +139,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Flamboyan No. ' . rand(1, 50),
                 'type' => 'Peternak',
                 'keterangan' => 'Kandang',
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -142,6 +152,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Anggrek No. ' . rand(1, 50),
                 'type' => 'Pedagang',
                 'keterangan' => null,
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -153,6 +165,8 @@ class ClientSeeder extends Seeder
                 'alamat' => 'Jl. Teratai No. ' . rand(1, 50),
                 'type' => 'Karyawan',
                 'keterangan' => 'Karyawan Keliling',
+                'bon' => 0,
+                'titipan' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -164,6 +178,8 @@ class ClientSeeder extends Seeder
             'alamat' => 'Jl. Cempaka No. ' . rand(1, 50),
             'type' => 'Karyawan',
             'keterangan' => 'Karyawan Lain',
+            'bon' => 0,
+                'titipan' => 0,
             'created_at' => now(),
             'updated_at' => now(),
             ];
@@ -175,6 +191,8 @@ class ClientSeeder extends Seeder
             'alamat' => 'Jl. Matahari No. 1',
             'type' => 'Peternak',
             'keterangan' => 'Pocok',
+            'bon' => 0,
+                'titipan' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -185,6 +203,8 @@ class ClientSeeder extends Seeder
             'alamat' => 'Jl. Sepatu No. 1',
             'type' => 'Peternak',
             'keterangan' => 'Ternak Keluar',
+            'bon' => 0,
+                'titipan' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ];

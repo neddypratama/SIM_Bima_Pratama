@@ -78,13 +78,17 @@ new class extends Component {
 
     public function edit($id): void
     {
-        $this->editingKategori = Kategori::find($id);
+        if (Auth()->user()->role_id == 1) {
+            $this->editingKategori = Kategori::find($id);
 
-        if ($this->editingKategori) {
-            $this->editingName = $this->editingKategori->name;
-            $this->editingDeskripsi = $this->editingKategori->deskripsi;
-            $this->editingType = $this->editingKategori->type;
-            $this->editModal = true; // Tampilkan modal
+            if ($this->editingKategori) {
+                $this->editingName = $this->editingKategori->name;
+                $this->editingDeskripsi = $this->editingKategori->deskripsi;
+                $this->editingType = $this->editingKategori->type;
+                $this->editModal = true; // Tampilkan modal
+            }
+        } else {
+            $this->warning('Mohon maaf tidak bisa edit kategori', position: 'toast-top');
         }
     }
 

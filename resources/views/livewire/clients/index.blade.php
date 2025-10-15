@@ -114,7 +114,7 @@ new class extends Component {
     public function clients(): LengthAwarePaginator
     {
         return Client::query()
-            ->with('transaksi.kategori') // agar eager load, lebih hemat query
+            ->with('transaksi.details.kategori') // agar eager load, lebih hemat query
             ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
             ->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))
             ->orderBy(...array_values($this->sortBy))

@@ -72,6 +72,12 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
+        $client = Client::find($transaksi->client_id);
+        if ($transaksi->type == 'Kredit') {
+            $client?->decrement('bon', $transaksi->total);
+        } else {
+            $client?->increment('bon', $transaksi->total);
+        }
 
         $link = TransaksiLink::where('linked_id', $id)->first();
         $link?->delete();

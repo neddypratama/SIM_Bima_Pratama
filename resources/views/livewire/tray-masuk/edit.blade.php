@@ -244,8 +244,25 @@ new class extends Component {
                         <div class="col-span-2">
                             <x-input label="Rincian" wire:model="name" />
                         </div>
-                        <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
-                            placeholder="Pilih Client" searchable single clearable />
+                        <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
+                            single searchable clearable label="Client" >
+                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                                <x-list-item :item="$clients" sub-value="invoice">
+                                <x-slot:avatar>
+                                    <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                </x-slot:avatar>
+                                <x-slot:actions>
+                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+
+                                </x-slot:actions>
+                                </x-list-item>
+                            @endscope
+
+                            {{-- Tampilan ketika sudah dipilih --}}
+                            @scope('selection', $clients)
+                                {{ $clients->name . ' | ' .  $clients->type}}
+                            @endscope
+                        </x-choices-offline>
                     </div>
                 </div>
             </div>
