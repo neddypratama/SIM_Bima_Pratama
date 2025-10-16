@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('clients', function (Blueprint $table) {
+        Schema::create('stoks', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->text('alamat');
-            $table->enum('type', ['Karyawan', 'Peternak', 'Pedagang', 'Supplier']);
-            $table->string('keterangan')->nullable();
-            $table->integer('bon')->nullable();
-            $table->integer('titipan')->nullable();
+            $table->foreignId('barang_id')->constrained();
+            $table->dateTime('tanggal');
+            $table->enum('type', ['Masuk', 'Keluar']);
+            $table->integer('jumlah')->default(0);
             $table->timestamps();
         });
     }
@@ -28,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('clients');
+        Schema::dropIfExists('stoks');
     }
 };

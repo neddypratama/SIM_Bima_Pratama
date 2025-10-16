@@ -93,6 +93,13 @@
                     </x-menu-sub>
                 @endif
 
+                {{-- ✅ Stok hanya untuk role 1 dan 2 --}}
+                {{-- @if (in_array(auth()->user()->role_id, [1, 2]))
+                    <x-menu-sub title="Manage Stok" icon="fas.warehouse">
+                        <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok" />
+                    </x-menu-sub>
+                @endif --}}
+
                 {{-- ✅ Transactions untuk role sesuai route --}}
                 <x-menu-sub title="Telur & Tray" icon="fas.egg">
                     @if (in_array(auth()->user()->role_id, [1, 3]))

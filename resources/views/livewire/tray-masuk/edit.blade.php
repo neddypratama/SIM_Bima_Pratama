@@ -54,9 +54,7 @@ new class extends Component {
                     $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Aset%');
                 })
                 ->get(),
-            'clients' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get(),
+            'clients' => Client::where('type', 'like', '%Supplier%')->where('name', 'like', 'Tray%')->get(),
         ];
     }
 
@@ -204,7 +202,7 @@ new class extends Component {
                 continue;
             }
 
-            $stokLama = $barang->stok ;
+            $stokLama = $barang->stok;
             $hppLama = $barang->hpp ?? 0;
             $qtyBaru = $item['kuantitas'] ?? 0;
             $hargaSatuanBaru = $item['value'] ?? 0;
@@ -245,22 +243,18 @@ new class extends Component {
                             <x-input label="Rincian" wire:model="name" />
                         </div>
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" >
+                            single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                <x-slot:avatar>
-                                    <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                </x-slot:avatar>
-                                <x-slot:actions>
-                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
-
-                                </x-slot:actions>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+                                    </x-slot:actions>
                                 </x-list-item>
                             @endscope
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' .  $clients->type}}
+                                {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
                     </div>
@@ -278,13 +272,13 @@ new class extends Component {
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
-                            <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value" prefix="Rp "
-                                money="IDR" />
+                            <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
+                                prefix="Rp " money="IDR" />
                             <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
                                 type="number" min="1" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
-                        
+
                         <div class="flex justify-end">
                             <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
                                 class="btn-error btn-sm" label="Hapus Item" />
@@ -302,8 +296,7 @@ new class extends Component {
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/tray-masuk" />
-            <x-button spinner icon="o-check" label="Update" spinner="save" type="submit"
-                class="btn-primary" />
+            <x-button spinner icon="o-check" label="Update" spinner="save" type="submit" class="btn-primary" />
         </x-slot:actions>
     </x-form>
 </div>

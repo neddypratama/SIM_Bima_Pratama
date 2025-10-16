@@ -52,7 +52,7 @@ new class extends Component {
     public function saveCreate(): void
     {
         $this->validate([
-            'newClientName' => 'required|string|max:255',
+            'newClientName' => 'required|string|max:255|unique:clients,name',
             'newClientAlamat' => 'nullable',
             'newClientType' => 'required|in:Karyawan,Peternak,Pedagang',
         ]);
@@ -79,7 +79,7 @@ new class extends Component {
     {
         if ($this->editingClient) {
             $this->validate([
-                'editingName' => 'required|string|max:255',
+                'editingName' => 'required|string|max:255|unique:clients,name',
                 'editingAlamat' => 'nullable',
                 'editingType' => 'required|in:Karyawan,Peternak,Pedagang',
             ]);

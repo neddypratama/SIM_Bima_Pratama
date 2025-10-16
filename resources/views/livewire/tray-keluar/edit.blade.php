@@ -129,7 +129,6 @@ new class extends Component {
             'details.*.kuantitas' => 'required|integer|min:1',
         ]);
 
-
         foreach ($this->details as $i => $item) {
             if ($item['max_qty'] !== null && $item['kuantitas'] > $item['max_qty']) {
                 $this->addError("details.$i.kuantitas", 'Qty tidak boleh melebihi stok barang.');
@@ -145,7 +144,6 @@ new class extends Component {
         $stokTransaksi = Transaksi::where('invoice', 'like', "%$inv")
             ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Tray'))
             ->first();
-
 
         $kategoriTelur = Kategori::where('name', 'Stok Tray')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
@@ -303,22 +301,18 @@ new class extends Component {
                             <x-input label="Rincian Transaksi" wire:model="name" placeholder="Contoh: Penjualan Tray" />
                         </div>
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" >
+                            single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                <x-slot:avatar>
-                                    <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                </x-slot:avatar>
-                                <x-slot:actions>
-                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
-
-                                </x-slot:actions>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+                                    </x-slot:actions>
                                 </x-list-item>
                             @endscope
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' .  $clients->type}}
+                                {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
                     </div>

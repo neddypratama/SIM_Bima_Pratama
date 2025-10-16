@@ -54,7 +54,7 @@ new class extends Component {
                     $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Aset%');
                 })
                 ->get(),
-            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
+            'clients' => Client::where('type', 'like', '%Supplier%')->where('name', 'like', 'Obat%')->get(),
         ];
     }
 
@@ -245,9 +245,6 @@ new class extends Component {
                             single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                    <x-slot:avatar>
-                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                    </x-slot:avatar>
                                     <x-slot:actions>
                                         <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
 

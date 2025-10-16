@@ -135,7 +135,7 @@ new class extends Component {
     <x-header title="Daftar Transaksi" separator progress-indicator />
 
     <!-- FILTERS -->
-    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4" >
         <div class="md:col-span-1">
             <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
         </div>
@@ -150,7 +150,7 @@ new class extends Component {
     </div>
 
     <x-card>
-        <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination />
+        <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination link="telur-masuk/{id}/show?invoice={invoice}"/>
     </x-card>
 
     <!-- FILTER DRAWER -->

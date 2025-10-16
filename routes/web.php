@@ -43,8 +43,13 @@ Route::middleware('auth')->group(function() {
         Volt::route('/kategoris', 'kategoris.index');
 
         Volt::route('/transaksis', 'transaksis.index');
-        // Volt::route('/transaksis/create', 'transaksis.create');
         Volt::route('/transaksis/{transaksi}/show', 'transaksis.show'); 
+
+        Volt::route('/stok', 'stok.index');
+        Volt::route('/stok/create', 'stok.create');
+        Volt::route('/stok/{stok}/edit', 'stok.edit');
+        Volt::route('/stok/{stok}/show', 'stok.show');
+
     });
 
     // User Pembelian Telur 

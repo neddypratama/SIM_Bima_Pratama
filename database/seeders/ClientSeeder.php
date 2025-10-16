@@ -17,13 +17,13 @@ class ClientSeeder extends Seeder
             'Agus','Bonari','Iwan','Nunuk','Candra','Eko Bedali','Kusnar','Jainal Candirejo','Cahyo','Unsu',
             'Kusuma','Sutik Candirejo','Maria','Suryanto','Sigit','Musid','Sugeng Krebet','Diki','Sugeng',
             'Suprat','Mamik','Isnafuah','Edi dawung','Rohmad','Sukar','Imam Karangbendo','Agus dawung','Wardoyo',
-            'Wiji','Kaseri','Samsul dayu','Sunarman','Wahyu','Gunawan','Purbo','Yanto dawung','Basuki',
+            'Wiji','Kaseri','Samsul dayu','Sunarman',' Elf','Gunawan','Purbo','Yanto dawung','Basuki',
             'Ika Karangbendo','Ngari','Naning','Andri Karangbendo','Rowi','B Sun','Andri Kalicilik','Ririd',
         ];
 
         // 🟡 Data dengan keterangan KUNING
         $clientsKuning = [
-            'Suci','Topah','Joko Bonkakah','Suryono','Triono','Febri','Fadil','Kholik','Jam','Wulan','Leginah',
+            'Suci Kuning','Topah','Joko Bonkakah','Suryono','Triono','Febri','Fadil','Kholik','Jam','Wulan','Leginah',
             'Kholis','Septi','Arif','Yadi','Nurkholis','Karyo','Safii','Arifin','Irul','Tini','Didit','Daroini',
             'Huda','Joko Manding','Kari','Saiful','Lim','Ghasa','Adi','Utami','Harmi','Tukiran','Suratman',
             'Dwin','Koim','Kafid','Hanik',
@@ -62,16 +62,20 @@ class ClientSeeder extends Seeder
 
         // KARYAWAN KELILING
         $clientsKaryawanKeliling = [
-            'Syah', 'Agung', 'Tri', 'Heji', 'Arya', 'Hebi', 'Zikin', 'Ipul', 'Imam', 'Shodiq',
-            'Rurin', 'Muda', 'Zubet', 'Iwan', 'Anton', 'Eko', 'Rafi', 'Son', 'Mursyid', 'Rum',
-            'Sopiyah', 'Irul', 'Yuyun', 'Zamron cs', 'Agung 2', 'Sokib', 'Din',
+            'Syah', 'Agung 2', 'Tri', 'Heji', 'Arya', 'Hebi', 'Zikin', 'Ipul', 'Imam', 'Shodiq',
+            'Rurin 2', 'Muda', 'Zubet', 'Iwan 2', 'Anton', 'Eko', 'Rafi', 'Son', 'Mursyid', 'Rum',
+            'Sopiyah', 'Irul 2', 'Yuyun', 'Zamron cs', 'Agung 3', 'Sokib 2', 'Din',
         ];
 
         // KARYAWAN LAIN
         $clientsKaryawanLain = [
-            'Koim', 'Anak Yatim', 'Didit', 'Ela', 'Sipon', 'Yeni', 'Ika/Aris', 'Supri Sopir', 'Sipon',
-            'Mun', 'Binti paket', 'Pertashop', 'Polet', 'Toko', 'Azka', 'Zulfa', 'Kasan', 'Joko', 'Yoga', 
-            'Bagas', 'Jun', 'Eka', 'Nasik', 'Niam', 'Mufas', 'Suyoto', 'Azka titip', 'Kateni', 'Ridwan',
+            'Koim 2', 'Anak Yatim', 'Didit 2', 'Ela', 'Sipon', 'Yeni', 'Ika/Aris', 'Supri Sopir', 'Sipon 2',
+            'Mun', 'Binti paket', 'Pertashop', 'Polet', 'Toko 2', 'Azka', 'Zulfa', 'Kasan', 'Joko', 'Yoga', 
+            'Bagas', 'Jun', 'Eka', 'Nasik 2', 'Niam', 'Mufas 2', 'Suyoto', 'Azka titip', 'Kateni', 'Ridwan',
+        ];
+
+        $clientSupplier = [
+            'Tray Diamond / DM', 'Tray Super Buah / SB', 'Obat-Obatan', 'Sentrat SK', 'Sentrat Ponggok', 'Bp. Supriadi',
         ];
 
         $data = [];
@@ -185,6 +189,20 @@ class ClientSeeder extends Seeder
             ];
         }
 
+        // Supplier
+        foreach ($clientSupplier as $name) {
+        $data[] = [
+            'name' => $name,
+            'alamat' => 'Jl. Raflesia No. ' . rand(1, 50),
+            'type' => 'Supplier',
+            'keterangan' => 'Supplier',
+            'bon' => 0,
+                'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+            ];
+        }
+
         // POCOK
         $data[] = [
             'name' => 'Abi',
@@ -208,6 +226,7 @@ class ClientSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ];
+
 
         DB::table('clients')->insert($data);
     }
