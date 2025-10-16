@@ -151,7 +151,7 @@ new class extends Component {
                 <tbody>
                     <!-- Pendapatan -->
                     <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-chart-line mr-2"></i>Pendapatan</td>
+                        <td colspan="3"><i class="fas fa-chart-line mr-5"></i>Pendapatan</td>
                     </tr>
                     @foreach ($neracaPendapatan as $row)
                         <tr>
@@ -167,7 +167,7 @@ new class extends Component {
 
                     <!-- Pengeluaran -->
                     <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-coins mr-2"></i>Pengeluaran</td>
+                        <td colspan="3"><i class="fas fa-coins mr-5"></i>Pengeluaran</td>
                     </tr>
                     @foreach ($neracaPengeluaran as $row)
                         <tr>
@@ -183,7 +183,7 @@ new class extends Component {
 
                     <!-- Aset -->
                     <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-wallet mr-2"></i>Aset</td>
+                        <td colspan="3"><i class="fas fa-wallet mr-5"></i>Aset</td>
                     </tr>
                     @foreach ($neracaAset as $row)
                         <tr>
@@ -199,7 +199,7 @@ new class extends Component {
 
                     <!-- Liabilitas -->
                     <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-file-invoice-dollar mr-2"></i>Liabilitas</td>
+                        <td colspan="3"><i class="fas fa-file-invoice-dollar mr-5"></i>Liabilitas</td>
                     </tr>
                     @foreach ($neracaLiabilitas as $row)
                         <tr>
@@ -225,7 +225,7 @@ new class extends Component {
 
         @if ($totalDebit !== $totalKredit)
             <div class="mt-4 p-3 text-yellow-800 rounded bg-yellow-100">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <i class="fas fa-exclamation-triangle mr-5"></i>
                 <strong>Perhatian:</strong> Neraca tidak seimbang (Selisih:
                 Rp {{ number_format($totalDebit - $totalKredit, 0, ',', '.') }})
             </div>

@@ -362,8 +362,8 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                        <x-select wire:model.live="details.{{ $index }}.kategori_id" label="Kategori"
-                            :options="$kategoris" placeholder="Pilih Kategori" />
+                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
+                            placeholder="Pilih Kategori" single clearable searchable />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />

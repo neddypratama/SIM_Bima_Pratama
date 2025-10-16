@@ -145,8 +145,8 @@ new class extends Component {
                     </div>
                     <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bayar Bank BCA" />
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <x-select label="Kategori" wire:model="kategori_id" :options="$kategori"
-                            placeholder="Pilih Kategori" />
+                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategori"
+                            placeholder="Pilih Kategori" single clearable searchable />
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                     </div>
                 </div>

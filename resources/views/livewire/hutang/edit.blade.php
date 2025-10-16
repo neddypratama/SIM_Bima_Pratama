@@ -22,7 +22,7 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
+    #[Rule('required|integer|min:0')]
     public int $total = 0;
 
     #[Rule('required')]
@@ -214,8 +214,8 @@ new class extends Component {
                                 {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
-                        <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
-                            placeholder="Pilih Kategori" />
+                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
+                            placeholder="Pilih Kategori" single clearable searchable />
                     </div>
                 </div>
             </div>

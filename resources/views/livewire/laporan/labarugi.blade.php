@@ -136,7 +136,7 @@ new class extends Component {
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <x-card>
             <h3 class="text-lg font-semibold text-green-800">
-                <i class="fas fa-coins text-green-600 mr-2"></i>Total Pendapatan
+                <i class="fas fa-coins text-green-600"></i>Total Pendapatan
             </h3>
             <p class="text-2xl font-bold text-green-700 mt-2">
                 Rp {{ number_format($totalPendapatan, 0, ',', '.') }}
@@ -145,7 +145,7 @@ new class extends Component {
 
         <x-card>
             <h3 class="text-lg font-semibold text-red-800">
-                <i class="fas fa-wallet text-red-600 mr-2"></i>Total Pengeluaran
+                <i class="fas fa-wallet text-red-600"></i>Total Pengeluaran
             </h3>
             <p class="text-2xl font-bold text-red-700 mt-2">
                 Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}
@@ -154,7 +154,7 @@ new class extends Component {
 
         <x-card>
             <h3 class="text-lg font-semibold">
-                <i class="fas fa-chart-line text-blue-600 mr-2"></i>Laba Sebelum Pajak
+                <i class="fas fa-chart-line text-blue-600"></i>Laba Sebelum Pajak
             </h3>
             <p class="text-2xl font-bold {{ $labaSebelumPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
                 Rp {{ number_format($labaSebelumPajak, 0, ',', '.') }}
@@ -163,7 +163,7 @@ new class extends Component {
 
         <x-card>
             <h3 class="text-lg font-semibold">
-                <i class="fas fa-calculator text-purple-600 mr-2"></i>Laba Setelah Pajak
+                <i class="fas fa-calculator text-purple-600"></i>Laba Setelah Pajak
             </h3>
             <p class="text-2xl font-bold {{ $labaSetelahPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
                 Rp {{ number_format($labaSetelahPajak, 0, ',', '.') }}
@@ -175,10 +175,10 @@ new class extends Component {
     </div>
 
     <x-card class="mt-4">
-        <h3 class="text-xl font-semibold mb-4"><i class="fas fa-list-ul mr-2"></i>Rincian</h3>
+        <h3 class="text-xl font-semibold mb-4"><i class="fas fa-list-ul"></i>Rincian</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up mr-2"></i>Pendapatan per
+                <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up"></i>Pendapatan per
                     Kategori</h4>
                 <ul class="divide-y divide-gray-200">
                     @foreach ($pendapatanData as $kategori => $total)
@@ -191,7 +191,7 @@ new class extends Component {
             </div>
 
             <div>
-                <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down mr-2"></i>Pengeluaran
+                <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down"></i>Pengeluaran
                     per Kategori</h4>
                 <ul class="divide-y divide-gray-200">
                     @foreach ($pengeluaranData as $kategori => $total)

@@ -24,7 +24,7 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
+    #[Rule('required|integer|min:0')]
     public int $total = 0;
 
     #[Rule('required')]
@@ -163,8 +163,8 @@ new class extends Component {
                     </div>
                     <x-input label="Rincian" wire:model="name" />
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <x-select label="Kategori" wire:model="kategori_id" :options="$kategori"
-                            placeholder="Pilih Kategori" />
+                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategori"
+                            placeholder="Pilih Kategori" single clearable searchable />
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                     </div>
                 </div>

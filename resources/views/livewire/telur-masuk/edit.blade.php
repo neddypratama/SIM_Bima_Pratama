@@ -24,7 +24,7 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
+    #[Rule('required|integer|min:0')]
     public int $total = 0;
 
     #[Rule('required')]
