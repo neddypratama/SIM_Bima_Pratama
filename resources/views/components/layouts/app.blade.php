@@ -115,10 +115,10 @@
                 <x-menu-sub title="Pakan & Obat" icon="fas.flask">
                     @if (in_array(auth()->user()->role_id, [1, 4, 6]))
                         <x-menu-item title="Pembelian Sentrat" icon="fas.cart-plus" link="/sentrat-masuk" />
+                        <x-menu-item title="Pembelian Obat" icon="fas.cart-plus" link="/obat-masuk" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 4]))
                         <x-menu-item title="Penjualan Sentrat" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
-                        <x-menu-item title="Pembelian Obat" icon="fas.cart-plus" link="/obat-masuk" />
                         <x-menu-item title="Penjualan Obat" icon="fas.file-invoice-dollar" link="/obat-keluar" />
                     @endif
                 </x-menu-sub>
