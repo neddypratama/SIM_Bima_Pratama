@@ -26,12 +26,7 @@ new class extends Component {
     public int $client_id = 0;
 
     public int $filter = 0;
-    public array $page = [
-        ['id' => 10, 'name' => '10'],
-        ['id' => 25, 'name' => '25'],
-        ['id' => 50, 'name' => '50'],
-        ['id' => 100, 'name' => '100']
-    ];
+    public array $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
 
     public int $perPage = 10;
 
@@ -65,14 +60,7 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [
-            ['key' => 'id', 'label' => '#', 'class' => 'w-1'],
-            ['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-36'],
-            ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-56'],
-            ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-24'],
-            ['key' => 'total', 'label' => 'Total', 'class' => 'w-24'],
-            ['key' => 'user.name', 'label' => 'User', 'class' => 'w-24']
-        ];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksis(): LengthAwarePaginator
@@ -81,8 +69,7 @@ new class extends Component {
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
-                    $query->where('name', 'like', "%{$this->search}%")
-                          ->orWhere('invoice', 'like', "%{$this->search}%");
+                    $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
                 });
             })
             ->when($this->user_id, fn(Builder $q) => $q->where('user_id', $this->user_id))
@@ -103,11 +90,21 @@ new class extends Component {
     {
         if ($this->filter >= 0 && $this->filter < 5) {
             $this->filter = 0;
-            if (!empty($this->search)) $this->filter++;
-            if ($this->user_id != 0) $this->filter++;
-            if ($this->client_id != 0) $this->filter++;
-            if ($this->kategori_id != 0) $this->filter++;
-            if ($this->startDate || $this->endDate) $this->filter++;
+            if (!empty($this->search)) {
+                $this->filter++;
+            }
+            if ($this->user_id != 0) {
+                $this->filter++;
+            }
+            if ($this->client_id != 0) {
+                $this->filter++;
+            }
+            if ($this->kategori_id != 0) {
+                $this->filter++;
+            }
+            if ($this->startDate || $this->endDate) {
+                $this->filter++;
+            }
         }
 
         return [
@@ -135,7 +132,7 @@ new class extends Component {
     <x-header title="Daftar Transaksi" separator progress-indicator />
 
     <!-- FILTERS -->
-    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4" >
+    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">
         <div class="md:col-span-1">
             <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
         </div>
@@ -150,7 +147,8 @@ new class extends Component {
     </div>
 
     <x-card>
-        <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination link="telur-masuk/{id}/show?invoice={invoice}"/>
+        <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination
+            link="telur-masuk/{id}/show?invoice={invoice}" />
     </x-card>
 
     <!-- FILTER DRAWER -->

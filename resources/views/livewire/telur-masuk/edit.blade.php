@@ -243,8 +243,8 @@ new class extends Component {
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Pembelian Telur Ayam Ras" />
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Pembelian Telur Ayam Ras" />
                         <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
                             placeholder="Pilih Client" searchable single clearable />
                     </div>

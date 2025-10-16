@@ -86,7 +86,7 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-32'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-32'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
@@ -145,17 +145,17 @@ new class extends Component {
     </x-header>
 
     <!-- FILTERS -->
-    <div class="grid grid-cols-1 md:grid-cols-8 gap-3 items-end mb-4">
-        <div class="md:col-span-2">
+    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">
+        <div class="md:col-span-1">
             <x-select label="Show entries" :options="$pages" wire:model.live="perPage" class="w-full" />
         </div>
 
-        <div class="md:col-span-5">
+        <div class="md:col-span-6">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass"
                 class="w-full" />
         </div>
 
-        <div class="md:col-span-1 flex justify-end">
+        <div class="md:col-span-1">
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"
                 badge="{{ $this->filter }}" badge-classes="badge-primary" class="w-full md:w-auto" />
         </div>

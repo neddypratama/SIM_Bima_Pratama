@@ -229,9 +229,9 @@ new class extends Component {
                             type="datetime-local" />
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Pembelian Telur Ayam Ras" />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Pembelian Telur Ayam Ras" />
                         <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
                             placeholder="Pilih Client" searchable single clearable />
                     </div>
