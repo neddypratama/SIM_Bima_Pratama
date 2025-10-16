@@ -229,17 +229,17 @@ new class extends Component {
 
         foreach ($detailData as $d) {
             DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id, 'kategori_id' => $kategoriTelur->id]));
-            
+
             $barang = Barang::find($d['barang_id']);
             if ($barang) {
                 $barang->decrement('stok', $d['kuantitas']);
             }
-            
+
             TransaksiLink::create([
                 'transaksi_id' => $hpp->id,
                 'linked_id' => $stok->id,
             ]);
-    
+
             TransaksiLink::create([
                 'transaksi_id' => $stok->id,
                 'linked_id' => $hpp->id,
@@ -293,25 +293,22 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="sm:col-span-2">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Penjualan Tray" />
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian Transaksi" wire:model="name" placeholder="Contoh: Penjualan Tray" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" >
+                            single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                <x-slot:actions>
-                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
 
-                                </x-slot:actions>
+                                    </x-slot:actions>
                                 </x-list-item>
                             @endscope
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' .  $clients->type}}
+                                {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
                     </div>
@@ -327,7 +324,7 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />
                             <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
@@ -337,7 +334,7 @@ new class extends Component {
                                 :max="$item['max_qty'] ?? null" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-input label="Barang" :value="$pokok->firstWhere('id', $item['barang_id'])?->name ?? '-'" readonly />
                             <x-input label="Harga Pokok (HPP)" :value="number_format(
                                 $item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0),

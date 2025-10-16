@@ -239,9 +239,7 @@ new class extends Component {
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="col-span-2">
-                            <x-input label="Rincian" wire:model="name" />
-                        </div>
+                        <x-input label="Rincian" wire:model="name" placeholder="Contoh: Pembelian Tray" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
                             single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
@@ -269,7 +267,7 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
                             <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"

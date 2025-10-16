@@ -22,7 +22,7 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
+    #[Rule('required|integer|min:0')]
     public int $total = 0;
 
     #[Rule('required')]
@@ -192,17 +192,12 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bon Pak Agus" />
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
-                            placeholder="Pilih Tipe" />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bon Pak Agus" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
                             single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                    <x-slot:avatar>
-                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                    </x-slot:avatar>
                                     <x-slot:actions>
                                         <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
 
@@ -215,6 +210,10 @@ new class extends Component {
                                 {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-select label="Tipe Transaksi" wire:model.live="type" :options="$optionType"
+                            placeholder="Pilih Tipe" />
                         <x-select wire:model="kategori_id" label="Kategori" :options="$kategoris"
                             placeholder="Pilih Kategori" />
                     </div>

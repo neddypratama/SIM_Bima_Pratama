@@ -230,10 +230,8 @@ new class extends Component {
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="sm:col-span-2">
                             <x-input label="Rincian Transaksi" wire:model="name"
                                 placeholder="Contoh: Pembelian Telur Ayam Ras" />
-                        </div>
                         <x-choices-offline wire:model="client_id" label="Client" :options="$clients"
                             placeholder="Pilih Client" searchable single clearable />
                     </div>
@@ -250,7 +248,7 @@ new class extends Component {
 
                 <div class="col-span-6 grid gap-5">
                     @foreach ($details as $index => $item)
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
                             <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"

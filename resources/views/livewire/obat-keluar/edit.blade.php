@@ -58,7 +58,7 @@ new class extends Component {
                 'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
                 'hpp' => Barang::find($detail->barang_id)->hpp ?? 0,
             ];
-             $this->kategori_id = $detail->kategori_id;
+            $this->kategori_id = $detail->kategori_id;
         }
 
         $kategori = Kategori::where('name', 'Stok Obat-Obatan')->first();
@@ -74,9 +74,7 @@ new class extends Component {
             'users' => User::all(),
             'barangs' => $this->barangs,
             'kategoris' => Kategori::where('name', 'like', '%Obat%')->where('type', 'like', '%Pendapatan%')->get(),
-            'clients' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get(),
+            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
         ];
     }
 
@@ -298,29 +296,27 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="sm:col-span-2">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Pembelian Telur Ayam Ras" />
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Pembelian Telur Ayam Ras" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" >
+                            single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                <x-slot:actions>
-                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
 
-                                </x-slot:actions>
+                                    </x-slot:actions>
                                 </x-list-item>
                             @endscope
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' .  $clients->type}}
+                                {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
+                    </div>
                 </div>
-            </div>
 
         </x-card>
 
@@ -332,7 +328,7 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
                             <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
@@ -342,7 +338,7 @@ new class extends Component {
                                 :max="$item['max_qty'] ?? null" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-input label="Barang" :value="$pokok->firstWhere('id', $item['barang_id'])?->name ?? '-'" readonly />
                             <x-input label="Harga Pokok (HPP)" :value="number_format(
                                 $item['hpp'] ?? ($pokok->firstWhere('id', $item['barang_id'])?->hpp ?? 0),
@@ -369,7 +365,7 @@ new class extends Component {
 
                     <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
                         <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
-                            class="btn-primary" /> 
+                            class="btn-primary" />
                         <x-input label="Total Pembayaran" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
                     </div>
                 </div>
@@ -378,8 +374,7 @@ new class extends Component {
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/obat-keluar" />
-            <x-button spinner label="Update" icon="o-check" spinner="save" type="submit"
-                class="btn-primary" />
+            <x-button spinner label="Update" icon="o-check" spinner="save" type="submit" class="btn-primary" />
         </x-slot:actions>
     </x-form>
 </div>

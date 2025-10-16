@@ -167,9 +167,6 @@ new class extends Component {
                                 {{-- Tampilan item di dropdown --}}
                                 @scope('item', $transaksi)
                                     <x-list-item :item="$transaksi" sub-value="invoice">
-                                        <x-slot:avatar>
-                                            <x-icon name="fas.receipt" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                        </x-slot:avatar>
                                         <x-slot:actions>
                                             @php
                                                 // Hitung total transaksi yang sudah terhubung

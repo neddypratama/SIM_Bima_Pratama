@@ -143,11 +143,9 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="sm:col-span-2">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Bayar Pembelian Telur Ayam Ras" />
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Bayar Pembelian Telur Ayam Ras" />
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                     </div>
                 </div>
@@ -168,9 +166,6 @@ new class extends Component {
                                 {{-- Tampilan item di dropdown --}}
                                 @scope('item', $transaksi)
                                     <x-list-item :item="$transaksi" sub-value="invoice">
-                                        <x-slot:avatar>
-                                            <x-icon name="fas.receipt" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                        </x-slot:avatar>
                                         <x-slot:actions>
                                             @php
                                                 // Hitung total transaksi yang sudah terhubung
