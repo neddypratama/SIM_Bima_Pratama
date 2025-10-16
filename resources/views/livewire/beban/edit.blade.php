@@ -12,7 +12,7 @@ new class extends Component {
     use Toast;
 
     public Transaksi $beban; // transaksi utama
-    public Transaksi $kas;   // transaksi linked
+    public Transaksi $kas; // transaksi linked
 
     #[Rule('required')]
     public string $invoice = '';
@@ -111,10 +111,8 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="col-span-2">
-                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
                         <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
                             placeholder="Pilih Kategori" single clearable searchable />
                     </div>
@@ -128,8 +126,7 @@ new class extends Component {
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/beban" />
-            <x-button spinner label="Update" icon="o-check" spinner="save" type="submit"
-                class="btn-primary" />
+            <x-button spinner label="Update" icon="o-check" spinner="save" type="submit" class="btn-primary" />
         </x-slot:actions>
     </x-form>
 </div>

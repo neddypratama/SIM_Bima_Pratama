@@ -110,10 +110,8 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="col-span-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
-                        </div>
                         <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
                             placeholder="Pilih Kategori" single clearable searchable />
                     </div>
