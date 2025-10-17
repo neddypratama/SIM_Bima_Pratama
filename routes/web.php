@@ -67,15 +67,20 @@ Route::middleware('auth')->group(function() {
         Volt::route('/sentrat-keluar/{transaksi}/edit', 'sentrat-keluar.edit');
         Volt::route('/sentrat-keluar/{transaksi}/show', 'sentrat-keluar.show');
     
-        Volt::route('/obat-masuk', 'obat-masuk.index');
-        Volt::route('/obat-masuk/create', 'obat-masuk.create');
-        Volt::route('/obat-masuk/{transaksi}/edit', 'obat-masuk.edit');
-        Volt::route('/obat-masuk/{transaksi}/show', 'obat-masuk.show');
-    
         Volt::route('/obat-keluar', 'obat-keluar.index');
         Volt::route('/obat-keluar/create', 'obat-keluar.create');
         Volt::route('/obat-keluar/{transaksi}/edit', 'obat-keluar.edit');
         Volt::route('/obat-keluar/{transaksi}/show', 'obat-keluar.show');
+
+        // Volt::route('/curah-keluar', 'curah-keluar.index');
+        // Volt::route('/curah-keluar/create', 'curah-keluar.create');
+        // Volt::route('/curah-keluar/{transaksi}/edit', 'curah-keluar.edit');
+        // Volt::route('/curah-keluar/{transaksi}/show', 'curah-keluar.show');
+    
+        // Volt::route('/kucing-keluar', 'kucing-keluar.index');
+        // Volt::route('/kucing-keluar/create', 'kucing-keluar.create');
+        // Volt::route('/kucing-keluar/{transaksi}/edit', 'kucing-keluar.edit');
+        // Volt::route('/kucing-keluar/{transaksi}/show', 'kucing-keluar.show');
     });
 
     // User Kas Tunai
@@ -128,6 +133,21 @@ Route::middleware('auth')->group(function() {
         Volt::route('/sentrat-masuk/create', 'sentrat-masuk.create');
         Volt::route('/sentrat-masuk/{transaksi}/edit', 'sentrat-masuk.edit');
         Volt::route('/sentrat-masuk/{transaksi}/show', 'sentrat-masuk.show');
+
+        Volt::route('/obat-masuk', 'obat-masuk.index');
+        Volt::route('/obat-masuk/create', 'obat-masuk.create');
+        Volt::route('/obat-masuk/{transaksi}/edit', 'obat-masuk.edit');
+        Volt::route('/obat-masuk/{transaksi}/show', 'obat-masuk.show');
+
+        // Volt::route('/curah-masuk', 'curah-masuk.index');
+        // Volt::route('/curah-masuk/create', 'curah-masuk.create');
+        // Volt::route('/curah-masuk/{transaksi}/edit', 'curah-masuk.edit');
+        // Volt::route('/curah-masuk/{transaksi}/show', 'curah-masuk.show');
+
+        // Volt::route('/kucing-masuk', 'kucing-masuk.index');
+        // Volt::route('/kucing-masuk/create', 'kucing-masuk.create');
+        // Volt::route('/kucing-masuk/{transaksi}/edit', 'kucing-masuk.edit');
+        // Volt::route('/kucing-masuk/{transaksi}/show', 'kucing-masuk.show');
     });
 
     // User Kas Tunai dan Kas Bank pendapatan lainnya dan beban
