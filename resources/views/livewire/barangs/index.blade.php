@@ -7,6 +7,8 @@ use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Exports\BarangExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 new class extends Component {
     use Toast;
@@ -35,6 +37,13 @@ new class extends Component {
         $this->success('Filters cleared.', position: 'toast-top');
     }
 
+    public function export(): mixed
+    {
+        $this->success('Export dimulai...', position: 'toast-top');
+
+        return Excel::download(new BarangExport(), 'barang.xlsx');
+    }
+
     // Delete action
     public function delete($id): void
     {
@@ -46,24 +55,12 @@ new class extends Component {
     // Table headers
     public function headers(): array
     {
-        return [
-            ['key' => 'id', 'label' => '#', 'class' => 'w-1'], 
-            ['key' => 'jenis_name', 'label' => 'Jenis Barang'], 
-            ['key' => 'name', 'label' => 'Name'],
-            ['key' => 'stok', 'label' => 'Stok'],
-            ['key' => 'hpp', 'label' => 'Harga Pokok Penjualan', 'class' => 'w-1'],
-            ['key' => 'created_at', 'label' => 'Tanggal Dibuat', 'class' => 'w-1'],
-        ];
+        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'jenis_name', 'label' => 'Jenis Barang'], ['key' => 'name', 'label' => 'Name'], ['key' => 'stok', 'label' => 'Stok'], ['key' => 'hpp', 'label' => 'Harga Pokok Penjualan', 'class' => 'w-1'], ['key' => 'created_at', 'label' => 'Tanggal Dibuat', 'class' => 'w-1']];
     }
 
     public function barangs(): LengthAwarePaginator
     {
-        return Barang::query()
-        ->withAggregate('jenis', 'name')
-        ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
-        ->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))
-        ->orderBy(...array_values($this->sortBy))
-        ->paginate($this->perPage);
+        return Barang::query()->withAggregate('jenis', 'name')->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
     }
 
     public function with(): array
@@ -102,7 +99,10 @@ new class extends Component {
     <!-- HEADER -->
     <x-header title="Daftar Barang" separator progress-indicator>
         <x-slot:actions>
-            <x-button label="Create" link="/barangs/create" responsive icon="o-plus" class="btn-primary" />
+            <div class="flex flex-row sm:flex-row gap-2">
+                <x-button wire:click="export" icon="fas.download" primary>Export Excel</x-button>
+                <x-button label="Create" link="/barangs/create" responsive icon="o-plus" class="btn-primary" />
+            </div>
         </x-slot:actions>
     </x-header>
 

@@ -19,6 +19,48 @@ new class extends Component {
     public array $neracaAset = [];
     public array $neracaLiabilitas = [];
 
+    // Tambahkan property
+    public array $imbalancedCategories = [];
+
+    // Tambahkan di awal class Livewire
+    public array $expanded = []; // <- untuk menyimpan state expand/collapse
+
+    // Mapping kategori ke kelompok
+    public array $mappingPendapatan = [
+        'Pendapatan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arap'],
+        'Pendapatan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
+        'Pendapatan Obat' => ['Penjualan Obat-Obatan'],
+        'Pendapatan Eggtray' => ['Penjualan EggTray'],
+        'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
+        'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
+        'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
+    ];
+
+    public array $mappingPengeluaran = [
+        'Beban Transport' => ['Beban Transport', 'Beban BBM'],
+        'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
+        'Beban Produksi' => ['Beban Telur Pecah', 'Beban Barang Kadaluarsa', 'HPP'],
+        'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
+        'Beban Sedekah' => ['ZIS'],
+    ];
+
+    public array $mappingAset = [
+        'Piutang' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
+        'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
+        'Kas' => ['Kas Tunai'],
+        'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
+        'Bank BNI' => ['Bank BNI Binti Wasilah', 'Bank BNI Bima Pratama'],
+        'Bank BRI' => ['Bank BRI Binti Wasilah', 'Bank BRI Masduki'],
+    ];
+
+    public array $mappingLiabilitas = [
+        'Hutang Pihak Lain' => ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang', 'Hutang Bank'],
+        'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
+        'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB'],
+        'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
+        'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok'],
+    ];
+
     public function mount()
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
@@ -43,70 +85,81 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        // Reset data
         $this->neracaPendapatan = [];
         $this->neracaPengeluaran = [];
         $this->neracaAset = [];
         $this->neracaLiabilitas = [];
 
-        // Ambil transaksi dengan details & kategori terkait
+        // Ambil transaksi dengan details & kategori
         $transaksis = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get();
 
-        // Flatten semua detail ke satu collection
+        // Flatten semua detail
         $details = $transaksis
             ->flatMap(
                 fn($trx) => $trx->details->map(
-                    fn($detail) => [
-                        'kategori' => $detail->kategori?->name,
-                        'type_kategori' => $detail->kategori?->type,
-                        'type_transaksi' => strtolower($trx->type), // debit/kredit
-                        'sub_total' => $detail->sub_total ?? 0,
+                    fn($d) => [
+                        'kategori' => $d->kategori?->name,
+                        'type_kategori' => $d->kategori?->type,
+                        'type_transaksi' => strtolower($trx->type),
+                        'sub_total' => $d->sub_total ?? 0,
                     ],
                 ),
             )
             ->filter(fn($d) => $d['kategori']);
 
-        // Group hasil transaksi per kategori
-        $grouped = $details->groupBy('kategori')->map(function ($items, $kategori) {
-            $first = $items->first();
-            $debit = $items->where('type_transaksi', 'debit')->sum('sub_total');
-            $kredit = $items->where('type_transaksi', 'kredit')->sum('sub_total');
-
-            return [
-                'kategori' => $kategori,
-                'type' => $first['type_kategori'],
-                'debit' => $debit,
-                'kredit' => $kredit,
-            ];
-        });
-
-        // 🔹 Ambil semua kategori dari database
+        // Ambil semua kategori
         $allKategoris = Kategori::select('name', 'type')->get();
 
-        // 🔹 Gabungkan hasil transaksi dengan kategori yang tidak punya transaksi
-        $complete = $allKategoris->map(function ($kategori) use ($grouped) {
-            $data = $grouped[$kategori->name] ?? null;
-            return [
+        $complete = $allKategoris->map(
+            fn($kategori) => [
                 'kategori' => $kategori->name,
                 'type' => $kategori->type,
-                'debit' => $data['debit'] ?? 0,
-                'kredit' => $data['kredit'] ?? 0,
-            ];
-        });
+                'debit' => $details->filter(fn($d) => $d['kategori'] === $kategori->name && $d['type_kategori'] === $kategori->type && $d['type_transaksi'] === 'debit')->sum('sub_total'),
+                'kredit' => $details->filter(fn($d) => $d['kategori'] === $kategori->name && $d['type_kategori'] === $kategori->type && $d['type_transaksi'] === 'kredit')->sum('sub_total'),
+            ],
+        );
 
-        // 🔹 Pisahkan berdasarkan tipe kategori
-        foreach ($complete as $row) {
-            match ($row['type']) {
-                'Pendapatan' => ($this->neracaPendapatan[] = $row),
-                'Pengeluaran' => ($this->neracaPengeluaran[] = $row),
-                'Aset' => ($this->neracaAset[] = $row),
-                'Liabilitas' => ($this->neracaLiabilitas[] = $row),
-                default => null,
-            };
-        }
+        $mapHierarki = function ($mapping, $type) use ($complete) {
+            $result = [];
+            foreach ($mapping as $group => $categories) {
+                $sub = [];
+                $totalDebit = 0;
+                $totalKredit = 0;
+
+                foreach ($categories as $cat) {
+                    $row = $complete->first(fn($r) => $r['kategori'] === $cat && $r['type'] === $type);
+                    if ($row) {
+                        $sub[] = $row;
+                        $totalDebit += $row['debit'];
+                        $totalKredit += $row['kredit'];
+                    }
+                }
+
+                $result[] = [
+                    'group' => $group,
+                    'debit' => $totalDebit,
+                    'kredit' => $totalKredit,
+                    'details' => $sub,
+                ];
+            }
+            return $result;
+        };
+
+        $this->neracaPendapatan = $mapHierarki($this->mappingPendapatan, 'Pendapatan');
+        $this->neracaPengeluaran = $mapHierarki($this->mappingPengeluaran, 'Pengeluaran');
+        $this->neracaAset = $mapHierarki($this->mappingAset, 'Aset');
+        $this->neracaLiabilitas = $mapHierarki($this->mappingLiabilitas, 'Liabilitas');
+    }
+
+    // Tambahkan ini di dalam class Livewire kamu
+    protected function getTotal(array $groupData): array
+    {
+        $debit = array_sum(array_column($groupData, 'debit'));
+        $kredit = array_sum(array_column($groupData, 'kredit'));
+        return ['debit' => $debit, 'kredit' => $kredit];
     }
 
     public function with()
@@ -142,93 +195,77 @@ new class extends Component {
         <div class="overflow-x-auto">
             <table class="table w-full">
                 <thead>
-                    <tr>
-                        <th class="text-left">Akun / Kategori</th>
-                        <th class="text-center">Debit</th>
-                        <th class="text-center">Kredit</th>
+                    <tr class="bg-gray-100">
+                        <th class="text-left px-4 py-2">Akun / Kategori</th>
+                        <th class="text-center px-4 py-2">Debit</th>
+                        <th class="text-center px-4 py-2">Kredit</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Pendapatan -->
-                    <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-chart-line mr-5"></i>Pendapatan</td>
-                    </tr>
-                    @foreach ($neracaPendapatan as $row)
-                        <tr>
-                            <td>{{ $row['kategori'] }}</td>
-                            <td class="text-center text-blue-600">
-                                {{ $row['debit'] > 0 ? 'Rp ' . number_format($row['debit'], 0, ',', '.') : '-' }}
-                            </td>
-                            <td class="text-center text-green-600">
-                                {{ $row['kredit'] > 0 ? 'Rp ' . number_format($row['kredit'], 0, ',', '.') : '-' }}
-                            </td>
+                    @foreach (['Pendapatan' => $neracaPendapatan, 'Pengeluaran' => $neracaPengeluaran, 'Aset' => $neracaAset, 'Liabilitas' => $neracaLiabilitas] as $typeName => $groupData)
+                        <tr class="font-bold bg-gray-200">
+                            <td colspan="3">{{ $typeName }}</td>
+                        </tr>
+
+                        @foreach ($groupData as $group)
+                            <tr class="cursor-pointer bg-gray-50 hover:bg-gray-100"
+                                wire:click="$toggle('expanded.{{ $group['group'] }}')">
+                            <tr class="cursor-pointer bg-gray-50 hover:bg-gray-100"
+                                wire:click="$toggle('expanded.{{ $group['group'] }}')">
+                                <td>
+                                    <i class="fas fa-chevron-right mr-2"
+                                        :class="{ 'fa-chevron-down': $expanded['{{ $group['group'] }}'] ?? false }"></i>
+                                    {{ $group['group'] }}
+                                </td>
+                                <td class="text-center text-blue-600">
+                                    {{ 'Rp ' . number_format($group['debit'], 0, ',', '.') }}
+                                </td>
+                                <td class="text-center text-green-600">
+                                    {{ 'Rp ' . number_format($group['kredit'], 0, ',', '.') }}
+                                </td>
+                            </tr>
+
+                            </tr>
+
+                            @if ($expanded[$group['group']] ?? false)
+                                @foreach ($group['details'] as $detail)
+                                    <tr class="bg-white">
+                                        <td class="pl-6">{{ $detail['kategori'] }}</td>
+                                        <td class="text-center text-blue-600">
+                                            {{ 'Rp ' . number_format($detail['debit'], 0, ',', '.') }}</td>
+                                        <td class="text-center text-green-600">
+                                            {{ 'Rp ' . number_format($detail['kredit'], 0, ',', '.') }}</td>
+                                    </tr>
+                                @endforeach
+                            @endif
+                        @endforeach
+
+                        <tr class="font-bold bg-gray-100">
+                            <td>Total {{ $typeName }}</td>
+                            @php $total = $this->getTotal($groupData); @endphp
+                            <td class="text-center">{{ 'Rp ' . number_format($total['debit'], 0, ',', '.') }}</td>
+                            <td class="text-center">{{ 'Rp ' . number_format($total['kredit'], 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
-
-                    <!-- Pengeluaran -->
-                    <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-coins mr-5"></i>Pengeluaran</td>
-                    </tr>
-                    @foreach ($neracaPengeluaran as $row)
-                        <tr>
-                            <td>{{ $row['kategori'] }}</td>
-                            <td class="text-center text-blue-600">
-                                {{ $row['debit'] > 0 ? 'Rp ' . number_format($row['debit'], 0, ',', '.') : '-' }}
-                            </td>
-                            <td class="text-center text-green-600">
-                                {{ $row['kredit'] > 0 ? 'Rp ' . number_format($row['kredit'], 0, ',', '.') : '-' }}
-                            </td>
-                        </tr>
-                    @endforeach
-
-                    <!-- Aset -->
-                    <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-wallet mr-5"></i>Aset</td>
-                    </tr>
-                    @foreach ($neracaAset as $row)
-                        <tr>
-                            <td>{{ $row['kategori'] }}</td>
-                            <td class="text-center text-blue-600">
-                                {{ $row['debit'] > 0 ? 'Rp ' . number_format($row['debit'], 0, ',', '.') : '-' }}
-                            </td>
-                            <td class="text-center text-green-600">
-                                {{ $row['kredit'] > 0 ? 'Rp ' . number_format($row['kredit'], 0, ',', '.') : '-' }}
-                            </td>
-                        </tr>
-                    @endforeach
-
-                    <!-- Liabilitas -->
-                    <tr class="font-bold">
-                        <td colspan="3"><i class="fas fa-file-invoice-dollar mr-5"></i>Liabilitas</td>
-                    </tr>
-                    @foreach ($neracaLiabilitas as $row)
-                        <tr>
-                            <td>{{ $row['kategori'] }}</td>
-                            <td class="text-center text-blue-600">
-                                {{ $row['debit'] > 0 ? 'Rp ' . number_format($row['debit'], 0, ',', '.') : '-' }}
-                            </td>
-                            <td class="text-center text-green-600">
-                                {{ $row['kredit'] > 0 ? 'Rp ' . number_format($row['kredit'], 0, ',', '.') : '-' }}
-                            </td>
-                        </tr>
-                    @endforeach
-
-                    <!-- Total -->
-                    <tr class="font-bold border-t-2">
-                        <td>Total</td>
+                    <!-- Total Keseluruhan -->
+                    <tr class="font-bold border-t-2 bg-gray-200">
+                        <td>Total Keseluruhan</td>
                         <td class="text-center text-blue-700">Rp {{ number_format($totalDebit, 0, ',', '.') }}</td>
                         <td class="text-center text-green-700">Rp {{ number_format($totalKredit, 0, ',', '.') }}</td>
                     </tr>
+
                 </tbody>
             </table>
-        </div>
+            @if ($totalDebit !== $totalKredit)
+                <div class="mt-4 p-3 text-yellow-800 rounded bg-yellow-100 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <span>
+                        <strong>Perhatian:</strong> Neraca tidak seimbang
+                        (Selisih: Rp {{ number_format(abs($totalDebit - $totalKredit), 0, ',', '.') }})
+                    </span>
+                </div>
+            @endif
 
-        @if ($totalDebit !== $totalKredit)
-            <div class="mt-4 p-3 text-yellow-800 rounded bg-yellow-100">
-                <i class="fas fa-exclamation-triangle mr-5"></i>
-                <strong>Perhatian:</strong> Neraca tidak seimbang (Selisih:
-                Rp {{ number_format($totalDebit - $totalKredit, 0, ',', '.') }})
-            </div>
-        @endif
+        </div>
     </x-card>
 </div>

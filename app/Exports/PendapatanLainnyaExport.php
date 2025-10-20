@@ -28,7 +28,7 @@ class PendapatanLainnyaExport implements FromCollection, WithHeadings, ShouldAut
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'like', '%Lain-Lain%');
+                $q->where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))

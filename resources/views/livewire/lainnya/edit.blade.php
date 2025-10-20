@@ -11,8 +11,8 @@ use Livewire\Attributes\Rule;
 new class extends Component {
     use Toast;
 
-    public Transaksi $beban; // transaksi utama
-    public Transaksi $kas; // transaksi linked
+    public Transaksi $beban; // transaksi utama (beban)
+    public ?Transaksi $bayar; // transaksi bank (debit)
 
     #[Rule('required')]
     public string $invoice = '';
@@ -26,8 +26,11 @@ new class extends Component {
     #[Rule('required')]
     public ?int $user_id = null;
 
-    #[Rule('nullable')]
+    #[Rule('required')]
     public ?int $kategori_id = null;
+
+    #[Rule('required')]
+    public ?int $bayar_id = null; // ID kategori metode pembayaran
 
     public ?string $tanggal = null;
 
@@ -37,27 +40,50 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
+            'kategoris' => Kategori::where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan')->get(),
+            'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
 
     public function mount(Transaksi $transaksi): void
     {
-        // Ambil transaksi utama
+        // Transaksi utama
         $this->beban = Transaksi::with('details.kategori')->findOrFail($transaksi->id);
 
-        // Set data form
+        // Isi form
         $this->invoice = $this->beban->invoice;
         $this->name = $this->beban->name;
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
 
+        $inv = substr($transaksi->invoice, -4);
+
+        // Cari transaksi pembayaran (Tunai / Transfer)
+        $bayar = Transaksi::where('invoice', 'like', "%-TNI-$inv")->first();
+
+        if (!$bayar) {
+            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$inv")->first();
+        }
+
+        // Set jika ditemukan
+        if ($bayar) {
+            $this->bayar = $bayar;
+
+            $firstDetail = $bayar->details()->first();
+            $this->bayar_id = $firstDetail ? $firstDetail->kategori_id : null;
+        } else {
+            // Jika tidak ditemukan, hindari error dan beri nilai default
+            $this->bayar = null;
+            $this->bayar_id = null;
+        }
+
+        // Ambil kategori utama
         foreach ($transaksi->details as $detail) {
             $this->details[] = [
                 'kategori_id' => $detail->kategori_id,
                 'sub_total' => $detail->sub_total,
             ];
-
             $this->kategori_id = $detail->kategori_id;
         }
     }
@@ -66,7 +92,46 @@ new class extends Component {
     {
         $this->validate();
 
-        // Update transaksi utama
+        // Ambil kategori pembayaran
+        $kategoriBayar = Kategori::find($this->bayar_id);
+        $inv = substr($this->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+
+        if ($kategoriBayar->name == 'Kas Tunai') {
+            $this->bayar->update([
+                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $this->total,
+            ]);
+            $this->bayar->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->bayar->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        } else {
+            $this->bayar->update([
+                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'total' => $this->total,
+            ]);
+            $this->bayar->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->bayar->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        }
+
+        // === UPDATE Transaksi BEBAN utama ===
         $this->beban->update([
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -75,12 +140,9 @@ new class extends Component {
         ]);
 
         $this->beban->details()->delete();
-
         DetailTransaksi::create([
             'transaksi_id' => $this->beban->id,
             'kategori_id' => $this->kategori_id,
-            'value' => null,
-            'kuantitas' => null,
             'sub_total' => $this->total,
         ]);
 
@@ -105,11 +167,15 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="sm:col-span-2">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Penjualan tali tambang" />
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Penjualan tali tambang" />
+                        <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
+                            placeholder="Pilih Metode" single clearable searchable />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
+                            placeholder="Pilih Kategori" single clearable searchable />
                         <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
                     </div>
                 </div>

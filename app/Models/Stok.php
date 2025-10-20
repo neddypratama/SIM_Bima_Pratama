@@ -7,14 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 class Stok extends Model
 {
     protected $fillable = [
-        'barang_id',
+        'invoice',
+        'user_id',
         'tanggal',
-        'type',
-        'jumlah',
+        'barang_id',
+        'tambah',
+        'kurang',
+        'kotor',
+        'rusak'
     ];
 
     public function barang()
     {
         return $this->belongsTo(Barang::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

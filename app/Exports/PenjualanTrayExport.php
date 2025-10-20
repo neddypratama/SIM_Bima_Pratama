@@ -28,7 +28,7 @@ class PenjualanTrayExport implements FromCollection, WithHeadings, ShouldAutoSiz
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'like', 'Penjualan Tray%');
+                $q->where('name', 'like', 'Penjualan Eggtray%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))

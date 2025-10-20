@@ -184,7 +184,7 @@ new class extends Component {
     </x-card>
 
     <div class="mt-6">
-        <x-button label="Kembali" link="/tunai
+        <x-button label="Kembali" link="/transfer
         " />
     </div>
 </div>

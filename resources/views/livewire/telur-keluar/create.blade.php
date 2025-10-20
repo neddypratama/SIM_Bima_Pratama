@@ -18,6 +18,7 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice1 = '';
     public string $invoice2 = '';
     public string $invoice3 = '';
 
@@ -94,6 +95,7 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-DPT-' . $str;
+            $this->invoice1 = 'INV-' . $tanggal . '-BON-' . $str;
             $this->invoice2 = 'INV-' . $tanggal . '-TLR-' . $str;
             $this->invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
         }
@@ -189,11 +191,37 @@ new class extends Component {
 
         $kategoriTelur = Kategori::where('name', 'Stok Telur')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
-
-        // dd($kategoriTelur, $kategoriHpp);
+        $kategoriBon = Kategori::where('name', 'like', 'Piutang Pedagang')->first();
 
         $totalTransaksi = 0;
         $detailData = [];
+
+        $bon = Transaksi::create([
+            'invoice' => $this->invoice1,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'client_id' => $this->client_id,
+            'type' => 'Debit',
+            'total' => $this->total,
+        ]);
+
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $bon->id,
+                'kategori_id' => $kategoriBon->id,
+                'value' => (int) $item['value'], // harga satuan
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)), // total harga (harga satuan * qty
+            ]);
+        }
+
+        $client = Client::find($this->client_id);
+
+        if ($client) {
+            $client->increment('bon', $this->total);
+        }
 
         $transaksi = Transaksi::create([
             'invoice' => $this->invoice,
@@ -271,16 +299,6 @@ new class extends Component {
             }
         }
 
-        TransaksiLink::create([
-            'transaksi_id' => $hpp->id,
-            'linked_id' => $stok->id,
-        ]);
-
-        TransaksiLink::create([
-            'transaksi_id' => $stok->id,
-            'linked_id' => $hpp->id,
-        ]);
-
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur-keluar');
     }
 
@@ -288,6 +306,7 @@ new class extends Component {
     {
         $this->details[] = [
             'value' => 0,
+            'kategori_id' => null,
             'barang_id' => null,
             'kuantitas' => 1,
             'hpp' => 0,
@@ -328,25 +347,25 @@ new class extends Component {
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Penjualan Telur Ayam Ras" />
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Penjualan Telur Ayam Ras" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
-                            single searchable clearable label="Client" >
+                            single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
-                                <x-slot:avatar>
-                                    <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                </x-slot:avatar>
-                                <x-slot:actions>
-                                    <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
+                                    <x-slot:avatar>
+                                        <x-icon name="fas.user" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
+                                    </x-slot:avatar>
+                                    <x-slot:actions>
+                                        <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
 
-                                </x-slot:actions>
+                                    </x-slot:actions>
                                 </x-list-item>
                             @endscope
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' .  $clients->type}}
+                                {{ $clients->name . ' | ' . $clients->type }}
                             @endscope
                         </x-choices-offline>
                     </div>
@@ -362,8 +381,8 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
-                            placeholder="Pilih Kategori" single clearable searchable />
+                        <x-choices-offline label="Kategori" wire:model.live="details.{{ $index }}.kategori_id"
+                            :options="$kategoris" placeholder="Pilih Kategori" single clearable searchable />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />

@@ -17,6 +17,8 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice1 = '';
+    public string $invoice2 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -29,6 +31,9 @@ new class extends Component {
 
     #[Rule('required')]
     public ?int $kategori_id = null;
+
+    #[Rule('required')]
+    public ?int $bayar_id = null;
 
     #[Rule('required')]
     public ?string $type = null;
@@ -49,6 +54,7 @@ new class extends Component {
             'users' => User::all(),
             'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
+            'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
 
@@ -65,7 +71,8 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-PGN-' . $str;
-            $this->invoice2 = 'INV-' . $tanggal . '-TNI-' . $str;
+            $this->invoice1 = 'INV-' . $tanggal . '-TNI-' . $str;
+            $this->invoice2 = 'INV-' . $tanggal . '-TFR-' . $str;
         }
     }
 
@@ -89,6 +96,49 @@ new class extends Component {
             'sub_total' => $this->total,
         ]);
 
+        $bayar = Kategori::find($this->bayar_id);
+        if ($this->type == "Debit") {
+            $tipe = "Kredit";
+        } else {
+            $tipe = "Debit";
+        }
+
+        if ($bayar->name == 'Kas Tunai') {
+            $tunai = Transaksi::create([
+                'invoice' => $this->invoice1,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'type' => $tipe,
+                'total' => $this->total,
+            ]);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $tunai->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        } else {
+            $bank = Transaksi::create([
+                'invoice' => $this->invoice2,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'type' => $tipe,
+                'total' => $this->total,
+            ]);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $bank->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        }
+
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/beban');
     }
 };
@@ -100,22 +150,24 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
+                        <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
                         <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
                             placeholder="Pilih Kategori" single clearable searchable />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
+                            placeholder="Pilih Metode" single clearable searchable />
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                         <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
                     </div>

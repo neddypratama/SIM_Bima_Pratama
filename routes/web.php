@@ -45,10 +45,25 @@ Route::middleware('auth')->group(function() {
         Volt::route('/transaksis', 'transaksis.index');
         Volt::route('/transaksis/{transaksi}/show', 'transaksis.show'); 
 
-        Volt::route('/stok', 'stok.index');
-        Volt::route('/stok/create', 'stok.create');
-        Volt::route('/stok/{stok}/edit', 'stok.edit');
-        Volt::route('/stok/{stok}/show', 'stok.show');
+        Volt::route('/stok-telur', 'stok-telur.index');
+        Volt::route('/stok-telur/create', 'stok-telur.create');
+        Volt::route('/stok-telur/{stok}/edit', 'stok-telur.edit');
+        Volt::route('/stok-telur/{stok}/show', 'stok-telur.show');
+
+        Volt::route('/stok-pakan', 'stok-pakan.index');
+        Volt::route('/stok-pakan/create', 'stok-pakan.create');
+        Volt::route('/stok-pakan/{stok}/edit', 'stok-pakan.edit');
+        Volt::route('/stok-pakan/{stok}/show', 'stok-pakan.show');
+
+        Volt::route('/stok-obat', 'stok-obat.index');
+        Volt::route('/stok-obat/create', 'stok-obat.create');
+        Volt::route('/stok-obat/{stok}/edit', 'stok-obat.edit');
+        Volt::route('/stok-obat/{stok}/show', 'stok-obat.show');
+
+        Volt::route('/stok-tray', 'stok-tray.index');
+        Volt::route('/stok-tray/create', 'stok-tray.create');
+        Volt::route('/stok-tray/{stok}/edit', 'stok-tray.edit');
+        Volt::route('/stok-tray/{stok}/show', 'stok-tray.show');
 
     });
 
@@ -72,15 +87,6 @@ Route::middleware('auth')->group(function() {
         Volt::route('/obat-keluar/{transaksi}/edit', 'obat-keluar.edit');
         Volt::route('/obat-keluar/{transaksi}/show', 'obat-keluar.show');
 
-        // Volt::route('/curah-keluar', 'curah-keluar.index');
-        // Volt::route('/curah-keluar/create', 'curah-keluar.create');
-        // Volt::route('/curah-keluar/{transaksi}/edit', 'curah-keluar.edit');
-        // Volt::route('/curah-keluar/{transaksi}/show', 'curah-keluar.show');
-    
-        // Volt::route('/kucing-keluar', 'kucing-keluar.index');
-        // Volt::route('/kucing-keluar/create', 'kucing-keluar.create');
-        // Volt::route('/kucing-keluar/{transaksi}/edit', 'kucing-keluar.edit');
-        // Volt::route('/kucing-keluar/{transaksi}/show', 'kucing-keluar.show');
     });
 
     // User Kas Tunai
@@ -138,16 +144,6 @@ Route::middleware('auth')->group(function() {
         Volt::route('/obat-masuk/create', 'obat-masuk.create');
         Volt::route('/obat-masuk/{transaksi}/edit', 'obat-masuk.edit');
         Volt::route('/obat-masuk/{transaksi}/show', 'obat-masuk.show');
-
-        // Volt::route('/curah-masuk', 'curah-masuk.index');
-        // Volt::route('/curah-masuk/create', 'curah-masuk.create');
-        // Volt::route('/curah-masuk/{transaksi}/edit', 'curah-masuk.edit');
-        // Volt::route('/curah-masuk/{transaksi}/show', 'curah-masuk.show');
-
-        // Volt::route('/kucing-masuk', 'kucing-masuk.index');
-        // Volt::route('/kucing-masuk/create', 'kucing-masuk.create');
-        // Volt::route('/kucing-masuk/{transaksi}/edit', 'kucing-masuk.edit');
-        // Volt::route('/kucing-masuk/{transaksi}/show', 'kucing-masuk.show');
     });
 
     // User Kas Tunai dan Kas Bank pendapatan lainnya dan beban

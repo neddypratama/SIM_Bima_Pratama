@@ -18,6 +18,7 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice1 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -50,7 +51,7 @@ new class extends Component {
         return [
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
+            'clients' => Client::where('type', 'like', '%Peternak%')->get(),
         ];
     }
 
@@ -100,7 +101,7 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-TLR-' . $str;
-            $this->invoice2 = 'INV-' . $tanggal . '-TNI-' . $str;
+            $this->invoice1 = 'INV-' . $tanggal . '-UTG-' . $str;
         }
     }
 
@@ -119,9 +120,7 @@ new class extends Component {
 
     public function save(): void
     {
-        // ✅ Validasi seluruh input sekaligus
         $this->validate();
-
         $this->validate([
             'details.*.value' => 'required|numeric|min:0',
             'details.*.barang_id' => 'required|exists:barangs,id',
@@ -142,27 +141,62 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $stok->id,
                 'kategori_id' => $this->kategori_id,
-                'value' => (int) $item['value'], // harga satuan
+                'value' => (int) $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ((int) $item['value'] ?? 0) * ((int) $item['kuantitas'] ?? 1),
+                'sub_total' => ((int) $item['value'] ?? 0) * ((int) ($item['kuantitas'] ?? 1)),
             ]);
+        }
 
-            $barang = Barang::find($item['barang_id']);
+        $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
 
-            // Hitung HPP baru
-            $stokLama = $barang->stok;
-            $hppLama = $barang->hpp ?? 0; // default 0 jika belum ada HPP
-            $qtyBaru = $item['kuantitas'] ?? 0;
-            $hargaSatuanBaru = $item['value'] ?? 0;
+        $hutang = Transaksi::create([
+            'invoice' => $this->invoice1,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'client_id' => $this->client_id,
+            'type' => 'Kredit',
+            'total' => $this->total,
+        ]);
 
-            $totalHarga = $stokLama * $hppLama + $qtyBaru * $hargaSatuanBaru;
-            $stokBaru = $stokLama + $qtyBaru;
-            $hppBaru = $stokBaru > 0 ? $totalHarga / $stokBaru : 0;
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $hutang->id,
+                'kategori_id' => $kateHutang->id,
+                'value' => (int) $item['value'],
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => ((int) $item['value'] ?? 0) * ((int) ($item['kuantitas'] ?? 1)),
+            ]);
+        }
 
-            // Update stok dan HPP barang
+        $client = Client::find($this->client_id);
+
+        if ($client) {
+            $client->increment('titipan', $this->total);
+        }
+
+        // Hitung HPP & stok sekali per barang unik
+        $barangIds = collect($this->details)->pluck('barang_id')->unique();
+
+        foreach ($barangIds as $id) {
+            $barang = Barang::find($id);
+            if (!$barang) {
+                continue;
+            }
+
+            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+
+            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
+
+            $stokKredit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+
+            $stokAkhir = $stokDebit - $stokKredit;
+            $hppBaru = $stokDebit > 0 ? $totalHarga / $stokDebit : 0;
+
             $barang->update([
-                'stok' => $stokBaru,
+                'stok' => $stokAkhir,
                 'hpp' => $hppBaru,
             ]);
         }

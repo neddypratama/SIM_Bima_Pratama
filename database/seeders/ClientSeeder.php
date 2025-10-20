@@ -75,7 +75,7 @@ class ClientSeeder extends Seeder
         ];
 
         $clientSupplier = [
-            'Tray Diamond / DM', 'Tray Super Buah / SB', 'Obat-Obatan', 'Sentrat SK', 'Sentrat Ponggok', 'Bp. Supriadi',
+            'Tray Diamond /DM', 'Tray Super Buah /SB', 'Obat SK', 'Obat Ponggok', 'Obat Random', 'Sentrat SK', 'Sentrat Ponggok', 'Bp.Supriyadi',
         ];
 
         $data = [];

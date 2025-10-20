@@ -17,6 +17,7 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice1 = '';
     public string $invoice2 = '';
     public string $invoice3 = '';
 
@@ -31,9 +32,6 @@ new class extends Component {
 
     #[Rule('required')]
     public ?int $client_id = null;
-
-    #[Rule('required')]
-    public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
 
@@ -53,7 +51,12 @@ new class extends Component {
             'pokok' => $this->pokok,
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
+            'kategoris' => Kategori::where('name', 'like', '%Pakan%')
+                ->where(function ($q) {
+                    $q->where('type', 'like', '%Pendapatan%');
+                })
+                ->get(),
+            'clients' => Client::where('type', 'like', '%Peternak%')->get(),
         ];
     }
 
@@ -61,16 +64,16 @@ new class extends Component {
     {
         $this->user_id = auth()->id();
         $this->tanggal = now()->format('Y-m-d\TH:i');
-        $this->kategori_id = Kategori::where('name', 'like', '%Penjualan Sentrat')->first()->id;
         $this->updatedTanggal($this->tanggal);
 
         $this->barangs = Barang::all();
         $this->pokok = Barang::all();
 
-        $kategori = Kategori::where('name', 'Stok Sentrat')->first();
+        $kategori = Kategori::where('name', 'Stok Pakan')->first();
         if ($kategori) {
             if (empty($this->details)) {
                 $this->details[] = [
+                    'kategori_id' => null,
                     'barang_id' => null,
                     'value' => 0,
                     'kuantitas' => 1,
@@ -91,6 +94,7 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-DPT-' . $str;
+            $this->invoice1 = 'INV-' . $tanggal . '-BON-' . $str;
             $this->invoice2 = 'INV-' . $tanggal . '-STR-' . $str;
             $this->invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
         }
@@ -98,26 +102,53 @@ new class extends Component {
 
     public function updatedDetails($value, $key): void
     {
+        // --- Jika kategori dipilih ---
+        if (str_ends_with($key, '.kategori_id')) {
+            $index = (int) explode('.', $key)[0];
+            $kategori = Kategori::find($value);
+
+            if ($kategori) {
+                // Ambil nama setelah kata "Penjualan"
+                $jenisNama = trim(preg_replace('/^Penjualan\s*/i', '', $kategori->name));
+
+                // Filter barang yang memiliki jenis dengan nama tersebut
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', function ($q) use ($jenisNama) {
+                    $q->where('name', 'like', "%{$jenisNama}%");
+                })
+                    ->get()
+                    ->map(
+                        fn($barang) => [
+                            'id' => $barang->id,
+                            'name' => $barang->name,
+                        ],
+                    )
+                    ->toArray();
+            }
+        }
+
+        // --- Jika barang dipilih ---
         if (str_ends_with($key, '.barang_id')) {
             $index = (int) explode('.', $key)[0];
             $barang = Barang::find($value);
             if ($barang) {
                 $this->details[$index]['max_qty'] = $barang->stok;
                 $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
-                $this->details[$index]['hpp'] = (float) $barang->hpp ?? 0;
+                $this->details[$index]['hpp'] = (float) $barang->hpp;
             }
         }
 
+        // --- Jika qty diubah ---
         if (str_ends_with($key, '.kuantitas')) {
             $index = (int) explode('.', $key)[0];
             $qty = (int) ($value ?: 1);
             $maxQty = $this->details[$index]['max_qty'] ?? null;
             if ($maxQty !== null && $qty > $maxQty) {
-                $qty = $maxQty; // ✅ batasi qty sesuai stok
+                $qty = $maxQty;
             }
             $this->details[$index]['kuantitas'] = $qty;
         }
 
+        // --- Update total jika ada perubahan harga/qty/hpp ---
         if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas') || str_ends_with($key, '.hpp')) {
             $this->calculateTotal();
         }
@@ -143,6 +174,7 @@ new class extends Component {
         $this->validate();
 
         $this->validate([
+            'details.*.kategori_id' => 'required|exists:kategoris,id',
             'details.*.value' => 'required|numeric|min:0',
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.kuantitas' => 'required|integer|min:1',
@@ -156,18 +188,45 @@ new class extends Component {
             }
         }
 
-        $kategoriSentrat = Kategori::where('name', 'Stok Sentrat')->first();
+        $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
+        $kategoriBon = Kategori::where('name',  'Piutang Peternak')->first();
 
         $totalTransaksi = 0;
         $detailData = [];
+
+        $bon = Transaksi::create([
+            'invoice' => $this->invoice1,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'client_id' => $this->client_id,
+            'type' => 'Debit',
+            'total' => $this->total,
+        ]);
+
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $bon->id,
+                'kategori_id' => $kategoriBon->id,
+                'value' => (int) $item['value'], // harga satuan
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)), // total harga (harga satuan * qty
+            ]);
+        }
+
+        $client = Client::find($this->client_id);
+
+        if ($client) {
+            $client->increment('bon', $this->total);
+        }
 
         $transaksi = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
-            'kategori_id' => $this->kategori_id,
             'client_id' => $this->client_id,
             'type' => 'Kredit',
             'total' => $this->total,
@@ -176,7 +235,7 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $transaksi->id,
-                'kategori_id' => $this->kategori_id,
+                'kategori_id' => $item['kategori_id'],
                 'value' => (int) $item['value'], // harga satuan
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
@@ -186,7 +245,7 @@ new class extends Component {
 
         foreach ($this->details as $item) {
             $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
-                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Sentrat'))->where('type', 'Debit');
+                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Pakan'))->where('type', 'Debit');
             });
 
             $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
@@ -229,10 +288,6 @@ new class extends Component {
             'total' => $totalTransaksi,
         ]);
 
-        // Hubungkan HPP ↔ Stok
-        $hpp->linkedTransaksis()->attach($stok->id);
-        $stok->linkedTransaksis()->attach($hpp->id);
-
         foreach ($detailData as $d) {
             DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id], ['kategori_id' => $kategoriSentrat->id]));
 
@@ -249,6 +304,7 @@ new class extends Component {
     {
         $this->details[] = [
             'value' => 0,
+            'kategori_id' => null,
             'barang_id' => null,
             'kuantitas' => 1,
             'hpp' => 0,
@@ -274,7 +330,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksi Penjualan Sentrat" separator progress-indicator />
+    <x-header title="Create Transaksi Penjualan Pakan" separator progress-indicator />
 
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
@@ -320,6 +376,8 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
+                        <x-choices-offline label="Kategori" wire:model.live="details.{{ $index }}.kategori_id"
+                            :options="$kategoris" placeholder="Pilih Kategori" single clearable searchable />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />

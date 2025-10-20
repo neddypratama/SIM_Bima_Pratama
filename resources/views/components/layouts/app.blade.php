@@ -94,11 +94,13 @@
                 @endif
 
                 {{-- ✅ Stok hanya untuk role 1 dan 2 --}}
-                {{-- @if (in_array(auth()->user()->role_id, [1, 2]))
+                @if (in_array(auth()->user()->role_id, [1, 2]))
                     <x-menu-sub title="Manage Stok" icon="fas.warehouse">
-                        <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok" />
+                        <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok-telur" />
+                        <x-menu-item title="Stok Pakan" icon="fas.wheat-awn" link="/stok-pakan" />
+                        <x-menu-item title="Stok Obat" icon="fas.capsules" link="/stok-obat" />
                     </x-menu-sub>
-                @endif --}}
+                @endif
 
                 {{-- ✅ Transactions untuk role sesuai route --}}
                 <x-menu-sub title="Telur & Tray" icon="fas.egg">
@@ -112,27 +114,20 @@
                     @endif
                 </x-menu-sub>
 
-                <x-menu-sub title="Sentrat & Obat" icon="fas.flask">
+                <x-menu-sub title="Pakan & Obat" icon="fas.flask">
                     @if (in_array(auth()->user()->role_id, [1, 4, 6]))
-                        <x-menu-item title="Pembelian Sentrat" icon="fas.cart-plus" link="/sentrat-masuk" />
+                        <x-menu-item title="Pembelian Pakan" icon="fas.cart-plus" link="/sentrat-masuk" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 4]))
+                        <x-menu-item title="Penjualan Pakan" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 4, 6]))
                         <x-menu-item title="Pembelian Obat" icon="fas.cart-plus" link="/obat-masuk" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 4]))
-                        <x-menu-item title="Penjualan Sentrat" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
                         <x-menu-item title="Penjualan Obat" icon="fas.file-invoice-dollar" link="/obat-keluar" />
                     @endif
                 </x-menu-sub>
-
-                {{-- <x-menu-sub title="Pakan" icon="fas.flask">
-                    @if (in_array(auth()->user()->role_id, [1, 4, 6]))
-                        <x-menu-item title="Pembelian Pakan Curah" icon="fas.cart-plus" link="/curah-masuk" />
-                        <x-menu-item title="Pembelian Pakan Kucing" icon="fas.cart-plus" link="/kucing-masuk" />
-                    @endif
-                    @if (in_array(auth()->user()->role_id, [1, 4]))
-                        <x-menu-item title="Penjualan Pakan Curah" icon="fas.file-invoice-dollar" link="/curah-keluar" />
-                        <x-menu-item title="Penjualan Pakan Kucing" icon="fas.file-invoice-dollar" link="/kucing-keluar" />
-                    @endif
-                </x-menu-sub> --}}
 
                 <x-menu-sub title="Kas" icon="fas.building-columns">
                     @if (in_array(auth()->user()->role_id, [1, 5]))

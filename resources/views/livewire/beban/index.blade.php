@@ -22,7 +22,7 @@ new class extends Component {
 
     public string $search = '';
     public bool $drawer = false;
-    public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+    public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $perPage = 10;
     public int $client_id = 0;
@@ -44,7 +44,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'kategori_id', 'filter']);
+        $this->reset(['search', 'kategori_id', 'filter']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -71,13 +71,18 @@ new class extends Component {
 
     public function delete($id): void
     {
+        // Ambil transaksi utama berdasarkan $id
         $transaksi = Transaksi::findOrFail($id);
-
-        $link = TransaksiLink::where('linked_id', $id)->first();
-        $link?->delete();
-
-        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
-        $transaksi->details()->delete(); // Hapus detail transaksi terkait
+        $suffix = substr($transaksi->invoice, -4);
+        $tunai = Transaksi::where('invoice', 'like', "%-TNI-$suffix")->first();
+        if (isset($tunai)) {
+            $bayar = $tunai;
+        } else {
+            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$suffix")->first();
+        }
+        $bayar->details()->delete();
+        $bayar->delete();
+        $transaksi->details()->delete();
         $transaksi->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
@@ -94,6 +99,11 @@ new class extends Component {
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
+            })
+            ->when($this->kategori_id, function (Builder $q) {
+                $q->whereHas('details', function ($query) {
+                    $query->where('kategori_id', $this->kategori_id);
+                });
             })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
@@ -196,9 +206,8 @@ new class extends Component {
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
 
-            {{-- ✅ Filter User --}}
-            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
-                single searchable />
+            <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori"
+                icon="o-flag" single searchable />
         </div>
 
         <x-slot:actions>

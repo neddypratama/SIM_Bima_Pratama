@@ -28,7 +28,7 @@ new class extends Component {
 
     public string $search = '';
     public bool $drawer = false;
-    public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+    public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $perPage = 10;
     public int $client_id = 0;
@@ -71,18 +71,23 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
-        $client = Client::find($transaksi->client_id);
-        if ($transaksi->type == 'Debit') {
-            $client?->decrement('bon', $transaksi->total);
-        } else {
-            $client?->increment('bon', $transaksi->total);
-        }
+        // $client = Client::find($transaksi->client_id);
+        // if ($transaksi->type == 'Debit') {
+        //     $client?->decrement('bon', $transaksi->total);
+        // } else {
+        //     $client?->increment('bon', $transaksi->total);
+        // }
 
-        $link = TransaksiLink::where('linked_id', $id)->first();
-        $link?->delete();
-        
-        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
-        $transaksi->details()->delete(); // Hapus detail transaksi terkait
+        $suffix = substr($transaksi->invoice, -4);
+        $tunai = Transaksi::where('invoice', 'like', "%-TNI-$suffix")->first();
+        if (isset($tunai)) {
+            $bayar = $tunai;
+        } else {
+            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$suffix")->first();
+        }
+        $bayar->details()->delete();
+        $bayar->delete();
+        $transaksi->details()->delete();
         $transaksi->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
@@ -181,7 +186,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) || Auth::user()->role_id == 1)
                         <x-button icon="o-pencil"
                             link="/piutang/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />

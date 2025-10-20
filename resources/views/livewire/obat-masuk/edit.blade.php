@@ -71,7 +71,7 @@ new class extends Component {
 
         $this->barangs = Barang::all();
 
-       $this->details = $transaksi->details
+        $this->details = $transaksi->details
             ->map(
                 fn($d) => [
                     'barang_id' => $d->barang_id,
@@ -104,7 +104,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-         $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
     }
 
     public function updatedKategoriId($value): void
@@ -151,32 +151,84 @@ new class extends Component {
             'details.*.kuantitas' => 'required|integer|min:1',
         ]);
 
-        // 1️⃣ Rollback stok lama
+        // 1️⃣ Rollback stok lama (hitung ulang stok & HPP tanpa transaksi ini)
         foreach ($this->transaksi->details as $oldDetail) {
             $barang = Barang::find($oldDetail->barang_id);
             if (!$barang) {
                 continue;
             }
 
-            // Kurangi stok
-            $stokBaru = max(0, $barang->stok - $oldDetail->kuantitas);
-            $barang->update(['stok' => $stokBaru]);
+            // Hitung ulang stok dari semua transaksi lain (tanpa transaksi ini)
+            $stokBaru = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas') - DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
 
-            // Hitung ulang HPP dari semua transaksi lama (kecuali transaksi yang sedang diedit)
-            $detailQuery = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'));
+            // Hitung ulang HPP dari semua transaksi pembelian lain
+            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
 
-            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
-            $totalQty = $detailQuery->sum('kuantitas');
+            $totalQty = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
 
             $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
-            $barang->update(['hpp' => $hppBaru]);
+
+            $barang->update([
+                'stok' => $stokBaru,
+                'hpp' => $hppBaru,
+            ]);
         }
 
-        // 2️⃣ Update transaksi
+        $suffix = substr($this->transaksi->invoice, -4);
+        $hutang = Transaksi::where('invoice', 'like', "%-UTG-$suffix")->first();
+        $client = Client::find($this->client_id);
+
+        // Hilangkan spasi ganda dan ubah jadi pola LIKE-friendly
+        $clientName = 'Hutang ' . trim(str_replace(['  '], [' '], $client->name));
+        $kateHutang = Kategori::where('name', 'like', $clientName)->first();
+
+        $hutang->update([
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'client_id' => $this->client_id,
+            'tanggal' => $this->tanggal,
+            'total' => $this->total,
+            'type' => 'Kredit',
+        ]);
+        $hutang->details()->delete();
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $hutang->id,
+                'kategori_id' => $kateHutang->id,
+                'barang_id' => $item['barang_id'],
+                'value' => (int) $item['value'],
+                'kuantitas' => (int) $item['kuantitas'],
+                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+            ]);
+        }
+
+        $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
+        $newClient = Client::find($this->client_id);
+
+        // Jika client lama dan baru berbeda
+        if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            // Kembalikan titipan client lama
+            $oldClient->decrement('titipan', $this->transaksi->total);
+
+            // Tambahkan titipan ke client baru
+            $newClient->increment('titipan', $this->total);
+        } elseif ($newClient) {
+            // Jika client sama, hanya update selisih total
+            $selisih = $this->total - $this->transaksi->total;
+
+            if ($selisih > 0) {
+                $newClient->increment('titipan', $selisih);
+            } elseif ($selisih < 0) {
+                $newClient->decrement('titipan', abs($selisih));
+            }
+        }
+
+        // 2️⃣ Update transaksi utama
         $this->transaksi->update([
             'name' => $this->name,
             'user_id' => $this->user_id,
             'client_id' => $this->client_id,
+            'kategori_id' => $this->kategori_id,
             'tanggal' => $this->tanggal,
             'total' => $this->total,
             'type' => 'Debit',
@@ -185,30 +237,43 @@ new class extends Component {
         // 3️⃣ Hapus detail lama
         $this->transaksi->details()->delete();
 
-        // 4️⃣ Simpan detail baru + update stok & HPP
+        // 4️⃣ Simpan detail baru
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $this->transaksi->id,
                 'kategori_id' => $this->kategori_id,
+                'barang_id' => $item['barang_id'],
                 'value' => (int) $item['value'],
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)),
+                'kuantitas' => (int) $item['kuantitas'],
+                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
             ]);
+        }
 
-            $barang = Barang::find($item['barang_id']);
+        // 5️⃣ Setelah semua detail baru disimpan, update stok & HPP berdasarkan semua transaksi aktif
+        $barangIds = collect($this->details)->pluck('barang_id')->unique();
+
+        foreach ($barangIds as $barangId) {
+            $barang = Barang::find($barangId);
             if (!$barang) {
                 continue;
             }
 
-            $stokLama = $barang->stok;
-            $hppLama = $barang->hpp ?? 0;
-            $qtyBaru = $item['kuantitas'] ?? 0;
-            $hargaSatuanBaru = $item['value'] ?? 0;
+            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
 
-            $totalHarga = $stokLama * $hppLama + $qtyBaru * $hargaSatuanBaru;
-            $stokBaru = $stokLama + $qtyBaru;
-            $hppBaru = $stokBaru > 0 ? $totalHarga / $stokBaru : 0;
+            $stokKredit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+
+            $stokBaru = $stokDebit - $stokKredit;
+
+            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
+
+            $totalQty = $stokDebit;
+
+            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
+
+            // Jika stok <= 0, reset HPP ke 0
+            if ($stokBaru <= 0) {
+                $hppBaru = 0;
+            }
 
             $barang->update([
                 'stok' => $stokBaru,
@@ -238,7 +303,7 @@ new class extends Component {
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <x-input label="Rincian" wire:model="name" />
+                        <x-input label="Rincian" wire:model="name" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
                             single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)

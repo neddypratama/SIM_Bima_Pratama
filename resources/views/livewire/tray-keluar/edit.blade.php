@@ -74,7 +74,7 @@ new class extends Component {
             'pokok' => $this->pokok,
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'clients' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
+            'clients' => Client::where('type', 'like', '%Peternak%')->get(),
         ];
     }
 
@@ -138,13 +138,13 @@ new class extends Component {
 
         $inv = substr($this->transaksi->invoice, -4);
 
-        $hppTransaksi = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'HPP'))
-            ->first();
-        $stokTransaksi = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Tray'))
-            ->first();
+        $bonTransaksi = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
+        $hppTransaksi = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
+        $stokTransaksi = Transaksi::where('invoice', 'like', "%-TRY-$inv")->first();
 
+        // dd($bonTransaksi, $hppTransaksi, $stokTransaksi);
+
+        $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
         $kategoriTelur = Kategori::where('name', 'Stok Tray')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
 
@@ -225,6 +225,47 @@ new class extends Component {
             }
         }
 
+        $bonTransaksi->update([
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'client_id' => $this->client_id,
+            'tanggal' => $this->tanggal,
+            'total' => $this->total,
+            'type' => 'Debit',
+        ]);
+        $bonTransaksi->details()->delete();
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $bonTransaksi->id,
+                'kategori_id' => $kategoriBon->id,
+                'barang_id' => $item['barang_id'],
+                'value' => (int) $item['value'],
+                'kuantitas' => (int) $item['kuantitas'],
+                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+            ]);
+        }
+
+        $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
+        $newClient = Client::find($this->client_id);
+
+        // Jika client lama dan baru berbeda
+        if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            // Kembalikan titipan client lama
+            $oldClient->decrement('bon', $this->transaksi->total);
+
+            // Tambahkan bon ke client baru
+            $newClient->increment('bon', $this->total);
+        } elseif ($newClient) {
+            // Jika client sama, hanya update selisih total
+            $selisih = $this->total - $this->transaksi->total;
+
+            if ($selisih > 0) {
+                $newClient->increment('bon', $selisih);
+            } elseif ($selisih < 0) {
+                $newClient->decrement('bon', abs($selisih));
+            }
+        }
+
         // --- 3. Update Transaksi Pendapatan (Kredit Utama) ---
         $this->transaksi->update([
             'name' => $this->name,
@@ -296,7 +337,7 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian Transaksi" wire:model="name" placeholder="Contoh: Penjualan Tray" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
                             single searchable clearable label="Client">

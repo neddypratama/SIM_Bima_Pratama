@@ -11,13 +11,13 @@ use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 new class extends Component {
-    public string $startDate;
-    public string $endDate;
+    public $startDate;
+    public $endDate;
 
-    public array $pendapatanData = [];
-    public array $pengeluaranData = [];
-
-    public float $bebanPajak = 0;
+    public $pendapatanData = [];
+    public $pengeluaranData = [];
+    public $expanded = []; // toggle detail
+    public $bebanPajak = 0;
 
     public function mount()
     {
@@ -43,70 +43,91 @@ new class extends Component {
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name');
-        $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name');
+        // Semua kategori
+        $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name')->toArray();
+        $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name')->toArray();
 
-        // == Pendapatan ==
-        $pendapatan = Transaksi::with('details.kategori')
+        // Mapping kelompok
+        $mappingPendapatan = [
+            'Pendapatan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arap'],
+            'Pendapatan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
+            'Pendapatan Obat' => ['Penjualan Obat-Obatan'],
+            'Pendapatan Eggtray' => ['Penjualan EggTray'],
+            'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
+            'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
+            'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
+        ];
+
+        $mappingPengeluaran = [
+            'Beban Transport' => ['Beban Transport', 'Beban BBM'],
+            'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
+            'Beban Produksi' => ['Beban Telur Pecah', 'Beban Barang Kadaluarsa', 'HPP'],
+            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
+            'Beban Sedekah' => ['ZIS'],
+        ];
+
+        // --- Pendapatan per kategori ---
+        $pendapatanFlat = Transaksi::with('details.kategori')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [$start, $end])
             ->get()
             ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type == 'Pendapatan')
-            ->groupBy(fn($detail) => $detail->kategori->name)
-            ->map(function ($group) {
-                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total');
-                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total');
-                return $kredit - $debit;
-            });
+            ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pendapatan')
+            ->groupBy(fn($d) => $d->kategori->name)
+            ->map(fn($group) => 
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='kredit')->sum('sub_total') -
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='debit')->sum('sub_total')
+            )
+            ->toArray();
 
-        // == Pengeluaran ==
-        $pengeluaran = Transaksi::with('details.kategori')
+        // --- Pengeluaran per kategori ---
+        $pengeluaranFlat = Transaksi::with('details.kategori')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [$start, $end])
             ->get()
             ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type == 'Pengeluaran')
-            ->groupBy(fn($detail) => $detail->kategori->name)
-            ->map(function ($group) {
-                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total');
-                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total');
-                return $debit - $kredit;
-            });
-
-        // == Beban Pajak ==
-        $this->bebanPajak = Transaksi::with('details.kategori')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran')->where('name', 'Beban Pajak'))
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($detail) => $detail->kategori && $detail->kategori->type == 'Pengeluaran' && $detail->kategori->name == 'Beban Pajak')
-            ->sum('sub_total');
-
-        // == Pastikan semua kategori tetap muncul ==
-        $this->pendapatanData = $kategoriPendapatan
-            ->mapWithKeys(
-                fn($name) => [
-                    $name => $pendapatan[$name] ?? 0,
-                ],
+            ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pengeluaran')
+            ->groupBy(fn($d) => $d->kategori->name)
+            ->map(fn($group) => 
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='debit')->sum('sub_total') -
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='kredit')->sum('sub_total')
             )
             ->toArray();
 
-        $this->pengeluaranData = $kategoriPengeluaran
-            ->mapWithKeys(
-                fn($name) => [
-                    $name => $pengeluaran[$name] ?? 0,
-                ],
-            )
-            ->toArray();
+        // Beban Pajak
+        $this->bebanPajak = $pengeluaranFlat['Beban Pajak'] ?? 0;
 
+        // --- Kelompokkan pendapatan ---
+        $this->pendapatanData = [];
+        foreach ($mappingPendapatan as $kelompok => $subs) {
+            $detail = [];
+            $total = 0;
+            foreach ($subs as $sub) {
+                $nilai = $pendapatanFlat[$sub] ?? 0;
+                $detail[$sub] = $nilai;
+                $total += $nilai;
+            }
+            $this->pendapatanData[$kelompok] = ['total' => $total, 'detail' => $detail];
+        }
+
+        // --- Kelompokkan pengeluaran ---
+        $this->pengeluaranData = [];
+        foreach ($mappingPengeluaran as $kelompok => $subs) {
+            $detail = [];
+            $total = 0;
+            foreach ($subs as $sub) {
+                $nilai = $pengeluaranFlat[$sub] ?? 0;
+                $detail[$sub] = $nilai;
+                $total += $nilai;
+            }
+            $this->pengeluaranData[$kelompok] = ['total' => $total, 'detail' => $detail];
+        }
     }
 
     public function with()
     {
-        $totalPendapatan = array_sum($this->pendapatanData);
-        $totalPengeluaran = array_sum($this->pengeluaranData);
-
+        $totalPendapatan = array_sum(array_map(fn($d) => $d['total'], $this->pendapatanData));
+        $totalPengeluaran = array_sum(array_map(fn($d) => $d['total'], $this->pengeluaranData));
         $labaSebelumPajak = $totalPendapatan - $totalPengeluaran;
         $labaSetelahPajak = $labaSebelumPajak - $this->bebanPajak;
 
@@ -138,26 +159,22 @@ new class extends Component {
             <h3 class="text-lg font-semibold text-green-800">
                 <i class="fas fa-coins text-green-600"></i>Total Pendapatan
             </h3>
-            <p class="text-2xl font-bold text-green-700 mt-2">
-                Rp {{ number_format($totalPendapatan, 0, ',', '.') }}
-            </p>
+            <p class="text-2xl font-bold text-green-700 mt-2">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
         </x-card>
 
         <x-card>
             <h3 class="text-lg font-semibold text-red-800">
                 <i class="fas fa-wallet text-red-600"></i>Total Pengeluaran
             </h3>
-            <p class="text-2xl font-bold text-red-700 mt-2">
-                Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}
-            </p>
+            <p class="text-2xl font-bold text-red-700 mt-2">Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
         </x-card>
 
         <x-card>
             <h3 class="text-lg font-semibold">
                 <i class="fas fa-chart-line text-blue-600"></i>Laba Sebelum Pajak
             </h3>
-            <p class="text-2xl font-bold {{ $labaSebelumPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
-                Rp {{ number_format($labaSebelumPajak, 0, ',', '.') }}
+            <p class="text-2xl font-bold {{ $labaSebelumPajak >=0 ? 'text-green-700':'text-red-700' }} mt-2">
+                Rp {{ number_format($labaSebelumPajak,0,',','.') }}
             </p>
         </x-card>
 
@@ -165,43 +182,67 @@ new class extends Component {
             <h3 class="text-lg font-semibold">
                 <i class="fas fa-calculator text-purple-600"></i>Laba Setelah Pajak
             </h3>
-            <p class="text-2xl font-bold {{ $labaSetelahPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
-                Rp {{ number_format($labaSetelahPajak, 0, ',', '.') }}
+            <p class="text-2xl font-bold {{ $labaSetelahPajak >=0 ? 'text-green-700':'text-red-700' }} mt-2">
+                Rp {{ number_format($labaSetelahPajak,0,',','.') }}
             </p>
-            <p class="text-sm text-gray-500 mt-1">
-                (Beban Pajak: Rp {{ number_format($bebanPajak, 0, ',', '.') }})
-            </p>
+            <p class="text-sm text-gray-500 mt-1">(Beban Pajak: Rp {{ number_format($bebanPajak,0,',','.') }})</p>
         </x-card>
     </div>
 
     <x-card class="mt-4">
         <h3 class="text-xl font-semibold mb-4"><i class="fas fa-list-ul"></i>Rincian</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Pendapatan -->
             <div>
-                <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up"></i>Pendapatan per
-                    Kategori</h4>
+                <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up"></i>Pendapatan per Kelompok</h4>
                 <ul class="divide-y divide-gray-200">
-                    @foreach ($pendapatanData as $kategori => $total)
-                        <li class="flex justify-between py-2">
-                            <span class="font-medium">{{ $kategori }}</span>
-                            <span class="text-green-700">Rp {{ number_format($total, 0, ',', '.') }}</span>
+                    @foreach($pendapatanData as $kelompok => $data)
+                        <li class="py-2">
+                            <div class="flex justify-between cursor-pointer" wire:click="$toggle('expanded.{{ $kelompok }}')">
+                                <span class="font-medium">{{ $kelompok }}</span>
+                                <span class="text-green-700">Rp {{ number_format($data['total'],0,',','.') }}</span>
+                            </div>
+                            @if($expanded[$kelompok] ?? false)
+                                <ul class="pl-4 mt-2">
+                                    @foreach($data['detail'] as $sub => $val)
+                                        <li class="flex justify-between py-1 text-green-600">
+                                            <span>{{ $sub }}</span>
+                                            <span>Rp {{ number_format($val,0,',','.') }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
             </div>
 
+            <!-- Pengeluaran -->
             <div>
-                <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down"></i>Pengeluaran
-                    per Kategori</h4>
+                <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down"></i>Pengeluaran per Kelompok</h4>
                 <ul class="divide-y divide-gray-200">
-                    @foreach ($pengeluaranData as $kategori => $total)
-                        <li class="flex justify-between py-2">
-                            <span class="font-medium">{{ $kategori }}</span>
-                            <span class="text-red-700">Rp {{ number_format($total, 0, ',', '.') }}</span>
+                    @foreach($pengeluaranData as $kelompok => $data)
+                        <li class="py-2">
+                            <div class="flex justify-between cursor-pointer" wire:click="$toggle('expanded.{{ $kelompok }}')">
+                                <span class="font-medium">{{ $kelompok }}</span>
+                                <span class="text-red-700">Rp {{ number_format($data['total'],0,',','.') }}</span>
+                            </div>
+                            @if($expanded[$kelompok] ?? false)
+                                <ul class="pl-4 mt-2">
+                                    @foreach($data['detail'] as $sub => $val)
+                                        <li class="flex justify-between py-1 text-red-600">
+                                            <span>{{ $sub }}</span>
+                                            <span>Rp {{ number_format($val,0,',','.') }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
             </div>
+
         </div>
     </x-card>
 </div>

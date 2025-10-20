@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Client;
@@ -63,7 +64,7 @@ new class extends Component {
         $this->exportModal = false;
         $this->success('Export dimulai...', position: 'toast-top');
 
-        return Excel::download(new PenjualanSentratExport($this->startDate, $this->endDate), 'penjualan-sentrat.xlsx');
+        return Excel::download(new PenjualanSentratExport($this->startDate, $this->endDate), 'penjualan-pakan.xlsx');
     }
 
     public function delete($id): void
@@ -71,23 +72,14 @@ new class extends Component {
         $transaksi = Transaksi::findOrFail($id);
         $inv = substr($transaksi->invoice, -4);
 
-        $hpp = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'HPP'))
-            ->first();
-
-        $stok = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Sentrat'))
-            ->first();
+        $hpp = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
+        $stok = Transaksi::where('invoice', 'like', "%-STR-$inv")->first();
+        $bon = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
         // dd($stok, $hpp);
 
         // ✅ Kembalikan stok barang
-        if ($hpp) {
+        if ($hpp && $stok) {
             $hpp->details()->delete();
-            $hpp->linked()->delete();
-            $hpp->delete();
-        }
-
-        if ($stok) {
             foreach ($stok->details as $detail) {
                 $barang = Barang::find($detail->barang_id);
                 if ($barang) {
@@ -95,12 +87,15 @@ new class extends Component {
                 }
             }
             $stok->details()->delete();
-            $stok->linked()->delete();
             $stok->delete();
+            $hpp->delete();
         }
 
-        // 🔥 Hapus relasi dari tabel transaksi_links terlebih dahulu
-        \DB::table('transaksi_links')->where('transaksi_id', $transaksi->id)->delete();
+        $client = Client::find($transaksi->client_id);
+        $client->decrement('bon', (int) $transaksi->total);
+
+        $bon->details()->delete();
+        $bon->delete();
 
         // 🔥 Hapus detail dan transaksi utama
         $transaksi->details()->delete();
@@ -120,7 +115,7 @@ new class extends Component {
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'like', '%Penjualan Sentrat%');
+                $q->where('name', 'like', '%Penjualan Pakan%');
             })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
@@ -165,7 +160,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Transaksi Penjualan Sentrat" separator progress-indicator>
+    <x-header title="Transaksi Penjualan Pakan" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>

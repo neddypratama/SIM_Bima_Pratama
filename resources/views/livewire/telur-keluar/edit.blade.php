@@ -19,18 +19,28 @@ new class extends Component {
 
     public Transaksi $transaksi;
 
+    #[Rule('required')]
     public string $invoice = '';
     public string $invoice2 = '';
     public string $invoice3 = '';
 
+    #[Rule('required')]
     public string $name = '';
+
+    #[Rule('required|integer|min:1')]
     public int $total = 0;
+
+    #[Rule('required')]
     public ?int $user_id = null;
+
+    #[Rule('required')]
     public ?int $client_id = null;
-    public ?int $kategori_id = null;
+
     public ?string $tanggal = null;
 
+    #[Rule('required|array|min:1')]
     public array $details = [];
+
     public $barangs;
     public $pokok;
     public array $filteredBarangs = [];
@@ -166,17 +176,16 @@ new class extends Component {
 
         $inv = substr($this->transaksi->invoice, -4);
 
-        $hppTransaksi = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'HPP'))
-            ->first();
-        $stokTransaksi = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Telur'))
-            ->first();
+        $bonTransaksi = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
+        $hppTransaksi = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
+        $stokTransaksi = Transaksi::where('invoice', 'like', "%-TLR-$inv")->first();
 
-        // dd($hppTransaksi, $stokTransaksi);
+        // dd($bonTransaksi, $hppTransaksi, $stokTransaksi);
 
+        $kategoriBon = Kategori::where('name', 'Piutang Pedagang')->first();
         $kategoriTelur = Kategori::where('name', 'Stok Telur')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
+        // dd($kategoriBon, $kategoriHpp, $kategoriTelur);
 
         // Hitung total dan detail transaksi
         $totalTransaksi = 0;
@@ -255,6 +264,47 @@ new class extends Component {
             }
         }
 
+        $bonTransaksi->update([
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'client_id' => $this->client_id,
+            'tanggal' => $this->tanggal,
+            'total' => $this->total,
+            'type' => 'Debit',
+        ]);
+        $bonTransaksi->details()->delete();
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $bonTransaksi->id,
+                'kategori_id' => $kategoriBon->id,
+                'barang_id' => $item['barang_id'],
+                'value' => (int) $item['value'],
+                'kuantitas' => (int) $item['kuantitas'],
+                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+            ]);
+        }
+
+        $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
+        $newClient = Client::find($this->client_id);
+
+        // Jika client lama dan baru berbeda
+        if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            // Kembalikan titipan client lama
+            $oldClient->decrement('bon', $this->transaksi->total);
+
+            // Tambahkan bon ke client baru
+            $newClient->increment('bon', $this->total);
+        } elseif ($newClient) {
+            // Jika client sama, hanya update selisih total
+            $selisih = $this->total - $this->transaksi->total;
+
+            if ($selisih > 0) {
+                $newClient->increment('bon', $selisih);
+            } elseif ($selisih < 0) {
+                $newClient->decrement('bon', abs($selisih));
+            }
+        }
+
         // === 3. Update Transaksi Pendapatan (Kredit Utama) ===
         $this->transaksi->update([
             'name' => $this->name,
@@ -284,6 +334,7 @@ new class extends Component {
     {
         $this->details[] = [
             'value' => 0,
+            'kategori_id' => null,
             'barang_id' => null,
             'kuantitas' => 1,
             'hpp' => 0,
@@ -325,8 +376,8 @@ new class extends Component {
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <x-input label="Rincian Transaksi" wire:model="name"
-                                placeholder="Contoh: Penjualan Telur Ayam Ras" />
+                        <x-input label="Rincian Transaksi" wire:model="name"
+                            placeholder="Contoh: Penjualan Telur Ayam Ras" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
                             single searchable clearable label="Client">
                             {{-- Tampilan item di dropdown --}} @scope('item', $clients)
@@ -359,8 +410,8 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
-                            placeholder="Pilih Kategori" single clearable searchable />
+                        <x-choices-offline label="Kategori" wire:model.live="details.{{ $index }}.kategori_id"
+                            :options="$kategoris" placeholder="Pilih Kategori" single clearable searchable />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />

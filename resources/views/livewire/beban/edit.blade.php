@@ -12,7 +12,7 @@ new class extends Component {
     use Toast;
 
     public Transaksi $beban; // transaksi utama
-    public Transaksi $kas; // transaksi linked
+    public ?Transaksi $bayar; // transaksi linked
 
     #[Rule('required')]
     public string $invoice = '';
@@ -30,6 +30,9 @@ new class extends Component {
     public ?string $type = null;
 
     #[Rule('required')]
+    public ?int $bayar_id = null; // ID kategori metode pembayaran
+
+    #[Rule('required')]
     public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
@@ -42,6 +45,7 @@ new class extends Component {
             'users' => User::all(),
             'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
+            'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
 
@@ -59,6 +63,27 @@ new class extends Component {
         $this->type = $this->beban->type;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
 
+        $inv = substr($transaksi->invoice, -4);
+
+        // Cari transaksi pembayaran (Tunai / Transfer)
+        $bayar = Transaksi::where('invoice', 'like', "%-TNI-$inv")->first();
+
+        if (!$bayar) {
+            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$inv")->first();
+        }
+
+        // Set jika ditemukan
+        if ($bayar) {
+            $this->bayar = $bayar;
+
+            $firstDetail = $bayar->details()->first();
+            $this->bayar_id = $firstDetail ? $firstDetail->kategori_id : null;
+        } else {
+            // Jika tidak ditemukan, hindari error dan beri nilai default
+            $this->bayar = null;
+            $this->bayar_id = null;
+        }
+
         foreach ($transaksi->details as $detail) {
             $this->details[] = [
                 'kategori_id' => $detail->kategori_id,
@@ -72,6 +97,53 @@ new class extends Component {
     public function save(): void
     {
         $this->validate();
+
+        // Ambil kategori pembayaran
+        $kategoriBayar = Kategori::find($this->bayar_id);
+        $inv = substr($this->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+
+        if ($this->type == 'Debit') {
+            $tipe = 'Kredit';
+        } else {
+            $tipe = 'Debit';
+        }
+
+        if ($kategoriBayar->name == 'Kas Tunai') {
+            $this->bayar->update([
+                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'type' => $tipe,
+                'total' => $this->total,
+            ]);
+            $this->bayar->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->bayar->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        } else {
+            $this->bayar->update([
+                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'type' => $tipe,
+                'total' => $this->total,
+            ]);
+            $this->bayar->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->bayar->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        }
 
         // Update transaksi utama
         $this->beban->update([
@@ -101,11 +173,11 @@ new class extends Component {
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
-            <div class="lg:grid grid-cols-5 gap-4">
+            <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
                     <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
                 </div>
-                <div class="col-span-3 grid gap-3">
+                <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
@@ -116,7 +188,9 @@ new class extends Component {
                         <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
                             placeholder="Pilih Kategori" single clearable searchable />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
+                            placeholder="Pilih Metode" single clearable searchable />
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                         <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
                     </div>

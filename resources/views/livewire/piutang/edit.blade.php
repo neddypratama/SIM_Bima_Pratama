@@ -14,7 +14,7 @@ new class extends Component {
     use Toast;
 
     public Transaksi $piutang; // transaksi utama
-    public Transaksi $kas; // transaksi linked
+    public ?Transaksi $bayar; // transaksi linked
 
     #[Rule('required')]
     public string $invoice = '';
@@ -34,8 +34,8 @@ new class extends Component {
     #[Rule('required')]
     public ?int $client_id = null;
 
-    #[Rule('nullable|integer')]
-    public ?int $linked_id = null;
+    #[Rule('required')]
+    public ?int $bayar_id = null; // ID kategori metode pembayaran
 
     #[Rule('required')]
     public ?string $type = null;
@@ -50,20 +50,7 @@ new class extends Component {
             'users' => User::all(),
             'clients' => Client::all(),
             'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'like', '%Piutang%')->get(),
-            'transaksiOptions' => Transaksi::with(['client:id,name', 'details.kategori:id,name,type', 'linked.linkedTransaksi'])
-                ->whereHas('details.kategori', function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%');
-                })
-                ->get()
-                ->filter(function ($t) {
-                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
-                    $sisa = $t->total - $totalLinked;
-
-                    // akses this->transaksi dari closure dengan use()
-                    return $sisa > 0 || $t->id === $this->piutang->linked->first()?->linked_id;
-                })
-                ->values(),
-
+            'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Piutang Bertambah'], ['id' => 'Kredit', 'name' => 'Piutang Berkurang']],
         ];
     }
@@ -81,6 +68,27 @@ new class extends Component {
         $this->type = $this->piutang->type;
         $this->tanggal = \Carbon\Carbon::parse($this->piutang->tanggal)->format('Y-m-d\TH:i');
 
+        $inv = substr($transaksi->invoice, -4);
+
+        // Cari transaksi pembayaran (Tunai / Transfer)
+        $bayar = Transaksi::where('invoice', 'like', "%-TNI-$inv")->first();
+
+        if (!$bayar) {
+            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$inv")->first();
+        }
+
+        // Set jika ditemukan
+        if ($bayar) {
+            $this->bayar = $bayar;
+
+            $firstDetail = $bayar->details()->first();
+            $this->bayar_id = $firstDetail ? $firstDetail->kategori_id : null;
+        } else {
+            // Jika tidak ditemukan, hindari error dan beri nilai default
+            $this->bayar = null;
+            $this->bayar_id = null;
+        }
+
         foreach ($transaksi->details as $detail) {
             $this->details[] = [
                 'kategori_id' => $detail->kategori_id,
@@ -89,48 +97,100 @@ new class extends Component {
 
             $this->kategori_id = $detail->kategori_id;
         }
-
-        $this->linked_id = $transaksi->linked->first()?->linked_id ?? null;
     }
 
     public function save(): void
     {
         $this->validate();
 
-        $tunai = $this->piutang;
+        $oldClient = Client::find($this->piutang->getOriginal('client_id'));
+        $newClient = Client::find($this->client_id);
 
-        $this->client_id = Transaksi::find($this->linked_id)->client_id ?? $this->client_id;
+        if ($this->type == 'Debit') {
+            $tipe = 'Kredit';
+            // Jika client lama dan baru berbeda
+            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+                // Kembalikan titipan client lama
+                $oldClient->decrement('bon', $this->piutang->total);
 
-        $kategoriPiutang = ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'];
-        $oldKategori = $this->piutang->details->first()->kategori->name ?? null;
-        $oldClientId = $this->piutang->client_id;
-        $oldType = $this->piutang->type;
-        $oldTotal = $this->piutang->total;
-        $kategoriBaru = Kategori::find($this->kategori_id)->name ?? null;
+                // Tambahkan bon ke client baru
+                $newClient->increment('bon', $this->total);
+            } elseif ($newClient) {
+                // Jika client sama, hanya update selisih total
+                $selisih = $this->total - $this->piutang->total;
 
-        if (in_array($oldKategori, $kategoriPiutang) && $oldClientId) {
-            $clientLama = Client::find($oldClientId);
-            if ($clientLama) {
-                if ($oldType == 'Debit') {
-                    $clientLama->decrement('bon', $oldTotal);
-                } else {
-                    $clientLama->increment('bon', $oldTotal);
+                if ($selisih > 0) {
+                    $newClient->increment('bon', $selisih);
+                } elseif ($selisih < 0) {
+                    $newClient->decrement('bon', abs($selisih));
+                }
+            }
+        } else {
+            $tipe = 'Debit';
+            // Jika client lama dan baru berbeda
+            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+                // Kembalikan titipan client lama
+                $oldClient->increment('bon', $this->piutang->total);
+
+                // Tambahkan bon ke client baru
+                $newClient->decrement('bon', $this->total);
+            } elseif ($newClient) {
+                // Jika client sama, hanya update selisih total
+                $selisih = $this->total - $this->piutang->total;
+
+                if ($selisih > 0) {
+                    $newClient->decrement('bon', $selisih);
+                } elseif ($selisih < 0) {
+                    $newClient->increment('bon', abs($selisih));
                 }
             }
         }
 
-        // Jika sekarang termasuk kategori piutang → terapkan perubahan baru
-        if (in_array($kategoriBaru, $kategoriPiutang) && $this->client_id) {
-            $clientBaru = Client::findOrFail($this->client_id);
-            if ($this->type == 'Debit') {
-                $clientBaru->increment('bon', $this->total);
-            } else {
-                $clientBaru->decrement('bon', $this->total);
-            }
+        // Ambil kategori pembayaran
+        $kategoriBayar = Kategori::find($this->bayar_id);
+        $inv = substr($this->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+
+        if ($kategoriBayar->name == 'Kas Tunai') {
+            $this->bayar->update([
+                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => $tipe,
+                'total' => $this->total,
+            ]);
+            $this->bayar->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->bayar->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
+        } else {
+            $this->bayar->update([
+                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => $tipe,
+                'total' => $this->total,
+            ]);
+            $this->bayar->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->bayar->id,
+                'kategori_id' => $this->bayar_id,
+                'value' => null,
+                'kuantitas' => null,
+                'sub_total' => $this->total,
+            ]);
         }
 
         // Update transaksi utama
-        $tunai->update([
+        $this->piutang->update([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -140,35 +200,14 @@ new class extends Component {
             'total' => $this->total,
         ]);
 
-        $tunai->details()->delete();
+        $this->piutang->details()->delete();
         DetailTransaksi::create([
-            'transaksi_id' => $tunai->id,
+            'transaksi_id' => $this->piutang->id,
             'kategori_id' => $this->kategori_id,
             'kuantitas' => null,
             'value' => null,
             'sub_total' => $this->total,
         ]);
-
-        $link = TransaksiLink::where('linked_id', $tunai->id)->first();
-        if ($link) {
-            $link->delete();
-        }
-
-        // Hapus link lama
-        $tunai->linked()->delete();
-
-        // Buat link baru jika ada
-        if ($this->linked_id) {
-            TransaksiLink::create([
-                'transaksi_id' => $tunai->id,
-                'linked_id' => $this->linked_id,
-            ]);
-
-            TransaksiLink::create([
-                'transaksi_id' => $this->linked_id,
-                'linked_id' => $tunai->id,
-            ]);
-        }
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/piutang');
     }
@@ -207,7 +246,7 @@ new class extends Component {
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' . $clients->type }}
+                                {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->bon + (int) $this->total, 0, ',', '.') }}
                             @endscope
                         </x-choices-offline>
                     </div>
@@ -229,46 +268,11 @@ new class extends Component {
                 </div>
 
                 <div class="col-span-6 grid gap-3">
-                    @if ($type == 'Debit')
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div class="col-span-2">
-                                <x-choices-offline label="Pilih Transaksi" wire:model="linked_id" :options="$transaksiOptions"
-                                    placeholder="Cari atau pilih transaksi" searchable clearable single>
-                                    {{-- Tampilan item di dropdown --}}
-                                    @scope('item', $transaksi)
-                                        <x-list-item :item="$transaksi" sub-value="invoice">
-                                            <x-slot:avatar>
-                                                <x-icon name="fas.receipt" class="bg-primary/10 p-2 w-9 h-9 rounded-full" />
-                                            </x-slot:avatar>
-                                            <x-slot:actions>
-                                                @php
-                                                    // Hitung total transaksi yang sudah terhubung
-                                                    $totalLinked = $transaksi->linked->sum(
-                                                        fn($l) => $l->linkedTransaksi->total ?? 0,
-                                                    );
-                                                    $sisa = $transaksi->total - $totalLinked;
-                                                @endphp
-
-                                                <x-badge :value="'Rp ' . number_format($sisa, 0, ',', '.')" class="badge-soft badge-primary badge-sm" />
-                                                <x-badge :value="$transaksi->client?->name ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
-
-                                            </x-slot:actions>
-                                        </x-list-item>
-                                    @endscope
-
-                                    {{-- Tampilan ketika sudah dipilih --}}
-                                    @scope('selection', $transaksi)
-                                        {{ $transaksi->invoice . ' | ' . 'Rp ' . number_format($transaksi->total, 0, ',', '.') . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
-                                    @endscope
-                                </x-choices-offline>
-                            </div>
-                            <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
-                        </div>
-                    @else
-                        <div class="grid grid-cols-1 gap-4">
-                            <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
-                        </div>
-                    @endif
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
+                            placeholder="Pilih Metode" single clearable searchable />
+                        <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
+                    </div>
                 </div>
             </div>
         </x-card>

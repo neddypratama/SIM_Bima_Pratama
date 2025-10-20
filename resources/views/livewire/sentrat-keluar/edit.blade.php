@@ -61,7 +61,7 @@ new class extends Component {
             $this->kategori_id = $detail->kategori_id;
         }
 
-        $kategori = Kategori::where('name', 'Stok Sentrat')->first();
+        $kategori = Kategori::where('name', 'Stok Pakan')->first();
         foreach ($this->details as $index => $detail) {
             $this->filteredBarangs[$index] = Barang::whereHas('jenis', fn($q) => $q->where('kategori_id', $kategori->id))->get()->map(fn($barang) => ['id' => $barang->id, 'name' => $barang->name])->toArray();
         }
@@ -139,14 +139,12 @@ new class extends Component {
 
         $inv = substr($this->transaksi->invoice, -4);
 
-        $hppTransaksi = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'HPP'))
-            ->first();
-        $stokTransaksi = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Sentrat'))
-            ->first();
+        $bonTransaksi = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
+        $hppTransaksi = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
+        $stokTransaksi = Transaksi::where('invoice', 'like', "%-STR-$inv")->first();
 
-        $kategoriSentrat = Kategori::where('name', 'Stok Sentrat')->first();
+        $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
+        $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
 
         // Hitung total dan detail transaksi
@@ -155,7 +153,7 @@ new class extends Component {
 
         foreach ($this->details as $item) {
             $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
-                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Sentrat'))->where('type', 'Debit');
+                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Pakan'))->where('type', 'Debit');
             });
 
             $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
@@ -226,6 +224,47 @@ new class extends Component {
             }
         }
 
+        $bonTransaksi->update([
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'client_id' => $this->client_id,
+            'tanggal' => $this->tanggal,
+            'total' => $this->total,
+            'type' => 'Debit',
+        ]);
+        $bonTransaksi->details()->delete();
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $bonTransaksi->id,
+                'kategori_id' => $kategoriBon->id,
+                'barang_id' => $item['barang_id'],
+                'value' => (int) $item['value'],
+                'kuantitas' => (int) $item['kuantitas'],
+                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+            ]);
+        }
+
+        $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
+        $newClient = Client::find($this->client_id);
+
+        // Jika client lama dan baru berbeda
+        if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            // Kembalikan titipan client lama
+            $oldClient->decrement('bon', $this->transaksi->total);
+
+            // Tambahkan bon ke client baru
+            $newClient->increment('bon', $this->total);
+        } elseif ($newClient) {
+            // Jika client sama, hanya update selisih total
+            $selisih = $this->total - $this->transaksi->total;
+
+            if ($selisih > 0) {
+                $newClient->increment('bon', $selisih);
+            } elseif ($selisih < 0) {
+                $newClient->decrement('bon', abs($selisih));
+            }
+        }
+
         // === 3. Update Transaksi Pendapatan (Kredit Utama) ===
         $this->transaksi->update([
             'name' => $this->name,
@@ -255,6 +294,7 @@ new class extends Component {
     {
         $this->details[] = [
             'value' => 0,
+            'kategori_id' => null,
             'barang_id' => null,
             'kuantitas' => 1,
             'hpp' => 0,

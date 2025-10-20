@@ -21,10 +21,9 @@ new class extends Component {
 
     public string $search = '';
     public bool $drawer = false;
-    public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+    public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $perPage = 10;
-    public int $client_id = 0;
     public int $kategori_id = 0;
 
     public bool $exportModal = false; // ✅ Modal export
@@ -43,7 +42,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'kategori_id', 'filter']);
+        $this->reset(['search', 'kategori_id', 'filter']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -72,6 +71,15 @@ new class extends Component {
     {
         // Ambil transaksi utama berdasarkan $id
         $transaksi = Transaksi::findOrFail($id);
+        $suffix = substr($transaksi->invoice, -4);
+        $tunai = Transaksi::where('invoice', 'like', "%-TNI-$suffix")->first();
+        if (isset($tunai)) {
+            $bayar = $tunai;
+        } else {
+            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$suffix")->first();
+        }
+        $bayar->details()->delete();
+        $bayar->delete();
         $transaksi->details()->delete();
         $transaksi->delete();
 
@@ -89,7 +97,12 @@ new class extends Component {
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'like', '%Lain-Lain%');
+                $q->where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan');
+            })
+            ->when($this->kategori_id, function (Builder $q) {
+                $q->whereHas('details', function ($query) {
+                    $query->where('kategori_id', $this->kategori_id);
+                });
             })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
@@ -111,6 +124,7 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
+            'kategori' => Kategori::where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -128,11 +142,11 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Transaksi Penjualan Lainnya" separator progress-indicator>
+    <x-header title="Transaksi Pendapatan Lainnya" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
-            <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-            <x-button label="Create" link="/lainnya/create" responsive icon="o-plus" class="btn-primary" />
+                <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
+                <x-button label="Create" link="/lainnya/create" responsive icon="o-plus" class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-header>
@@ -166,7 +180,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) || Auth::user()->role_id == 1)
                         <x-button icon="o-pencil"
                             link="/lainnya/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
@@ -176,10 +190,14 @@ new class extends Component {
         </x-table>
     </x-card>
 
-    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
+    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button
+        class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
+
+            <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori"
+                icon="o-flag" single searchable />
         </div>
 
         <x-slot:actions>

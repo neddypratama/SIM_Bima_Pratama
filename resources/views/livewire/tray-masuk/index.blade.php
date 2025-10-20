@@ -67,21 +67,59 @@ new class extends Component {
 
     public function delete($id): void
     {
-        $transaksi = Transaksi::find($id);
+        $transaksi = Transaksi::find($id)->load('details');
+        if (!$transaksi) {
+            $this->error('Transaksi tidak ditemukan.');
+            return;
+        }
 
-        if ($transaksi) {
-            foreach ($transaksi->details as $detail) {
-                $barang = Barang::find($detail->barang_id);
-                if ($barang) {
-                    $barang->decrement('stok', $detail->kuantitas);
-                }
+        // 1️⃣ Rollback stok & HPP untuk semua barang dalam transaksi ini
+        foreach ($transaksi->details as $oldDetail) {
+            $barang = Barang::find($oldDetail->barang_id);
+            if (!$barang) {
+                continue;
             }
 
-            $transaksi->details()->delete();
-            $transaksi->delete();
+            // Hitung stok baru berdasarkan semua transaksi lain (tanpa transaksi ini)
+            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
 
-            $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
+            $stokKredit = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+
+            $stokBaru = $stokDebit - $stokKredit;
+
+            // Hitung ulang HPP dari semua transaksi pembelian lain
+            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
+
+            $totalQty = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+
+            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
+
+            // Jika stok <= 0, reset HPP ke 0
+            if ($stokBaru <= 0) {
+                $hppBaru = 0;
+            }
+
+            $barang->update([
+                'stok' => $stokBaru,
+                'hpp' => $hppBaru,
+            ]);
         }
+
+        $client = Client::find($transaksi->client_id);
+        $client->decrement('titipan', (int) $transaksi->total);
+
+        $suffix = substr($transaksi->invoice, -4);
+        $hutang = Transaksi::where('invoice', 'like', "%-UTG-$suffix")->first();
+        $hutang->details()->delete();
+        $hutang->delete();
+
+        // 2️⃣ Hapus detail transaksi
+        $transaksi->details()->delete();
+
+        // 3️⃣ Hapus transaksi utama
+        $transaksi->delete();
+        
+        $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
     public function headers(): array
@@ -115,9 +153,7 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
-            'client' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get(),
+            'client' => Client::where('type', 'like', '%Supplier%')->where('name', 'like', 'Tray%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -172,7 +208,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) || Auth::user()->role_id == 1)
                         <x-button icon="o-pencil"
                             link="/tray-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
@@ -188,8 +224,8 @@ new class extends Component {
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
-            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" searchable single />
+            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client"
+                option-label="name" option-value="id" icon="o-user" placeholder-value="0" searchable single />
         </div>
 
         <x-slot:actions>

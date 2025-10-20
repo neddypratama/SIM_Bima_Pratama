@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
+use App\Exports\TransaksiExport;
+use Maatwebsite\Excel\Facades\Excel;
+
 
 new class extends Component {
     use Toast;
@@ -30,8 +33,10 @@ new class extends Component {
 
     public int $perPage = 10;
 
-    public string $startDate;
-    public string $endDate;
+    public bool $exportModal = false; // ✅ Modal export
+    // ✅ Tambah tanggal untuk filter export
+    public ?string $startDate = null;
+    public ?string $endDate = null;
 
     public function mount()
     {
@@ -47,6 +52,27 @@ new class extends Component {
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
+
+    public function openExportModal(): void
+    {
+        $this->exportModal = true;
+        $this->startDate = now()->startOfMonth()->toDateString();
+        $this->endDate = now()->endOfMonth()->toDateString();
+    }
+
+    public function export(): mixed
+    {
+        if (!$this->startDate || !$this->endDate) {
+            $this->error('Pilih tanggal terlebih dahulu.');
+            return null; // ✅ Sekarang tetap return sesuatu
+        }
+
+        $this->exportModal = false;
+        $this->success('Export dimulai...', position: 'toast-top');
+
+        return Excel::download(new TransaksiExport($this->startDate, $this->endDate), 'transaksi.xlsx');
+    }
+
 
     public function delete($id): void
     {
@@ -129,7 +155,13 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Daftar Transaksi" separator progress-indicator />
+    <x-header title="Daftar Transaksi" separator progress-indicator >
+        <x-slot:actions>
+            <div class="flex flex-row sm:flex-row gap-2">
+                <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
+            </div>
+        </x-slot:actions>
+    </x-header>
 
     <!-- FILTERS -->
     <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">
@@ -173,4 +205,16 @@ new class extends Component {
             <x-button label="Done" icon="o-check" class="btn-primary" @click="$wire.drawer=false" />
         </x-slot:actions>
     </x-drawer>
+
+    <!-- ✅ MODAL EXPORT -->
+    <x-modal wire:model="exportModal" title="Export Data" separator>
+        <div class="grid gap-4">
+            <x-input label="Start Date" type="date" wire:model="startDate" />
+            <x-input label="End Date" type="date" wire:model="endDate" />
+        </div>
+        <x-slot:actions>
+            <x-button label="Batal" @click="$wire.exportModal=false" />
+            <x-button label="Export" class="btn-primary" wire:click="export" spinner />
+        </x-slot:actions>
+    </x-modal>
 </div>

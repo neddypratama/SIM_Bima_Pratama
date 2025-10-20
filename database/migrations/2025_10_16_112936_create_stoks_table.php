@@ -13,10 +13,14 @@ return new class extends Migration
     {
         Schema::create('stoks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('barang_id')->constrained();
+            $table->string('invoice')->unique();
+            $table->foreignId('user_id')->constrained();
             $table->dateTime('tanggal');
-            $table->enum('type', ['Masuk', 'Keluar']);
-            $table->integer('jumlah')->default(0);
+            $table->foreignId('barang_id')->constrained();
+            $table->integer('tambah')->default(0);
+            $table->integer('kurang')->default(0);
+            $table->integer('kotor')->default(0);
+            $table->integer('rusak')->default(0);
             $table->timestamps();
         });
     }

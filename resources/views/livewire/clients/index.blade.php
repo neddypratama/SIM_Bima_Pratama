@@ -6,6 +6,8 @@ use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Exports\ClientExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 new class extends Component {
     use Toast;
@@ -97,6 +99,13 @@ new class extends Component {
         $this->success('Filters cleared.', position: 'toast-top');
     }
 
+    public function export(): mixed
+    {
+        $this->success('Export dimulai...', position: 'toast-top');
+
+        return Excel::download(new ClientExport(), 'client.xlsx');
+    }
+
     // Delete action
     public function delete($id): void
     {
@@ -123,7 +132,6 @@ new class extends Component {
 
     public function with(): array
     {
-
         if ($this->filter >= 0 && $this->filter < 2) {
             if (!$this->search == null) {
                 $this->filter = 1;
@@ -157,7 +165,10 @@ new class extends Component {
     <!-- HEADER -->
     <x-header title="Daftar Klien" separator progress-indicator>
         <x-slot:actions>
-            <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
+            <div class="flex flex-row sm:flex-row gap-2">
+                <x-button wire:click="export" icon="fas.download" primary>Export Excel</x-button>
+                <x-button label="Create" @click="$wire.create()" responsive icon="o-plus" class="btn-primary" />
+            </div>
         </x-slot:actions>
     </x-header>
 

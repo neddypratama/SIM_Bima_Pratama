@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('deskripsi')->nullable();
-            $table->enum('type', ['Aset', 'Liabilitas', 'Pendapatan', 'Pengeluaran']); // sebutkan nama tabel secara eksplisit
+            $table->enum('type', ['Aset', 'Liabilitas', 'Ekuitas', 'Pendapatan', 'Pengeluaran']); // sebutkan nama tabel secara eksplisit
             $table->timestamps();
         });
     }

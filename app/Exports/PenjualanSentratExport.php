@@ -29,7 +29,7 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', callback: function (Builder $q) {
-                $q->where('name', 'like', 'Penjualan Sentrat%');
+                $q->where('name', 'like', 'Penjualan Pakan%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))

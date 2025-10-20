@@ -27,7 +27,7 @@ class BebanExport implements FromCollection, WithHeadings, ShouldAutoSize, WithM
     {
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
+                $q->where('type', 'like', '%Pengeluaran%');
             })
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))

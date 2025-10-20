@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
+use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Client;
@@ -75,37 +76,31 @@ new class extends Component {
         $inv = substr($transaksi->invoice, -4);
 
         // Ambil HPP & Stok berdasarkan linked_id = transaksi utama
-        $hpp = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'HPP'))
-            ->first();
+        $stok = Transaksi::where('invoice', 'like', "%-OBT-$inv")->first();
+        $hpp = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
+        $bon = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
 
-        $stok = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Obat-Obatan'))
-            ->first();
-
-        // ✅ Kembalikan stok barang sebelum hapus detail stok
-        if ($stok) {
+        // ✅ Kembalikan stok barang
+        if ($hpp && $stok) {
+            $hpp->details()->delete();
             foreach ($stok->details as $detail) {
                 $barang = Barang::find($detail->barang_id);
                 if ($barang) {
                     $barang->increment('stok', $detail->kuantitas);
                 }
             }
-
             $stok->details()->delete();
-            $stok->linked()->delete();
             $stok->delete();
-        }
-
-        if ($hpp) {
-            $hpp->details()->delete();
-            $hpp->linked()->delete();
             $hpp->delete();
         }
 
-        // 🔥 Hapus relasi dari tabel transaksi_links terlebih dahulu
-        \DB::table('transaksi_links')->where('transaksi_id', $transaksi->id)->delete();
+        $client = Client::find($transaksi->client_id);
+        $client->decrement('bon', (int) $transaksi->total);
 
+        $bon->details()->delete();
+        $bon->delete();
+
+        // 🔥 Hapus detail dan transaksi utama
         $transaksi->details()->delete();
         $transaksi->delete();
 
@@ -149,9 +144,7 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
-            'client' => Client::where('type', 'like', '%Pedagang%')
-                ->orWhere('type', 'like', '%Peternak%')
-                ->get(),
+            'client' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
             'kategori' => Kategori::where('name', 'like', 'Penjualan Obat%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
@@ -208,7 +201,8 @@ new class extends Component {
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
                     @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today))
-                        <x-button icon="o-pencil" link="/obat-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                        <x-button icon="o-pencil"
+                            link="/obat-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                 </div>

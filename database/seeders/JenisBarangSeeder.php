@@ -18,7 +18,7 @@ class JenisBarangSeeder extends Seeder
         $stokTelur = Kategori::where('name', 'like', 'Stok Telur')->first()->id;
         $stokTray = Kategori::where('name', 'like', 'Stok Tray')->first()->id;
         $stokObat = Kategori::where('name', 'like', 'Stok Obat-Obatan')->first()->id;
-        $stokSentrat = Kategori::where('name', 'like', 'Stok Sentrat')->first()->id;
+        $stokSentrat = Kategori::where('name', 'like', 'Stok Pakan')->first()->id;
         
         DB::table('jenis_barangs')->insert([
             [
@@ -64,8 +64,22 @@ class JenisBarangSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'name' => 'Stok Sentrat',
+                'name' => 'Pakan Sentrat/Pabrikan',
                 'deskripsi' => 'Kategori untuk barang pakan atau sentrat ternak.',
+                'kategori_id' => $stokSentrat,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Pakan Curah',
+                'deskripsi' => 'Kategori untuk barang pakan curah.',
+                'kategori_id' => $stokSentrat,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Pakan Kucing',
+                'deskripsi' => 'Kategori untuk barang pakan Kucing.',
                 'kategori_id' => $stokSentrat,
                 'created_at' => now(),
                 'updated_at' => now(),
