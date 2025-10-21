@@ -49,7 +49,7 @@ new class extends Component {
 
         // Mapping kelompok
         $mappingPendapatan = [
-            'Pendapatan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arap'],
+            'Pendapatan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arap', 'Penjualan Telur Asin'],
             'Pendapatan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
             'Pendapatan Obat' => ['Penjualan Obat-Obatan'],
             'Pendapatan Eggtray' => ['Penjualan EggTray'],
