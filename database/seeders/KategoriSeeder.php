@@ -47,6 +47,13 @@ class KategoriSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'Penjualan Telur Asin',
+                'deskripsi' => 'Kategori untuk pendapatan dari penjualan telur asin.',
+                'type' => 'Pendapatan',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
 
             // --- Penjualan Pakan ---
             [
@@ -192,8 +199,22 @@ class KategoriSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [ 
-                'name' => 'Beban Telur Pecah', 
-                'deskripsi' => 'Kategori untuk kerugian dari telur pecah atau tidak layak jual.', 
+                'name' => 'Beban Telur Bentes', 
+                'deskripsi' => 'Kategori untuk kerugian dari telur pecah.', 
+                'type' => 'Pengeluaran', 
+                'created_at' => now(), 
+                'updated_at' => now(), 
+            ], 
+            [ 
+                'name' => 'Beban Telur Ceplok', 
+                'deskripsi' => 'Kategori untuk kerugian dari telur pecah.', 
+                'type' => 'Pengeluaran', 
+                'created_at' => now(), 
+                'updated_at' => now(), 
+            ], 
+            [ 
+                'name' => 'Beban Telur Prok', 
+                'deskripsi' => 'Kategori untuk kerugian dari telur prok.', 
                 'type' => 'Pengeluaran', 
                 'created_at' => now(), 
                 'updated_at' => now(), 

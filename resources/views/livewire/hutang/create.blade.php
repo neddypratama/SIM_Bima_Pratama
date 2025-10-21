@@ -85,9 +85,11 @@ new class extends Component {
 
         $client = Client::find($this->client_id);
         if ($this->type == 'Kredit') {
+            $tipe = 'Debit';
             // dd($this->client_id, $kategori->name, $this->type, $this->total);
             $client->increment('titipan', $this->total);
         } else {
+            $tipe = 'Kredit';
             $client->decrement('titipan', $this->total);
         }
 
@@ -118,7 +120,7 @@ new class extends Component {
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => 'Debit',
+                'type' => $tipe,
                 'total' => $this->total,
             ]);
 
@@ -136,7 +138,7 @@ new class extends Component {
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => 'Debit',
+                'type' => $tipe,
                 'total' => $this->total,
             ]);
 

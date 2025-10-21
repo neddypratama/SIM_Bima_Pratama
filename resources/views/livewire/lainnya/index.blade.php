@@ -180,7 +180,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) || Auth::user()->role_id == 1)
+                     @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id ==  Auth::user()->id)
                         <x-button icon="o-pencil"
                             link="/lainnya/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />

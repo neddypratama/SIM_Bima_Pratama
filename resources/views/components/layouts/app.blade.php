@@ -158,6 +158,8 @@
                             link="/laporan-labarugi" />
                         <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced"
                             link="/laporan-neraca-saldo" />
+                        <x-menu-item title="Laporan Aset" icon="fas.scale-balanced"
+                            link="/laporan-aset" />
                     </x-menu-sub>
                 @endif
 

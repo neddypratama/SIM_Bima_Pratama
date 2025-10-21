@@ -101,7 +101,7 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-36'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-36'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'user.name', 'label' => 'Pembuat', 'class' => 'w-16'], ['key' => 'tambah', 'label' => ' Tambah', 'class' => 'w-16'], ['key' => 'kurang', 'label' => ' Kurang', 'class' => 'w-16'], ['key' => 'kotor', 'label' => ' Kotor', 'class' => 'w-16'], ['key' => 'rusak', 'label' => ' Pecah', 'class' => 'w-16']];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-36'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-36'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'user.name', 'label' => 'Pembuat', 'class' => 'w-16'], ['key' => 'tambah', 'label' => ' Tambah', 'class' => 'w-16'], ['key' => 'kurang', 'label' => ' Kurang', 'class' => 'w-16'], ['key' => 'kotor', 'label' => ' Kotor', 'class' => 'w-16'], ['key' => 'bentes', 'label' => ' Bentes', 'class' => 'w-16'], ['key' => 'ceplok', 'label' => ' Ceplok', 'class' => 'w-16'], ['key' => 'rusak', 'label' => ' Pecah', 'class' => 'w-16']];
     }
 
     public function transaksi(): LengthAwarePaginator

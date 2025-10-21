@@ -29,7 +29,9 @@ new class extends Component {
     public ?int $tambah = 0;
     public ?int $kurang = 0;
     public ?int $kotor = 0;
-    public ?int $pecah = 0;
+    public ?int $bentes = 0;
+    public ?int $ceplok = 0;
+    public ?int $prok = 0;
 
     public function mount($stok): void
     {
@@ -44,8 +46,8 @@ new class extends Component {
         $barang = $stokEdit->barang;
         if ($barang) {
             // stok asli sebelum transaksi ini
-            $this->stokAsli = $barang->stok - $stokEdit->tambah + ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->rusak);
-            $this->stok = $this->stokAsli + $stokEdit->tambah - ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->rusak);
+            $this->stokAsli = $barang->stok - $stokEdit->tambah + ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->bentes + $stokEdit->ceplok + $stokEdit->rusak);
+            $this->stok = $this->stokAsli + $stokEdit->tambah - ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->bentes + $stokEdit->ceplok + $stokEdit->rusak);
         } else {
             $this->stokAsli = $this->stok = 0;
         }
@@ -53,7 +55,9 @@ new class extends Component {
         $this->tambah = $stokEdit->tambah;
         $this->kurang = $stokEdit->kurang;
         $this->kotor = $stokEdit->kotor;
-        $this->pecah = $stokEdit->rusak;
+        $this->bentes = $stokEdit->bentes;
+        $this->ceplok = $stokEdit->ceplok;
+        $this->prok = $stokEdit->rusak;
     }
 
     public function with(): array
@@ -76,25 +80,27 @@ new class extends Component {
                 $this->tambah = $this->stokModel->tambah;
                 $this->kurang = $this->stokModel->kurang;
                 $this->kotor = $this->stokModel->kotor;
-                $this->pecah = $this->stokModel->rusak;
-                $this->stokAsli = $barang->stok - $this->tambah + ($this->kurang + $this->kotor + $this->pecah);
+                $this->bentes = $this->stokModel->bentes;
+                $this->ceplok = $this->stokModel->ceplok;
+                $this->prok = $this->stokModel->rusak;
+                $this->stokAsli = $barang->stok - $this->tambah + ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok);
             } else {
                 // reset input untuk barang baru
-                $this->tambah = $this->kurang = $this->kotor = $this->pecah = 0;
+                $this->tambah = $this->kurang = $this->kotor = $this->bentes = $this->ceplok = $this->prok = 0;
                 $this->stokAsli = $barang->stok;
             }
 
-            $this->stok = $this->stokAsli + $this->tambah - ($this->kurang + $this->kotor + $this->pecah);
+            $this->stok = $this->stokAsli + $this->tambah - ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok);
         } else {
             $this->stokAsli = $this->stok = 0;
-            $this->tambah = $this->kurang = $this->kotor = $this->pecah = 0;
+            $this->tambah = $this->kurang = $this->kotor = $this->bentes = $this->ceplok = $this->prok = 0;
         }
     }
 
     public function updated($field): void
     {
         if (in_array($field, ['tambah', 'kurang', 'kotor', 'pecah'])) {
-            $this->stok = $this->stokAsli + $this->tambah - ($this->kurang + $this->kotor + $this->pecah);
+            $this->stok = $this->stokAsli + $this->tambah - ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok);
             $this->stok = max(0, $this->stok);
         }
     }
@@ -109,9 +115,9 @@ new class extends Component {
 
         DB::transaction(function () use ($barang) {
             // === 1. Hitung stok akhir ===
-            $stok_awal = $this->stokAsli ?? $barang->stok - $this->stokModel->tambah + ($this->stokModel->kurang + $this->stokModel->kotor + $this->stokModel->rusak);
+            $stok_awal = $this->stokAsli ?? $barang->stok - $this->stokModel->tambah + ($this->stokModel->kurang + $this->stokModel->kotor + $this->stokModel->bentes + $this->stokModel->ceplok + $this->stokModel->rusak);
 
-            $stok_akhir = $stok_awal + $this->tambah - ($this->kurang + $this->kotor + $this->pecah);
+            $stok_akhir = $stok_awal + $this->tambah - ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok);
             $stok_akhir = max(0, $stok_akhir);
 
             // === 2. Update stok barang ===
@@ -124,7 +130,7 @@ new class extends Component {
                 'tambah' => $this->tambah,
                 'kurang' => $this->kurang,
                 'kotor' => $this->kotor,
-                'rusak' => $this->pecah,
+                'rusak' => $this->prok,
             ]);
 
             // === 4. Ambil suffix invoice stok ===
@@ -213,19 +219,19 @@ new class extends Component {
             }
 
             // === 6. Update transaksi Telur Pecah ===
-            $trxPecah = Transaksi::where('invoice', 'like', "INV-%-PCH-$suffix")->first();
-            if ($trxPecah) {
-                $totalPecah = ($barang->hpp ?? 0) * ($this->pecah ?? 0);
-                $trxPecah->update([
+            $trxBentes = Transaksi::where('invoice', 'like', "INV-%-BTS-$suffix")->first();
+            if ($trxBentes) {
+                $totalPecah = ($barang->hpp ?? 0) * ($this->bentes ?? 0);
+                $trxBentes->update([
                     'total' => $totalPecah,
                     'tanggal' => $this->tanggal,
                 ]);
 
-                $detailPecah = DetailTransaksi::where('transaksi_id', $trxPecah->id)->first();
+                $detailPecah = DetailTransaksi::where('transaksi_id', $trxBentes->id)->first();
                 if ($detailPecah) {
                     $detailPecah->update([
                         'value' => (int) $barang->hpp,
-                        'kuantitas' => $this->pecah,
+                        'kuantitas' => $this->bentes,
                         'sub_total' => $totalPecah,
                     ]);
                 }
@@ -233,7 +239,7 @@ new class extends Component {
 
             $trxTelur2 = Transaksi::where('invoice', 'like', "INV-%-TLR2-$suffix")->first();
             if ($trxTelur2) {
-                $totalPecah = ($barang->hpp ?? 0) * ($this->pecah ?? 0);
+                $totalPecah = ($barang->hpp ?? 0) * ($this->bentes ?? 0);
                 $trxTelur2->update([
                     'total' => $totalPecah,
                     'tanggal' => $this->tanggal,
@@ -243,11 +249,86 @@ new class extends Component {
                 if ($detailPecah) {
                     $detailPecah->update([
                         'value' => (int) $barang->hpp,
-                        'kuantitas' => $this->pecah,
+                        'kuantitas' => $this->bentes,
                         'sub_total' => $totalPecah,
                     ]);
                 }
             }
+
+            // === 6. Update transaksi Telur Pecah ===
+            $trxCeplok = Transaksi::where('invoice', 'like', "INV-%-CLK-$suffix")->first();
+            if ($trxCeplok) {
+                $totalPecah = ($barang->hpp ?? 0) * ($this->ceplok ?? 0);
+                $trxCeplok->update([
+                    'total' => $totalPecah,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                $detailPecah = DetailTransaksi::where('transaksi_id', $trxCeplok->id)->first();
+                if ($detailPecah) {
+                    $detailPecah->update([
+                        'value' => (int) $barang->hpp,
+                        'kuantitas' => $this->ceplok,
+                        'sub_total' => $totalPecah,
+                    ]);
+                }
+            }
+
+            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-%-TLR3-$suffix")->first();
+            if ($trxTelur2) {
+                $totalPecah = ($barang->hpp ?? 0) * ($this->ceplok ?? 0);
+                $trxTelur2->update([
+                    'total' => $totalPecah,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                $detailPecah = DetailTransaksi::where('transaksi_id', $trxTelur2->id)->first();
+                if ($detailPecah) {
+                    $detailPecah->update([
+                        'value' => (int) $barang->hpp,
+                        'kuantitas' => $this->ceplok,
+                        'sub_total' => $totalPecah,
+                    ]);
+                }
+            }
+
+            // === 6. Update transaksi Telur Pecah ===
+            $trxPecah = Transaksi::where('invoice', 'like', "INV-%-PRK-$suffix")->first();
+            if ($trxPecah) {
+                $totalPecah = ($barang->hpp ?? 0) * ($this->prok ?? 0);
+                $trxPecah->update([
+                    'total' => $totalPecah,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                $detailPecah = DetailTransaksi::where('transaksi_id', $trxPecah->id)->first();
+                if ($detailPecah) {
+                    $detailPecah->update([
+                        'value' => (int) $barang->hpp,
+                        'kuantitas' => $this->prok,
+                        'sub_total' => $totalPecah,
+                    ]);
+                }
+            }
+
+            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-%-TLR4-$suffix")->first();
+            if ($trxTelur2) {
+                $totalPecah = ($barang->hpp ?? 0) * ($this->prok ?? 0);
+                $trxTelur2->update([
+                    'total' => $totalPecah,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                $detailPecah = DetailTransaksi::where('transaksi_id', $trxTelur2->id)->first();
+                if ($detailPecah) {
+                    $detailPecah->update([
+                        'value' => (int) $barang->hpp,
+                        'kuantitas' => $this->prok,
+                        'sub_total' => $totalPecah,
+                    ]);
+                }
+            }
+            
         });
 
         $this->success('Stok telur berhasil diperbarui!', redirectTo: '/stok-telur');
@@ -290,8 +371,10 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                         <x-input label="Telur Bertambah" wire:model.lazy="tambah" type="number" min="0" />
                         <x-input label="Telur Berkurang" wire:model.lazy="kurang" type="number" min="0" />
-                        <x-input label="Telur Kotor" wire:model.lazy="kotor" type="number"  />
-                        <x-input label="Telur Pecah" wire:model.lazy="pecah" type="number" min="0" />
+                        <x-input label="Telur Kotor" wire:model.lazy="kotor" type="number" />
+                        <x-input label="Telur Bentes" wire:model.lazy="bentes" type="number" min="0" />
+                        <x-input label="Telur Ceplok" wire:model.lazy="ceplok" type="number" min="0" />
+                        <x-input label="Telur Prok" wire:model.lazy="prok" type="number" min="0" />
                     </div>
                 </div>
             </div>

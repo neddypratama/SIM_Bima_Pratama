@@ -61,7 +61,7 @@ new class extends Component {
         $mappingPengeluaran = [
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
-            'Beban Produksi' => ['Beban Telur Pecah', 'Beban Barang Kadaluarsa', 'HPP'],
+            'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa', 'HPP'],
             'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
             'Beban Sedekah' => ['ZIS'],
         ];

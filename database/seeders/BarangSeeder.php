@@ -19,6 +19,7 @@ class BarangSeeder extends Seeder
         $telurHorn    = JenisBarang::where('name', 'Telur Horn')->first()->id ?? null;
         $telurPuyuh   = JenisBarang::where('name', 'Telur Puyuh')->first()->id ?? null;
         $telurArab    = JenisBarang::where('name', 'Telur Arab')->first()->id ?? null;
+        $telurAsin    = JenisBarang::where('name', 'Telur Asin')->first()->id ?? null;
         $tray         = JenisBarang::where('name', 'Tray')->first()->id ?? null;
         $obat         = JenisBarang::where('name', 'Obat-Obatan')->first()->id ?? null;
         $sentrat      = JenisBarang::where('name', 'Pakan Sentrat/Pabrikan')->first()->id ?? null;
@@ -37,7 +38,9 @@ class BarangSeeder extends Seeder
             // 🐥 Telur Puyuh
             ['Puyuh Bj', $telurPuyuh, 0],
             ['Puyuh Kg', $telurPuyuh, 0],
-            ['Asin', $telurPuyuh, 0],
+
+            // 🐥 Telur Asin
+            ['Asin', $telurAsin, 0],
 
             // 🐔 Telur Arab
             ['Arab Mrh', $telurArab, 0],

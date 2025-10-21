@@ -18,6 +18,7 @@ new class extends Component {
     public array $neracaPengeluaran = [];
     public array $neracaAset = [];
     public array $neracaLiabilitas = [];
+    public array $neracaEkuitas = [];
 
     // Tambahkan property
     public array $imbalancedCategories = [];
@@ -39,7 +40,7 @@ new class extends Component {
     public array $mappingPengeluaran = [
         'Beban Transport' => ['Beban Transport', 'Beban BBM'],
         'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
-        'Beban Produksi' => ['Beban Telur Pecah', 'Beban Barang Kadaluarsa', 'HPP'],
+        'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa', 'HPP'],
         'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
         'Beban Sedekah' => ['ZIS'],
     ];
@@ -59,6 +60,10 @@ new class extends Component {
         'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB'],
         'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
         'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok'],
+    ];
+
+    public array $mappingEkuitas = [
+        'Modal' => ['Modal Awal'],
     ];
 
     public function mount()
@@ -89,6 +94,7 @@ new class extends Component {
         $this->neracaPengeluaran = [];
         $this->neracaAset = [];
         $this->neracaLiabilitas = [];
+        $this->neracaEkuitas = [];
 
         // Ambil transaksi dengan details & kategori
         $transaksis = Transaksi::with(['details.kategori'])
@@ -152,6 +158,7 @@ new class extends Component {
         $this->neracaPengeluaran = $mapHierarki($this->mappingPengeluaran, 'Pengeluaran');
         $this->neracaAset = $mapHierarki($this->mappingAset, 'Aset');
         $this->neracaLiabilitas = $mapHierarki($this->mappingLiabilitas, 'Liabilitas');
+        $this->neracaEkuitas = $mapHierarki($this->mappingEkuitas, 'Ekuitas');
     }
 
     // Tambahkan ini di dalam class Livewire kamu
@@ -173,6 +180,7 @@ new class extends Component {
             'neracaPengeluaran' => $this->neracaPengeluaran,
             'neracaAset' => $this->neracaAset,
             'neracaLiabilitas' => $this->neracaLiabilitas,
+            'neracaEkuitas' => $this->neracaEkuitas,
             'totalDebit' => $totalDebit,
             'totalKredit' => $totalKredit,
         ];
@@ -195,22 +203,22 @@ new class extends Component {
         <div class="overflow-x-auto">
             <table class="table w-full">
                 <thead>
-                    <tr class="bg-gray-100">
+                    <tr class="">
                         <th class="text-left px-4 py-2">Akun / Kategori</th>
                         <th class="text-center px-4 py-2">Debit</th>
                         <th class="text-center px-4 py-2">Kredit</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (['Pendapatan' => $neracaPendapatan, 'Pengeluaran' => $neracaPengeluaran, 'Aset' => $neracaAset, 'Liabilitas' => $neracaLiabilitas] as $typeName => $groupData)
-                        <tr class="font-bold bg-gray-200">
+                    @foreach (['Pendapatan' => $neracaPendapatan, 'Pengeluaran' => $neracaPengeluaran, 'Aset' => $neracaAset, 'Liabilitas' => $neracaLiabilitas, 'Ekuitas' => $neracaEkuitas] as $typeName => $groupData)
+                        <tr class="font-bold ">
                             <td colspan="3">{{ $typeName }}</td>
                         </tr>
 
                         @foreach ($groupData as $group)
-                            <tr class="cursor-pointer bg-gray-50 hover:bg-gray-100"
+                            <tr class="cursor-pointer"
                                 wire:click="$toggle('expanded.{{ $group['group'] }}')">
-                            <tr class="cursor-pointer bg-gray-50 hover:bg-gray-100"
+                            <tr class="cursor-pointer"
                                 wire:click="$toggle('expanded.{{ $group['group'] }}')">
                                 <td>
                                     <i class="fas fa-chevron-right mr-2"
@@ -229,7 +237,7 @@ new class extends Component {
 
                             @if ($expanded[$group['group']] ?? false)
                                 @foreach ($group['details'] as $detail)
-                                    <tr class="bg-white">
+                                    <tr class="">
                                         <td class="pl-6">{{ $detail['kategori'] }}</td>
                                         <td class="text-center text-blue-600">
                                             {{ 'Rp ' . number_format($detail['debit'], 0, ',', '.') }}</td>
@@ -240,7 +248,7 @@ new class extends Component {
                             @endif
                         @endforeach
 
-                        <tr class="font-bold bg-gray-100">
+                        <tr class="font-bold">
                             <td>Total {{ $typeName }}</td>
                             @php $total = $this->getTotal($groupData); @endphp
                             <td class="text-center">{{ 'Rp ' . number_format($total['debit'], 0, ',', '.') }}</td>
@@ -248,7 +256,7 @@ new class extends Component {
                         </tr>
                     @endforeach
                     <!-- Total Keseluruhan -->
-                    <tr class="font-bold border-t-2 bg-gray-200">
+                    <tr class="font-bold border-t-2 =">
                         <td>Total Keseluruhan</td>
                         <td class="text-center text-blue-700">Rp {{ number_format($totalDebit, 0, ',', '.') }}</td>
                         <td class="text-center text-green-700">Rp {{ number_format($totalKredit, 0, ',', '.') }}</td>

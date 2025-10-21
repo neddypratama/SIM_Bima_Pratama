@@ -26,7 +26,7 @@ new class extends Component {
 
     public string $search = '';
     public bool $drawer = false;
-    public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+    public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $perPage = 10;
     public int $client_id = 0;
@@ -208,7 +208,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) || Auth::user()->role_id == 1)
+                     @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id ==  Auth::user()->id)
                         <x-button icon="o-pencil"
                             link="/tray-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />

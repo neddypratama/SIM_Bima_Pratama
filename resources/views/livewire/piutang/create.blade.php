@@ -88,13 +88,15 @@ new class extends Component {
 
         $client = Client::find($this->client_id);
         if ($this->type == 'Debit') {
+            $tipe = 'Kredit';
             // dd($this->client_id, $kategori->name, $this->type, $this->total);
             $client->increment('bon', $this->total);
         } else {
+            $tipe = 'Debit';
             $client->decrement('bon', $this->total);
         }
 
-        $tunai = Transaksi::create([
+        $piutang = Transaksi::create([
             'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
@@ -105,7 +107,7 @@ new class extends Component {
         ]);
 
         DetailTransaksi::create([
-            'transaksi_id' => $tunai->id,
+            'transaksi_id' => $piutang->id,
             'kategori_id' => $this->kategori_id,
             'kuantitas' => null,
             'value' => null,
@@ -121,7 +123,7 @@ new class extends Component {
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => 'Debit',
+                'type' => $tipe,
                 'total' => $this->total,
             ]);
 
@@ -139,7 +141,7 @@ new class extends Component {
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => 'Debit',
+                'type' => $tipe,
                 'total' => $this->total,
             ]);
 

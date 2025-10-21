@@ -164,6 +164,7 @@ Route::middleware('auth')->group(function() {
     Route::middleware('role:1,2,7')->group(function () {
         Volt::route('/laporan-labarugi', 'laporan.labarugi');
         Volt::route('/laporan-neraca-saldo', 'laporan.neraca-saldo');
+        Volt::route('/laporan-aset', 'laporan.aset');
     });
 });
 

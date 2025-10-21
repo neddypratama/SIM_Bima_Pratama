@@ -50,6 +50,13 @@ class JenisBarangSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Telur Asin',
+                'deskripsi' => 'Kategori untuk barang Telur Asin.',
+                'kategori_id' => $stokTelur,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Tray',
                 'deskripsi' => 'Kategori untuk barang tray telur.',
                 'kategori_id' => $stokTray,

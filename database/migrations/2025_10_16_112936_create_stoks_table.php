@@ -20,6 +20,8 @@ return new class extends Migration
             $table->integer('tambah')->default(0);
             $table->integer('kurang')->default(0);
             $table->integer('kotor')->default(0);
+            $table->integer('bentes')->default(0)->nullable();
+            $table->integer('ceplok')->default(0)->nullable();
             $table->integer('rusak')->default(0);
             $table->timestamps();
         });

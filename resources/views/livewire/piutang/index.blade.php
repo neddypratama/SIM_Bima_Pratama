@@ -71,12 +71,12 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
-        // $client = Client::find($transaksi->client_id);
-        // if ($transaksi->type == 'Debit') {
-        //     $client?->decrement('bon', $transaksi->total);
-        // } else {
-        //     $client?->increment('bon', $transaksi->total);
-        // }
+        $client = Client::find($transaksi->client_id);
+        if ($transaksi->type == 'Debit') {
+            $client?->decrement('bon', $transaksi->total);
+        } else {
+            $client?->increment('bon', $transaksi->total);
+        }
 
         $suffix = substr($transaksi->invoice, -4);
         $tunai = Transaksi::where('invoice', 'like', "%-TNI-$suffix")->first();
@@ -186,7 +186,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) || Auth::user()->role_id == 1)
+                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id ==  Auth::user()->id || Auth::user()->role_id == 1)
                         <x-button icon="o-pencil"
                             link="/piutang/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />

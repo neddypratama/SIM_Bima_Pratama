@@ -36,19 +36,28 @@ new class extends Component {
     public string $editingName = '';
     public string $editingAlamat = ''; // Menyimpan nilai input untuk nama Client
     public ?string $editingType = null;
+    public int $editingBon = 0;
+    public int $editingTitipan = 0;
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
     public string $newClientName = '';
     public string $newClientAlamat = ''; // Untuk menyimpan input nama Client baru
     public ?string $newClientType = null;
+    public int $newClientBon = 0;
+    public int $newClientTitipan = 0;
 
     public function create(): void
     {
         $this->newClientName = ''; // Reset input sebelum membuka modal
         $this->newClientAlamat = '';
         $this->newClientType = null;
-        $this->createModal = true;
+        $this->newClientBon = 0;
+        $this->newClientTitipan = 0;
+        if (Auth::user()->role_id == 1) {
+            # code...
+            $this->createModal = true;
+        }
     }
 
     public function saveCreate(): void
@@ -56,10 +65,12 @@ new class extends Component {
         $this->validate([
             'newClientName' => 'required|string|max:255|unique:clients,name',
             'newClientAlamat' => 'nullable',
-            'newClientType' => 'required|in:Karyawan,Peternak,Pedagang',
+            'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supllier',
+            'newClientBon' => 'nullable|integer',
+            'newClientTitipan' => 'nullable|integer',
         ]);
 
-        Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'type' => $this->newClientType]);
+        Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'type' => $this->newClientType, 'bon' => $this->newClientBon, 'titipan' => $this->newClientTitipan]);
 
         $this->createModal = false;
         $this->success('Client created successfully.', position: 'toast-top');
@@ -73,7 +84,12 @@ new class extends Component {
             $this->editingName = $this->editingClient->name;
             $this->editingAlamat = $this->editingClient->alamat;
             $this->editingType = $this->editingClient->type;
-            $this->editModal = true; // Tampilkan modal
+            $this->editingBon = $this->editingClient->bon;
+            $this->editingTitipan = $this->editingClient->titipan;
+            if (Auth::user()->role_id == 1) {
+                # code...
+                $this->editModal = true; // Tampilkan modal
+            }
         }
     }
 
@@ -83,9 +99,11 @@ new class extends Component {
             $this->validate([
                 'editingName' => 'required|string|max:255|unique:clients,name',
                 'editingAlamat' => 'nullable',
-                'editingType' => 'required|in:Karyawan,Peternak,Pedagang',
+                'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supllier',
+                'editingBon' => 'nullable|integer',
+                'editingTitipan' => 'nullable|integer',
             ]);
-            $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'type' => $this->editingType, 'updated_at' => now()]);
+            $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'type' => $this->editingType, 'bon' => $this->editingBon, 'titipan' => $this->editingTitipan, 'updated_at' => now()]);
             $this->editModal = false;
             $this->success('Client updated successfully.', position: 'toast-top');
         }
@@ -236,6 +254,8 @@ new class extends Component {
             <x-textarea label="Client Alamat" wire:model.live="newClientAlamat" placeholder="Here ..." />
             <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="newClientType"
                 :options="$tipeClientOptions" icon="o-flag" />
+            <x-input label="Client Bon" wire:model.live="newClientBon" />
+            <x-input label="Client Titipan" wire:model.live="newClientTitipan" />
         </div>
 
         <x-slot:actions>
@@ -250,6 +270,8 @@ new class extends Component {
             <x-textarea label="Client Alamat" wire:model.live="editingAlamat" placeholder="Here ..." />
             <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="editingType"
                 :options="$tipeClientOptions" icon="o-flag" />
+            <x-input label="Client Bon" wire:model.live="editingBon" />
+            <x-input label="Client Titipan" wire:model.live="editingTitipan" />
         </div>
 
         <x-slot:actions>
