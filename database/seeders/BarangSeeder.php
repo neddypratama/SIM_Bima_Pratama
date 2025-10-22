@@ -30,6 +30,8 @@ class BarangSeeder extends Seeder
             // 🥚 Telur Bebek
             ['Golden', $telurBebek, 0],
             ['BK', $telurBebek, 0],
+            ['BK Pth', $telurBebek, 0],
+            ['AB Pth', $telurBebek, 0],
 
             // 🥚 Telur Horn
             ['Horen', $telurHorn, 0],

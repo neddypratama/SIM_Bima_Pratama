@@ -44,7 +44,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'filter']);
+        $this->reset(['search', 'client_id','kategori_id', 'filter']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -106,6 +106,11 @@ new class extends Component {
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('type', 'like', '%Liabilitas%');
             })
+            ->when($this->kategori_id, function (Builder $q) {
+                $q->whereHas('details', function ($query) {
+                    $query->where('kategori_id', $this->kategori_id);
+                });
+            })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
@@ -126,12 +131,15 @@ new class extends Component {
             if ($this->client_id != 0) {
                 $this->filter++;
             }
+            if ($this->kategori_id != 0) {
+                $this->filter++;
+            }
         }
 
         return [
             'transaksi' => $this->transaksi(),
             'client' => Client::all(),
-            'kategori' => Kategori::where('name', 'like', 'Hutang%')->get(),
+            'kategori' => Kategori::where('type',  'Liabilitas')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -187,7 +195,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                     @if (Auth::user()->role_id == 1 ||
+                    @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
                         <x-button icon="o-pencil" link="/hutang/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
@@ -205,6 +213,9 @@ new class extends Component {
 
             {{-- ✅ Filter User --}}
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
+                single searchable />
+
+            <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" icon="o-flag"
                 single searchable />
         </div>
 

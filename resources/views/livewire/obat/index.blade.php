@@ -13,7 +13,7 @@ new class extends Component {
     public string $search = '';
     public string $startDate = '';
     public string $endDate = '';
-    public string $filterType = ''; // ✅ Filter untuk tipe transaksi
+    public string $filterType = 'Debit'; // ✅ Filter untuk tipe transaksi
     public array $sortBy = ['column' => 'tanggal', 'direction' => 'desc'];
     public int $perPage = 10;
 
@@ -36,19 +36,19 @@ new class extends Component {
     /** 🔹 Query utama */
     public function pembelianTelur(): LengthAwarePaginator
     {
-        return DetailTransaksi::query()
-            ->select(DB::raw('DATE(transaksi.tanggal) as tanggal'), DB::raw('barang.name as nama_barang'), DB::raw('SUM(detail_transaksis.kuantitas) as total_jumlah'), DB::raw('SUM(detail_transaksis.kuantitas * detail_transaksis.value) as total_harga'))
-            ->join('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
-            ->join('barangs as barang', 'barang.id', '=', 'detail_transaksis.barang_id')
-            ->join('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
-            ->where('kategori.name', 'like', '%Stok Obat%')
+        return DB::table('barangs as barang')
+            ->select('barang.name as nama_barang', DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
+            ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
+            ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
+            ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
+            ->where('kategori.name', 'like', '%Stok Telur%')
             ->where('transaksi.invoice', 'like', '%-OBT-%')
-            ->when($this->filterType, fn($q) => $q->where('transaksi.type', $this->filterType)) // ✅ filter Debit/Kredit
+            ->when($this->filterType, fn($q) => $q->where('transaksi.type', $this->filterType))
             ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
             ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
-            ->groupBy('tanggal', 'barang.name')
-            ->orderBy(...array_values($this->sortBy))
+            ->groupBy('barang.name')
+            ->orderBy('barang.name', 'asc')
             ->paginate($this->perPage);
     }
 
@@ -89,7 +89,7 @@ new class extends Component {
         </div>
 
         <div class="md:col-span-2">
-            <x-select label="Tipe Transaksi" placeholder="Semua" :options="$types" wire:model.live="filterType"
+            <x-select label="Tipe Transaksi" :options="$types" wire:model.live="filterType"
                 clearable />
         </div>
 

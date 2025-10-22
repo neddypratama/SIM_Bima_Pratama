@@ -2,7 +2,7 @@
 
 use App\Models\Transaksi;
 use App\Models\TransaksiLink;
-use App\Models\DetailTransaksi;
+use App\Models\Kategori;
 use App\Models\Barang;
 use App\Models\User;
 use App\Models\Client;
@@ -31,6 +31,7 @@ new class extends Component {
     public int $filter = 0;
     public int $perPage = 10;
     public int $client_id = 0;
+    public int $kategori_id = 0;
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -41,7 +42,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'filter']);
+        $this->reset(['search', 'client_id', 'kategori_id', 'filter']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -92,6 +93,11 @@ new class extends Component {
             ->whereHas('details.kategori', function ($q) {
                 $q->where('name', 'like', 'Bank %');
             })
+            ->when($this->kategori_id, function (Builder $q) {
+                $q->whereHas('details', function ($query) {
+                    $query->where('kategori_id', $this->kategori_id);
+                });
+            })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
@@ -115,14 +121,8 @@ new class extends Component {
         }
         return [
             'transaksi' => $this->transaksi(),
-            'client' => Client::all()
-                ->groupBy('type')
-                ->mapWithKeys(
-                    fn($group, $type) => [
-                        $type => $group->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()->toArray(),
-                    ],
-                )
-                ->toArray(),
+            'client' => Client::all(),
+            'kategori' => Kategori::where('name', 'like', 'Bank%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -194,8 +194,10 @@ new class extends Component {
                 icon="o-magnifying-glass" />
 
             {{-- ✅ Filter User --}}
-            <x-select-group placeholder="Pilih Client" wire:model.live="client_id" :options="$client" option-label="name"
-                option-value="id" icon="o-user" placeholder-value="0" />
+            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
+                single searchable />
+
+            <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" icon="o-flag" />
         </div>
 
         <x-slot:actions>

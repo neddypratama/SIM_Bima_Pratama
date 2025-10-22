@@ -132,6 +132,7 @@ new class extends Component {
         return Transaksi::query()
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('invoice', 'like', '%-TLR-%')
+            ->where('type', 'Debit')
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Telur%'))
             ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))

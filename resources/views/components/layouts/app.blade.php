@@ -162,9 +162,9 @@
                     <x-menu-sub title="Laporan" icon="fas.chart-bar">
                         <x-menu-item title="Laporan Laba Rugi" icon="fas.money-bill-transfer"
                             link="/laporan-labarugi" />
+                        <x-menu-item title="Laporan Aset" icon="fas.chart-simple" link="/laporan-aset" />
                         <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced"
                             link="/laporan-neraca-saldo" />
-                        <x-menu-item title="Laporan Aset" icon="fas.chart-simple" link="/laporan-aset" />
                     </x-menu-sub>
                 @endif
 
