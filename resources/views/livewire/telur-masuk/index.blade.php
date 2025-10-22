@@ -31,6 +31,9 @@ new class extends Component {
     public int $perPage = 10;
     public int $client_id = 0;
 
+    public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah']];
+    public ?string $tipePeternak = null; // <- value yang dipilih
+
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
     public ?string $startDate = null;
@@ -134,6 +137,11 @@ new class extends Component {
             ->where('invoice', 'like', '%-TLR-%')
             ->where('type', 'Debit')
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Telur%'))
+            ->when($this->tipePeternak, function (Builder $q) {
+                $q->whereHas('client', function ($query) {
+                    $query->where('keterangan', $this->tipePeternak);
+                });
+            })
             ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
             ->orderBy(...array_values($this->sortBy))
@@ -148,6 +156,9 @@ new class extends Component {
                 $this->filter++;
             }
             if ($this->client_id != 0) {
+                $this->filter++;
+            }
+            if ($this->tipePeternak != 0) {
                 $this->filter++;
             }
         }
@@ -230,6 +241,8 @@ new class extends Component {
                 icon="o-magnifying-glass" />
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" searchable
                 single />
+            <x-select placeholder="Pilih Peternak" wire:model.live="tipePeternak" :options="$tipePeternakOptions" icon="o-tag"
+                placeholder-value="0" />
         </div>
 
         <x-slot:actions>
