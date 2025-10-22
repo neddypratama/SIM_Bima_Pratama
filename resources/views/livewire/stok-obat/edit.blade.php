@@ -24,12 +24,12 @@ new class extends Component {
     public ?int $barang_id = null;
     public ?string $tanggal = null;
     public ?int $user_id = null;
-    public ?int $stokAsli = 0; // stok sebelum transaksi
-    public ?int $stok = 0; // stok tampil di form
-    public ?int $tambah = 0;
-    public ?int $kurang = 0;
-    public ?int $kotor = 0;
-    public ?int $pecah = 0;
+    public ?float $stokAsli = 0; // stok sebelum transaksi
+    public ?float $stok = 0; // stok tampil di form
+    public ?float $tambah = 0;
+    public ?float $kurang = 0;
+    public ?float $kotor = 0;
+    public ?float $pecah = 0;
 
     public function mount($stok): void
     {
@@ -144,7 +144,7 @@ new class extends Component {
                     $detailKotor = DetailTransaksi::where('transaksi_id', $trxKotor->id)->first();
                     if ($detailKotor) {
                         $detailKotor->update([
-                            'value' => (int) $barang->hpp,
+                            'value' => $barang->hpp,
                             'kuantitas' => $this->kotor,
                             'sub_total' => $totalKotor,
                         ]);
@@ -164,7 +164,7 @@ new class extends Component {
                     $detailKotor = DetailTransaksi::where('transaksi_id', $trxTelur1->id)->first();
                     if ($detailKotor) {
                         $detailKotor->update([
-                            'value' => (int) $barang->hpp,
+                            'value' => $barang->hpp,
                             'kuantitas' => $this->kotor,
                             'sub_total' => $totalKotor,
                         ]);
@@ -184,7 +184,7 @@ new class extends Component {
                     $detailKotor = DetailTransaksi::where('transaksi_id', $trxKotor->id)->first();
                     if ($detailKotor) {
                         $detailKotor->update([
-                            'value' => (int) $barang->hpp,
+                            'value' => $barang->hpp,
                             'kuantitas' => $this->kotor * -1,
                             'sub_total' => $totalKotor * -1,
                         ]);
@@ -204,7 +204,7 @@ new class extends Component {
                     $detailKotor = DetailTransaksi::where('transaksi_id', $trxTelur1->id)->first();
                     if ($detailKotor) {
                         $detailKotor->update([
-                            'value' => (int) $barang->hpp,
+                            'value' => $barang->hpp,
                             'kuantitas' => $this->kotor * -1,
                             'sub_total' => $totalKotor * -1,
                         ]);
@@ -224,7 +224,7 @@ new class extends Component {
                 $detailPecah = DetailTransaksi::where('transaksi_id', $trxPecah->id)->first();
                 if ($detailPecah) {
                     $detailPecah->update([
-                        'value' => (int) $barang->hpp,
+                        'value' => $barang->hpp,
                         'kuantitas' => $this->pecah,
                         'sub_total' => $totalPecah,
                     ]);
@@ -242,7 +242,7 @@ new class extends Component {
                 $detailPecah = DetailTransaksi::where('transaksi_id', $trxTelur2->id)->first();
                 if ($detailPecah) {
                     $detailPecah->update([
-                        'value' => (int) $barang->hpp,
+                        'value' => $barang->hpp,
                         'kuantitas' => $this->pecah,
                         'sub_total' => $totalPecah,
                     ]);
@@ -274,8 +274,8 @@ new class extends Component {
                             <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barangs"
                                 single searchable clearable label="Barang" />
                         </div>
-                        <x-input label="Stok Awal" wire:model.live="stokAsli" type="number" readonly />
-                        <x-input label="Stok Sekarang" wire:model.live="stok" type="number" readonly />
+                        <x-input label="Stok Awal" wire:model.live="stokAsli" type="number" step="0.01" readonly />
+                        <x-input label="Stok Sekarang" wire:model.live="stok" type="number" step="0.01" readonly />
                     </div>
                 </div>
             </div>
@@ -288,10 +288,10 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" min="0" />
-                        <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" min="0" />
-                        <x-input label="Obat Return" wire:model.lazy="kotor" type="number"  />
-                        <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" min="0" />
+                        <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
+                        <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
+                        <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01"  />
+                        <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01" min="0" />
                     </div>
                 </div>
             </div>

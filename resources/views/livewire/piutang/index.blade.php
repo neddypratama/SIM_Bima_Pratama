@@ -103,7 +103,7 @@ new class extends Component {
         return Transaksi::query()
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('type', 'like', '%Aset%')->Where('name', 'like', '%Piutang%');
+                $q->where('type', 'like', '%Aset%')->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
             })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
@@ -186,7 +186,8 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id ==  Auth::user()->id || Auth::user()->role_id == 1)
+                    @if (Auth::user()->role_id == 1 ||
+                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
                         <x-button icon="o-pencil"
                             link="/piutang/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />

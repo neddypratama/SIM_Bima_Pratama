@@ -24,8 +24,8 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:0')]
-    public int $total = 0;
+    #[Rule('required|numeric|min:0')]
+    public float $total = 0;
 
     #[Rule('required')]
     public ?int $user_id = null;
@@ -117,7 +117,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)));
     }
 
     public function addDetail(): void
@@ -152,7 +152,7 @@ new class extends Component {
         $this->validate([
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
-            'details.*.kuantitas' => 'required|integer|min:1',
+            'details.*.kuantitas' => 'required|numeric|min:1',
         ]);
 
         // 1️⃣ Rollback stok lama (hitung ulang stok & HPP tanpa transaksi ini)
@@ -205,9 +205,9 @@ new class extends Component {
                 'transaksi_id' => $hutang->id,
                 'kategori_id' => $kateHutang->id,
                 'barang_id' => $item['barang_id'],
-                'value' => (int) $item['value'],
-                'kuantitas' => (int) $item['kuantitas'],
-                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+                'value' =>  $item['value'],
+                'kuantitas' =>  $item['kuantitas'],
+                'sub_total' => ( $item['value']) * ( $item['kuantitas']),
             ]);
         }
 
@@ -252,9 +252,9 @@ new class extends Component {
                 'transaksi_id' => $this->transaksi->id,
                 'kategori_id' => $this->kategori_id,
                 'barang_id' => $item['barang_id'],
-                'value' => (int) $item['value'],
-                'kuantitas' => (int) $item['kuantitas'],
-                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+                'value' =>  $item['value'],
+                'kuantitas' =>  $item['kuantitas'],
+                'sub_total' => ( $item['value']) * ( $item['kuantitas']),
             ]);
         }
 
@@ -348,7 +348,7 @@ new class extends Component {
                             <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp " money="IDR" />
                             <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
-                                type="number" min="1" />
+                                type="number" min="1" step="0.01"/>
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
                         <div class="flex justify-end">

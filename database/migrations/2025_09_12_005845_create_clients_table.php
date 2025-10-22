@@ -17,8 +17,8 @@ return new class extends Migration
             $table->text('alamat');
             $table->enum('type', ['Karyawan', 'Peternak', 'Pedagang', 'Supplier']);
             $table->string('keterangan')->nullable();
-            $table->integer('bon')->nullable();
-            $table->integer('titipan')->nullable();
+            $table->decimal('bon', 15, 2)->nullable();
+            $table->decimal('titipan', 15, 2)->nullable();
             $table->timestamps();
         });
     }

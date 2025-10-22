@@ -75,13 +75,19 @@ Route::middleware('auth')->group(function() {
         Volt::route('/telur-masuk/{transaksi}/show', 'telur-masuk.show');
     });
 
+    Route::middleware('role:1,3,6')->group(function () {
+        Volt::route('/laporan-telur', 'telur.index');
+    });
+
     // User Pakan dan Obat
     Route::middleware('role:1,4')->group(function () {
+        Volt::route('/laporan-pakan', 'pakan.index');
         Volt::route('/sentrat-keluar', 'sentrat-keluar.index');
         Volt::route('/sentrat-keluar/create', 'sentrat-keluar.create');
         Volt::route('/sentrat-keluar/{transaksi}/edit', 'sentrat-keluar.edit');
         Volt::route('/sentrat-keluar/{transaksi}/show', 'sentrat-keluar.show');
     
+        Volt::route('/laporan-obat', 'obat.index');
         Volt::route('/obat-keluar', 'obat-keluar.index');
         Volt::route('/obat-keluar/create', 'obat-keluar.create');
         Volt::route('/obat-keluar/{transaksi}/edit', 'obat-keluar.edit');

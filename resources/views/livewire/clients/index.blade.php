@@ -20,6 +20,8 @@ new class extends Component {
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
 
     public $tipeClientOptions = [['id' => 'Karyawan', 'name' => 'Karyawan'], ['id' => 'Peternak', 'name' => 'Peternak'], ['id' => 'Pedagang', 'name' => 'Pedagang'], ['id' => 'Supplier', 'name' => 'Supplier']];
+    public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah'], ['id' => 'Pocok', 'name' => 'Pocok']];
+    public ?string $tipePeternak = null; // <- value yang dipilih
 
     public ?string $tipeClient = null; // <- value yang dipilih
 
@@ -36,6 +38,7 @@ new class extends Component {
     public string $editingName = '';
     public string $editingAlamat = ''; // Menyimpan nilai input untuk nama Client
     public ?string $editingType = null;
+    public ?string $editingKeterangan = null;
     public int $editingBon = 0;
     public int $editingTitipan = 0;
 
@@ -44,6 +47,7 @@ new class extends Component {
     public string $newClientName = '';
     public string $newClientAlamat = ''; // Untuk menyimpan input nama Client baru
     public ?string $newClientType = null;
+    public ?string $newClientKeterangan = null;
     public int $newClientBon = 0;
     public int $newClientTitipan = 0;
 
@@ -52,9 +56,10 @@ new class extends Component {
         $this->newClientName = ''; // Reset input sebelum membuka modal
         $this->newClientAlamat = '';
         $this->newClientType = null;
+        $this->newClientKeterangan = null;
         $this->newClientBon = 0;
         $this->newClientTitipan = 0;
-        if (Auth::user()->role_id == 1) {
+        if (Auth::user()->role_id == 1 || Auth::user()->role_id == 2) {
             # code...
             $this->createModal = true;
         }
@@ -65,12 +70,13 @@ new class extends Component {
         $this->validate([
             'newClientName' => 'required|string|max:255|unique:clients,name',
             'newClientAlamat' => 'nullable',
+            'newClientKeterangan' => 'nullable',
             'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supllier',
             'newClientBon' => 'nullable|integer',
             'newClientTitipan' => 'nullable|integer',
         ]);
 
-        Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'type' => $this->newClientType, 'bon' => $this->newClientBon, 'titipan' => $this->newClientTitipan]);
+        Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'keterangan' => $this->newClientKeterangan, 'type' => $this->newClientType, 'bon' => $this->newClientBon, 'titipan' => $this->newClientTitipan]);
 
         $this->createModal = false;
         $this->success('Client created successfully.', position: 'toast-top');
@@ -84,9 +90,10 @@ new class extends Component {
             $this->editingName = $this->editingClient->name;
             $this->editingAlamat = $this->editingClient->alamat;
             $this->editingType = $this->editingClient->type;
+            $this->editingKeterangan = $this->editingClient->keterangan;
             $this->editingBon = $this->editingClient->bon;
             $this->editingTitipan = $this->editingClient->titipan;
-            if (Auth::user()->role_id == 1) {
+            if (Auth::user()->role_id == 1 || Auth::user()->role_id == 2) {
                 # code...
                 $this->editModal = true; // Tampilkan modal
             }
@@ -97,13 +104,14 @@ new class extends Component {
     {
         if ($this->editingClient) {
             $this->validate([
-                'editingName' => 'required|string|max:255|unique:clients,name',
+                'editingName' => 'required|string|max:255',
                 'editingAlamat' => 'nullable',
+                'editingKeterangan' => 'nullable',
                 'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supllier',
                 'editingBon' => 'nullable|integer',
                 'editingTitipan' => 'nullable|integer',
             ]);
-            $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'type' => $this->editingType, 'bon' => $this->editingBon, 'titipan' => $this->editingTitipan, 'updated_at' => now()]);
+            $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'keterangan' => $this->editingKeterangan, 'type' => $this->editingType, 'bon' => $this->editingBon, 'titipan' => $this->editingTitipan, 'updated_at' => now()]);
             $this->editModal = false;
             $this->success('Client updated successfully.', position: 'toast-top');
         }
@@ -135,7 +143,7 @@ new class extends Component {
     // Table headers
     public function headers(): array
     {
-        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'type', 'label' => 'Tipe Client'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], ['key' => 'alamat', 'label' => 'Alamat', 'sortable' => false], ['key' => 'bon', 'label' => 'Bon'], ['key' => 'titipan', 'label' => 'Titipan', 'class' => 'w-1']];
+        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'type', 'label' => 'Tipe Client'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], ['key' => 'alamat', 'label' => 'Alamat', 'sortable' => false], ['key' => 'keterangan', 'label' => 'Keterangan', 'sortable' => false], ['key' => 'bon', 'label' => 'Bon'], ['key' => 'titipan', 'label' => 'Titipan', 'class' => 'w-1']];
     }
 
     public function clients(): LengthAwarePaginator
@@ -144,6 +152,7 @@ new class extends Component {
             ->with('transaksi.details.kategori') // agar eager load, lebih hemat query
             ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
             ->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))
+            ->when($this->tipePeternak, fn(Builder $q) => $q->where('keterangan', $this->tipePeternak))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -157,6 +166,9 @@ new class extends Component {
                 $this->filter = 0;
             }
             if (!$this->tipeClient == null) {
+                $this->filter += 1;
+            }
+            if (!$this->tipePeternak == null) {
                 $this->filter += 1;
             }
         }
@@ -240,6 +252,7 @@ new class extends Component {
         <div class="grid gap-5">
             <x-input placeholder="Name..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
             <x-select placeholder="Tipe Client" wire:model.live="tipeClient" :options="$tipeClientOptions" icon="o-flag" />
+            <x-select placeholder="Tipe Peternak" wire:model.live="tipePeternak" :options="$tipePeternakOptions" icon="o-flag" />
         </div>
 
         <x-slot:actions>
@@ -250,12 +263,13 @@ new class extends Component {
 
     <x-modal wire:model="createModal" title="Create Client">
         <div class="grid gap-4">
-            <x-input label="Client Name" wire:model.live="newClientName" />
-            <x-textarea label="Client Alamat" wire:model.live="newClientAlamat" placeholder="Here ..." />
-            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="newClientType"
-                :options="$tipeClientOptions" icon="o-flag" />
-            <x-input label="Client Bon" wire:model.live="newClientBon" />
-            <x-input label="Client Titipan" wire:model.live="newClientTitipan" />
+            <x-input label="Client Name" wire:model="newClientName" />
+            <x-textarea label="Client Alamat" wire:model="newClientAlamat" placeholder="Here ..." />
+            <x-textarea label="Client Keterangan" wire:model="newClientKeterangan" placeholder="Here ..." />
+            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model="newClientType" :options="$tipeClientOptions"
+                icon="o-flag" />
+            <x-input label="Client Bon" wire:model="newClientBon" />
+            <x-input label="Client Titipan" wire:model="newClientTitipan" />
         </div>
 
         <x-slot:actions>
@@ -266,12 +280,13 @@ new class extends Component {
 
     <x-modal wire:model="editModal" title="Edit Client">
         <div class="grid gap-4">
-            <x-input label="Client Name" wire:model.live="editingName" />
-            <x-textarea label="Client Alamat" wire:model.live="editingAlamat" placeholder="Here ..." />
-            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model.live="editingType"
-                :options="$tipeClientOptions" icon="o-flag" />
-            <x-input label="Client Bon" wire:model.live="editingBon" />
-            <x-input label="Client Titipan" wire:model.live="editingTitipan" />
+            <x-input label="Client Name" wire:model="editingName" />
+            <x-textarea label="Client Alamat" wire:model="editingAlamat" placeholder="Here ..." />
+            <x-textarea label="Client Keterangan" wire:model="editingKeterangan" placeholder="Here ..." />
+            <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model="editingType" :options="$tipeClientOptions"
+                icon="o-flag" />
+            <x-input label="Client Bon" wire:model="editingBon" />
+            <x-input label="Client Titipan" wire:model="editingTitipan" />
         </div>
 
         <x-slot:actions>

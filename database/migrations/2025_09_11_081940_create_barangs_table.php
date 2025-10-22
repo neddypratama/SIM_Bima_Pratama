@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('barangs', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->integer('stok');
+            $table->decimal('stok');
             $table->foreignId('jenis_id')->constrained('jenis_barangs');
             $table->decimal('hpp')->nullable();
             $table->timestamps();

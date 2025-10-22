@@ -18,14 +18,14 @@ new class extends Component {
     #[Rule('required|string')]
     public string $name = '';
 
-    #[Rule('required|integer')]
-    public ?int $stok = 0;
-
     #[Rule('required|exists:jenis_barangs,id')]
     public ?int $jenis_id = null;
 
-    #[Rule('required|integer')]
-    public ?int $hpp = 0;
+    #[Rule('required|numeric|decimal:0,2|min:0')]
+    public float $stok = 0.0;
+
+    #[Rule('nullable|numeric|decimal:0,2|min:0')]
+    public ?float $hpp = null;
 
     public function with(): array
     {
@@ -67,7 +67,8 @@ new class extends Component {
 
             <div class="col-span-3 grid gap-3">
                 <x-input label="Name" wire:model="name" />
-                <x-select label="Jenis Barang" wire:model="jenis_id" :options="$jenisbarangs" placeholder="Pilih jenis barang" />
+                <x-select label="Jenis Barang" wire:model="jenis_id" :options="$jenisbarangs"
+                    placeholder="Pilih jenis barang" />
             </div>
         </div>
 
@@ -79,7 +80,7 @@ new class extends Component {
                 <x-header title="Details" subtitle="More about the Barang" size="text-2xl" />
             </div>
             <div class="col-span-3 grid gap-3">
-                <x-input label="Stok" wire:model="stok" type="number" />
+                <x-input label="Stok" wire:model="stok" type="number" step="0.01" />
                 <x-input label="HPP" wire:model="hpp" prefix="Rp " money="IDR" />
             </div>
         </div>

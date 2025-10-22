@@ -27,8 +27,8 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
-    public int $total = 0;
+    #[Rule('required|numeric|min:1')]
+    public float $total = 0;
 
     #[Rule('required')]
     public ?int $user_id = null;
@@ -66,7 +66,7 @@ new class extends Component {
                 'barang_id' => $detail->barang_id,
                 'value' => $detail->value,
                 'kuantitas' => $detail->kuantitas,
-                'max_qty' => (int) Barang::find($detail->barang_id)->stok + $detail->kuantitas,
+                'max_qty' =>  Barang::find($detail->barang_id)->stok + $detail->kuantitas,
                 'hpp' => Barang::find($detail->barang_id)->hpp,
             ];
         }
@@ -92,7 +92,7 @@ new class extends Component {
     {
         // --- Jika kategori dipilih ---
         if (str_ends_with($key, '.kategori_id')) {
-            $index = (int) explode('.', $key)[0];
+            $index =  explode('.', $key)[0];
             $kategori = Kategori::find($value);
 
             if ($kategori) {
@@ -116,19 +116,19 @@ new class extends Component {
 
         // --- Jika barang dipilih ---
         if (str_ends_with($key, '.barang_id')) {
-            $index = (int) explode('.', $key)[0];
+            $index =  explode('.', $key)[0];
             $barang = Barang::find($value);
             if ($barang) {
                 $this->details[$index]['max_qty'] = $barang->stok;
-                $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
+                $this->details[$index]['kuantitas'] = max(1,  ($this->details[$index]['kuantitas'] ?? 1));
                 $this->details[$index]['hpp'] = (float) $barang->hpp;
             }
         }
 
         // --- Jika qty diubah ---
         if (str_ends_with($key, '.kuantitas')) {
-            $index = (int) explode('.', $key)[0];
-            $qty = (int) ($value ?: 1);
+            $index =  explode('.', $key)[0];
+            $qty =  ($value ?: 1);
             $maxQty = $this->details[$index]['max_qty'] ?? null;
             if ($maxQty !== null && $qty > $maxQty) {
                 $qty = $maxQty;
@@ -144,7 +144,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)));
 
         $this->totalPokok = collect($this->details)->sum(function ($item) {
             if (!$item['barang_id']) {
@@ -152,7 +152,7 @@ new class extends Component {
             }
             $barang = Barang::find($item['barang_id']);
             $hpp = isset($item['hpp']) && $item['hpp'] > 0 ? (float) $item['hpp'] : (float) ($barang->hpp ?? 0);
-            $qty = (int) ($item['kuantitas'] ?? 0);
+            $qty =  ($item['kuantitas'] ?? 0);
             return $hpp * $qty;
         });
     }
@@ -163,7 +163,7 @@ new class extends Component {
             'details' => 'required|array|min:1',
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
-            'details.*.kuantitas' => 'required|integer|min:1',
+            'details.*.kuantitas' => 'required|numeric|min:1',
             'details.*.kategori_id' => 'required|exists:kategoris,id',
         ]);
 
@@ -278,9 +278,9 @@ new class extends Component {
                 'transaksi_id' => $bonTransaksi->id,
                 'kategori_id' => $kategoriBon->id,
                 'barang_id' => $item['barang_id'],
-                'value' => (int) $item['value'],
-                'kuantitas' => (int) $item['kuantitas'],
-                'sub_total' => ((int) $item['value']) * ((int) $item['kuantitas']),
+                'value' =>  $item['value'],
+                'kuantitas' =>  $item['kuantitas'],
+                'sub_total' => ( $item['value']) * ( $item['kuantitas']),
             ]);
         }
 
@@ -418,7 +418,7 @@ new class extends Component {
                             <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp " money="IDR" />
                             <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
-                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
+                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1" step="0.01"
                                 :max="$item['max_qty'] ?? null" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>

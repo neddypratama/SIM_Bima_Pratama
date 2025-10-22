@@ -73,7 +73,7 @@ new class extends Component {
 
         $link = TransaksiLink::where('linked_id', $id)->first();
         $link?->delete();
-        
+
         $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
         $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
@@ -168,7 +168,8 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id ==  Auth::user()->id)
+                    @if (Auth::user()->role_id == 1 ||
+                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
                         <x-button icon="o-pencil" link="/tunai/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif

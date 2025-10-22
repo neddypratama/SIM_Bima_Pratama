@@ -165,9 +165,20 @@ class BarangSeeder extends Seeder
             ['Kebi B', $pakanCurah, 0],
 
             // Pakan Kucing
-            ['Paket Hemat', $pakanKucing, 0],
-            ['Paket Reguler', $pakanKucing, 0],
-            ['Paket Premium', $pakanKucing, 0],
+            ['CAT CHOIZE IJO', $pakanKucing, 0],
+            ['CAT CHOIZE OREN', $pakanKucing, 0],
+            ['CAT CHOIZE KUNING', $pakanKucing, 0],
+            ['CAT CHOIZE PINK KITTEN', $pakanKucing, 0],
+            ['CAT CHOIZE PINK DEWASA (TUNA)', $pakanKucing, 0],
+            ['EXCEL IJO (DONAT)', $pakanKucing, 0],
+            ['EXCEL UNGU (IKAN)', $pakanKucing, 0],
+            ['EXCEL MOM', $pakanKucing, 0],
+            ['FELIBITE PINK (IKAN)', $pakanKucing, 0],
+            ['FELIDITE DONAT', $pakanKucing, 0],
+            ['BOLT PINK (CRISTAL)', $pakanKucing, 0],
+            ['BOLT SALMON', $pakanKucing, 0],
+            ['BOLT DONAT KUNING', $pakanKucing, 0],
+            ['BOLT IKAN UNGU', $pakanKucing, 0],
         ];
 
 

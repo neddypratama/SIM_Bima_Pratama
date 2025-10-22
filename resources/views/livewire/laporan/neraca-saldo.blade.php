@@ -46,7 +46,11 @@ new class extends Component {
     ];
 
     public array $mappingAset = [
-        'Piutang' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
+        'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
+        'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
+        'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB'],
+        'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
+        'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok'],
         'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
         'Kas' => ['Kas Tunai'],
         'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
@@ -123,8 +127,8 @@ new class extends Component {
             fn($kategori) => [
                 'kategori' => $kategori->name,
                 'type' => $kategori->type,
-                'debit' => $details->filter(fn($d) => $d['kategori'] === $kategori->name && $d['type_kategori'] === $kategori->type && $d['type_transaksi'] === 'debit')->sum('sub_total'),
-                'kredit' => $details->filter(fn($d) => $d['kategori'] === $kategori->name && $d['type_kategori'] === $kategori->type && $d['type_transaksi'] === 'kredit')->sum('sub_total'),
+                'debit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $kategori->type && $d['type_transaksi'] == 'debit')->sum('sub_total'),
+                'kredit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $kategori->type && $d['type_transaksi'] == 'kredit')->sum('sub_total'),
             ],
         );
 
@@ -136,7 +140,7 @@ new class extends Component {
                 $totalKredit = 0;
 
                 foreach ($categories as $cat) {
-                    $row = $complete->first(fn($r) => $r['kategori'] === $cat && $r['type'] === $type);
+                    $row = $complete->first(fn($r) => $r['kategori'] == $cat && $r['type'] == $type);
                     if ($row) {
                         $sub[] = $row;
                         $totalDebit += $row['debit'];
@@ -216,10 +220,8 @@ new class extends Component {
                         </tr>
 
                         @foreach ($groupData as $group)
-                            <tr class="cursor-pointer"
-                                wire:click="$toggle('expanded.{{ $group['group'] }}')">
-                            <tr class="cursor-pointer"
-                                wire:click="$toggle('expanded.{{ $group['group'] }}')">
+                            <tr class="cursor-pointer" wire:click="$toggle('expanded.{{ $group['group'] }}')">
+                            <tr class="cursor-pointer" wire:click="$toggle('expanded.{{ $group['group'] }}')">
                                 <td>
                                     <i class="fas fa-chevron-right mr-2"
                                         :class="{ 'fa-chevron-down': $expanded['{{ $group['group'] }}'] ?? false }"></i>

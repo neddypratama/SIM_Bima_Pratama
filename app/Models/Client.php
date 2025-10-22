@@ -8,7 +8,7 @@ class Client extends Model
 {
     protected $table = 'clients';
 
-    protected $fillable = ['name', 'alamat', 'type', 'bon', 'titipan'];
+    protected $fillable = ['name', 'alamat', 'type', 'keterangan', 'bon', 'titipan'];
 
     public function transaksi()
     {

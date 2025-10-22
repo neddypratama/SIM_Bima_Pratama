@@ -48,7 +48,11 @@ new class extends Component {
 
         // Mapping kelompok
         $mappingAset = [
-            'Piutang' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
+            'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
+            'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
+            'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB'],
+            'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
+            'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok'],
             'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
             'Kas' => ['Kas Tunai'],
             'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
@@ -72,7 +76,7 @@ new class extends Component {
             ->flatMap(fn($trx) => $trx->details)
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Aset')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total'))
+            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
             ->toArray();
 
         // --- Liabilitas per kategori ---
@@ -83,7 +87,7 @@ new class extends Component {
             ->flatMap(fn($trx) => $trx->details)
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Liabilitas')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total'))
+            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total'))
             ->toArray();
 
         // --- Kelompokkan Aset ---

@@ -29,20 +29,20 @@ new class extends Component {
 
     public ?string $tanggal = null;
     public ?int $user_id = null;
-    public int $stok = 0;
-    public int $awal = 0;
+    public float $stok = 0;
+    public float $awal = 0;
 
-    #[Rule('nullable|integer|min:0')]
-    public int $tambah = 0;
+    #[Rule('nullable|numeric|min:0')]
+    public float $tambah = 0;
 
-    #[Rule('nullable|integer|min:0')]
-    public int $kurang = 0;
+    #[Rule('nullable|numeric|min:0')]
+    public float $kurang = 0;
 
-    #[Rule('nullable|integer')]
-    public int $kotor = 0;
+    #[Rule('nullable|numeric')]
+    public float $kotor = 0;
 
-    #[Rule('nullable|integer|min:0')]
-    public int $pecah = 0;
+    #[Rule('nullable|numeric|min:0')]
+    public float $pecah = 0;
 
     public function with(): array
     {
@@ -69,8 +69,8 @@ new class extends Component {
             $this->invoice = 'INV-' . $tanggal . '-STK-' . $str;
             $this->invoice1 = 'INV-' . $tanggal . '-RTN-' . $str;
             $this->invoice2 = 'INV-' . $tanggal . '-KDL-' . $str;
-            $this->invoice3 = 'INV-' . $tanggal . '-PKN1-' . $str;
-            $this->invoice4 = 'INV-' . $tanggal . '-PKN2-' . $str;
+            $this->invoice3 = 'INV-' . $tanggal . '-STR1-' . $str;
+            $this->invoice4 = 'INV-' . $tanggal . '-STR2-' . $str;
         }
     }
 
@@ -136,7 +136,7 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $kotor->id,
                 'kategori_id' => $kateKotor->id ?? null,
-                'value' => (int) $barang->hpp,
+                'value' => $barang->hpp,
                 'barang_id' => $barang->id,
                 'kuantitas' => $this->kotor,
                 'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0),
@@ -155,7 +155,7 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $telur1->id,
                 'kategori_id' => $kateTelur->id ?? null,
-                'value' => (int) $barang->hpp,
+                'value' => $barang->hpp,
                 'barang_id' => $barang->id,
                 'kuantitas' => $this->kotor,
                 'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0),
@@ -174,7 +174,7 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $kotor->id,
                 'kategori_id' => $kateKotor->id ?? null,
-                'value' => (int) $barang->hpp,
+                'value' => $barang->hpp,
                 'barang_id' => $barang->id,
                 'kuantitas' => $this->kotor * -1,
                 'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0) * -1,
@@ -193,7 +193,7 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $telur1->id,
                 'kategori_id' => $kateTelur->id ?? null,
-                'value' => (int) $barang->hpp,
+                'value' => $barang->hpp,
                 'barang_id' => $barang->id,
                 'kuantitas' => $this->kotor * -1,
                 'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0) * -1,
@@ -213,7 +213,7 @@ new class extends Component {
         DetailTransaksi::create([
             'transaksi_id' => $pecah->id,
             'kategori_id' => $katePecah->id ?? null,
-            'value' => (int) $barang->hpp,
+            'value' => $barang->hpp,
             'barang_id' => $barang->id,
             'kuantitas' => $this->pecah,
             'sub_total' => ($barang->hpp ?? 0) * ($this->pecah ?? 0),
@@ -232,7 +232,7 @@ new class extends Component {
         DetailTransaksi::create([
             'transaksi_id' => $telur2->id,
             'kategori_id' => $kateTelur->id ?? null,
-            'value' => (int) $barang->hpp,
+            'value' => $barang->hpp,
             'barang_id' => $barang->id,
             'kuantitas' => $this->pecah,
             'sub_total' => ($barang->hpp ?? 0) * ($this->pecah ?? 0),
@@ -263,8 +263,8 @@ new class extends Component {
                             <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barangs"
                                 single searchable clearable label="Barang" />
                         </div>
-                        <x-input label="Stok Awal" wire:model.live="awal" type="number" readonly />
-                        <x-input label="Stok Sekarang" wire:model.live="stok" type="number" readonly />
+                        <x-input label="Stok Awal" wire:model.live="awal" type="number" step="0.01" readonly />
+                        <x-input label="Stok Sekarang" wire:model.live="stok" type="number" step="0.01" readonly />
                     </div>
                 </div>
             </div>
@@ -278,10 +278,10 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Pakan Bertambah" wire:model.lazy="tambah" type="number" min="0" />
-                        <x-input label="Pakan Berkurang" wire:model.lazy="kurang" type="number" min="0" />
-                        <x-input label="Pakan Return" wire:model.lazy="kotor" type="number" />
-                        <x-input label="Pakan Kadaluarsa" wire:model.lazy="pecah" type="number" min="0" />
+                        <x-input label="Pakan Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
+                        <x-input label="Pakan Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
+                        <x-input label="Pakan Return" wire:model.lazy="kotor" type="number" step="0.01" />
+                        <x-input label="Pakan Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01" min="0" />
                     </div>
                 </div>
             </div>

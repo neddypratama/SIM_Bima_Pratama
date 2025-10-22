@@ -23,6 +23,9 @@ new class extends Component {
 
     public ?string $tipeClient = null;
 
+    public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah']];
+    public ?string $tipePeternak = null; // <- value yang dipilih
+
     public int $filter = 0;
 
     public $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
@@ -56,6 +59,7 @@ new class extends Component {
             ['key' => 'type', 'label' => 'Tipe Client', 'class' => 'w-48'],
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-48'],
             ['key' => 'alamat', 'label' => 'Alamat', 'sortable' => false, 'class' => 'w-64'],
+            ['key' => 'keterangan', 'label' => 'Keterangan', 'sortable' => false, 'class' => 'w-24'],
             ['key' => 'bon', 'label' => 'Bon', 'class' => 'w-36'],
             ['key' => 'titipan', 'label' => 'Titipan', 'class' => 'w-36'],
             ['key' => 'sisa', 'label' => 'Sisa', 'class' => 'w-36'], // ✅ Tambahan kolom baru
@@ -64,7 +68,7 @@ new class extends Component {
 
     public function clients(): LengthAwarePaginator
     {
-        return Client::query()->with('transaksi.details.kategori')->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
+        return Client::query()->with('transaksi.details.kategori')->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))->when($this->tipePeternak, fn(Builder $q) => $q->where('keterangan', $this->tipePeternak))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
     }
 
     public function with(): array
@@ -77,6 +81,9 @@ new class extends Component {
             }
             if (!$this->tipeClient == null) {
                 $this->filter += 1;
+            }
+             if ($this->tipePeternak != 0) {
+                $this->filter++;
             }
         }
         return [
@@ -122,14 +129,14 @@ new class extends Component {
             {{-- Kolom Bon --}}
             @scope('cell_bon', $client)
                 <span class="font-bold text-blue-600">
-                   Rp {{ number_format($client->bon, 0, ',', '.') }}
+                    Rp {{ number_format($client->bon, 0, ',', '.') }}
                 </span>
             @endscope
 
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
                 <span class="font-bold text-green-600">
-                   Rp {{ number_format($client->titipan, 0, ',', '.') }}
+                    Rp {{ number_format($client->titipan, 0, ',', '.') }}
                 </span>
             @endscope
 
@@ -152,6 +159,8 @@ new class extends Component {
         <div class="grid gap-5">
             <x-input placeholder="Name..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
             <x-select placeholder="Tipe Client" wire:model.live="tipeClient" :options="$tipeClientOptions" icon="o-flag" />
+            <x-select placeholder="Pilih Peternak" wire:model.live="tipePeternak" :options="$tipePeternakOptions" icon="o-tag"
+                placeholder-value="0" />
         </div>
 
         <x-slot:actions>

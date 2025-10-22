@@ -105,6 +105,9 @@
                 {{-- ✅ Transactions untuk role sesuai route --}}
                 <x-menu-sub title="Telur & Tray" icon="fas.egg">
                     @if (in_array(auth()->user()->role_id, [1, 3]))
+                        <x-menu-item title="Laporan Telur" icon="fas.store" link="/laporan-telur" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 3]))
                         <x-menu-item title="Pembelian Telur" icon="fas.cart-plus" link="/telur-masuk" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 6]))
@@ -116,12 +119,14 @@
 
                 <x-menu-sub title="Pakan & Obat" icon="fas.flask">
                     @if (in_array(auth()->user()->role_id, [1, 4, 6]))
+                        <x-menu-item title="Laporan Pakan" icon="fas.store" link="/laporan-pakan" />
                         <x-menu-item title="Pembelian Pakan" icon="fas.cart-plus" link="/sentrat-masuk" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 4]))
                         <x-menu-item title="Penjualan Pakan" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 4, 6]))
+                        <x-menu-item title="Laporan Obat" icon="fas.store" link="/laporan-obat" />
                         <x-menu-item title="Pembelian Obat" icon="fas.cart-plus" link="/obat-masuk" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 4]))
@@ -159,8 +164,7 @@
                             link="/laporan-labarugi" />
                         <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced"
                             link="/laporan-neraca-saldo" />
-                        <x-menu-item title="Laporan Aset" icon="fas.chart-simple"
-                            link="/laporan-aset" />
+                        <x-menu-item title="Laporan Aset" icon="fas.chart-simple" link="/laporan-aset" />
                     </x-menu-sub>
                 @endif
 

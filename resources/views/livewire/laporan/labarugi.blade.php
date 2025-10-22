@@ -75,8 +75,8 @@ new class extends Component {
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pendapatan')
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(fn($group) => 
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='kredit')->sum('sub_total') -
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='debit')->sum('sub_total')
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') -
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total')
             )
             ->toArray();
 
@@ -89,8 +89,8 @@ new class extends Component {
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pengeluaran')
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(fn($group) => 
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='debit')->sum('sub_total') -
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '')==='kredit')->sum('sub_total')
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') -
+                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total')
             )
             ->toArray();
 

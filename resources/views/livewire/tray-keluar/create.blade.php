@@ -25,8 +25,8 @@ new class extends Component {
     #[Rule('required')]
     public string $name = '';
 
-    #[Rule('required|integer|min:1')]
-    public int $total = 0;
+    #[Rule('required|numeric|min:1')]
+    public float $total = 0;
 
     #[Rule('required')]
     public ?int $user_id = null;
@@ -102,18 +102,18 @@ new class extends Component {
     public function updatedDetails($value, $key): void
     {
         if (str_ends_with($key, '.barang_id')) {
-            $index = (int) explode('.', $key)[0];
+            $index =  explode('.', $key)[0];
             $barang = Barang::find($value);
             if ($barang) {
                 $this->details[$index]['max_qty'] = $barang->stok;
-                $this->details[$index]['kuantitas'] = max(1, (int) ($this->details[$index]['kuantitas'] ?? 1));
+                $this->details[$index]['kuantitas'] = max(1,  ($this->details[$index]['kuantitas'] ?? 1));
                 $this->details[$index]['hpp'] = (float) $barang->hpp;
             }
         }
 
         if (str_ends_with($key, '.kuantitas')) {
-            $index = (int) explode('.', $key)[0];
-            $qty = (int) ($value ?: 1);
+            $index =  explode('.', $key)[0];
+            $qty =  ($value ?: 1);
             $maxQty = $this->details[$index]['max_qty'] ?? null;
             if ($maxQty !== null && $qty > $maxQty) {
                 $qty = $maxQty; // ✅ batasi qty sesuai stok
@@ -128,7 +128,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)));
 
         $this->totalPokok = collect($this->details)->sum(function ($item) {
             if (!$item['barang_id']) {
@@ -136,7 +136,7 @@ new class extends Component {
             }
             $barang = Barang::find($item['barang_id']);
             $hpp = isset($item['hpp']) && $item['hpp'] > 0 ? (float) $item['hpp'] : (float) ($barang->hpp ?? 0);
-            $qty = (int) ($item['kuantitas'] ?? 0);
+            $qty =  ($item['kuantitas'] ?? 0);
             return $hpp * $qty;
         });
     }
@@ -148,7 +148,7 @@ new class extends Component {
         $this->validate([
             'details.*.value' => 'required|numeric|min:0',
             'details.*.barang_id' => 'required|exists:barangs,id',
-            'details.*.kuantitas' => 'required|integer|min:1',
+            'details.*.kuantitas' => 'required|numeric|min:1',
             'details.*.hpp' => 'required|numeric|min:0',
         ]);
 
@@ -180,10 +180,10 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $bon->id,
                 'kategori_id' => $kategoriBon->id,
-                'value' => (int) $item['value'], // harga satuan
+                'value' =>  $item['value'], // harga satuan
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ((int) ($item['value'] ?? 0)) * ((int) ($item['kuantitas'] ?? 1)), // total harga (harga satuan * qty
+                'sub_total' => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)), // total harga (harga satuan * qty
             ]);
         }
 
@@ -208,10 +208,10 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $transaksi->id,
                 'kategori_id' => $this->kategori_id,
-                'value' => (int) $item['value'], // harga satuan
+                'value' =>  $item['value'], // harga satuan
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ((int) $item['value']) * ((int) ($item['kuantitas'] ?? 1)), // total harga
+                'sub_total' => ( $item['value']) * ( ($item['kuantitas'] ?? 1)), // total harga
             ]);
         }
 
@@ -353,7 +353,7 @@ new class extends Component {
                             <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp " money="IDR" />
                             <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
-                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1"
+                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="1" step="0.01"
                                 :max="$item['max_qty'] ?? null" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>

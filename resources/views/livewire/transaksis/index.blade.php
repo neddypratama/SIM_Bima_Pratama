@@ -14,7 +14,6 @@ use Carbon\Carbon;
 use App\Exports\TransaksiExport;
 use Maatwebsite\Excel\Facades\Excel;
 
-
 new class extends Component {
     use Toast;
     use WithPagination;
@@ -27,6 +26,9 @@ new class extends Component {
     public int $user_id = 0;
     public int $kategori_id = 0;
     public int $client_id = 0;
+
+    public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah'],  ['id' => 'Pocok', 'name' => 'Pocok']];
+    public ?string $tipePeternak = null; // <- value yang dipilih
 
     public int $filter = 0;
     public array $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
@@ -73,7 +75,6 @@ new class extends Component {
         return Excel::download(new TransaksiExport($this->startDate, $this->endDate), 'transaksi.xlsx');
     }
 
-
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
@@ -86,13 +87,13 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'client.keterangan', 'label' => 'Tipe Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksis(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->with(['client:id,name,keterangan', 'details.kategori:id,name,type'])
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
@@ -103,6 +104,11 @@ new class extends Component {
             ->when($this->kategori_id, function (Builder $q) {
                 $q->whereHas('details', function ($query) {
                     $query->where('kategori_id', $this->kategori_id);
+                });
+            })
+            ->when($this->tipePeternak, function (Builder $q) {
+                $q->whereHas('client', function ($query) {
+                    $query->where('keterangan', $this->tipePeternak);
                 });
             })
             ->when($this->startDate && $this->endDate, function (Builder $q) {
@@ -126,6 +132,9 @@ new class extends Component {
                 $this->filter++;
             }
             if ($this->kategori_id != 0) {
+                $this->filter++;
+            }
+            if ($this->tipePeternak != 0) {
                 $this->filter++;
             }
             if ($this->startDate || $this->endDate) {
@@ -155,7 +164,7 @@ new class extends Component {
 
 <div>
     <!-- HEADER -->
-    <x-header title="Daftar Transaksi" separator progress-indicator >
+    <x-header title="Daftar Transaksi" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
@@ -193,6 +202,8 @@ new class extends Component {
             <x-select placeholder="Pilih Client" wire:model.live="client_id" :options="$clients" icon="o-user"
                 placeholder-value="0" />
             <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategoris" icon="o-tag"
+                placeholder-value="0" />
+            <x-select placeholder="Pilih Peternak" wire:model.live="tipePeternak" :options="$tipePeternakOptions" icon="o-tag"
                 placeholder-value="0" />
 
             <!-- ✅ Tambahan filter tanggal -->

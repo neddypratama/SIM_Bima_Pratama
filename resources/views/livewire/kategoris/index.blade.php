@@ -24,7 +24,7 @@ new class extends Component {
 
     public int $perPage = 10; // Default jumlah data per halaman
 
-    public array $typeOptions = [['id' => 'Aset', 'name' => 'Aset'], ['id' => 'Liabilitas', 'name' => 'Liabilitas'], ['id' => 'Pendapatan', 'name' => 'Pendapatan'], ['id' => 'Pengeluaran', 'name' => 'Pengeluaran'],];
+    public array $typeOptions = [['id' => 'Aset', 'name' => 'Aset'], ['id' => 'Liabilitas', 'name' => 'Liabilitas'], ['id' => 'Pendapatan', 'name' => 'Pendapatan'], ['id' => 'Pengeluaran', 'name' => 'Pengeluaran']];
 
     public bool $editModal = false; // Untuk menampilkan modal edit
     public ?Kategori $editingKategori = null; // Menyimpan Kategori yang sedang diedit
@@ -59,7 +59,9 @@ new class extends Component {
         $this->newKategoriName = ''; // Reset input sebelum membuka modal
         $this->newKategoriDeskripsi = '';
         $this->newKategoriType = '';
-        $this->createModal = true;
+        if (Auth::user()->role_id == 1) {
+            $this->createModal = true;
+        }
     }
 
     public function saveCreate(): void

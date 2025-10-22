@@ -17,12 +17,12 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained();
             $table->dateTime('tanggal');
             $table->foreignId('barang_id')->constrained();
-            $table->integer('tambah')->default(0);
-            $table->integer('kurang')->default(0);
-            $table->integer('kotor')->default(0);
-            $table->integer('bentes')->default(0)->nullable();
-            $table->integer('ceplok')->default(0)->nullable();
-            $table->integer('rusak')->default(0);
+            $table->decimal('tambah')->default(0);
+            $table->decimal('kurang')->default(0);
+            $table->decimal('kotor')->default(0);
+            $table->decimal('bentes')->default(0)->nullable();
+            $table->decimal('ceplok')->default(0)->nullable();
+            $table->decimal('rusak')->default(0);
             $table->timestamps();
         });
     }

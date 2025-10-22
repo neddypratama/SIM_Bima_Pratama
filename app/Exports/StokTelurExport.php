@@ -3,8 +3,6 @@
 namespace App\Exports;
 
 use App\Models\Stok;
-use App\Models\Barang;
-use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -22,13 +20,12 @@ class StokTelurExport implements FromCollection, WithHeadings, ShouldAutoSize, W
     }
 
     /**
-     * Ambil data transaksi + relasi
+     * Ambil data stok telur sesuai filter
      */
     public function collection()
     {
-        return Stok::with(['user', 'barang.jenis', 'barang'])->whereHas('barang.jenis', function ($q) {
-                $q->where('name', 'like', '%Telur&');
-            })
+        return Stok::with(['user', 'barang.jenis', 'barang'])
+            ->whereHas('barang.jenis', fn($q) => $q->where('name', 'like', '%Telur%'))
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')
@@ -36,7 +33,7 @@ class StokTelurExport implements FromCollection, WithHeadings, ShouldAutoSize, W
     }
 
     /**
-     * Atur heading kolom Excel
+     * Heading kolom Excel
      */
     public function headings(): array
     {
@@ -45,35 +42,35 @@ class StokTelurExport implements FromCollection, WithHeadings, ShouldAutoSize, W
             'Tanggal',
             'Pembuat',
             'Jenis Barang',
-            'Barang',
-            'Stok Awal',
+            'Nama Barang',
             'Tambah',
             'Kurang',
             'Kotor',
+            'Bentes',
+            'Ceplok',
             'Pecah',
-            'Stok Sekarang'
+            'Stok Sekarang',
         ];
     }
 
     /**
-     * Atur data per row
+     * Map data per row
      */
     public function map($stok): array
     {
-        $rows = [
-                $stok->invoice,
-                $stok->tanggal,
-                $stok->user->name,
-                $stok->barang->jenis->name ?? '-',
-                $stok->barang?->name ?? '-',
-                $stok->barang?->stok - $stok->tambah + ($stok->kurang + $stok->kotor + $stok->rusak) ?? 0,
-                $stok->tambah ?? 0,
-                $stok->kurang ?? 0,
-                $stok->kotor ?? 0,
-                $stok->rusak ?? 0,
-                $stok->barang?->stok
-            ];
-
-        return $rows;
+        return [
+            $stok->invoice,
+            optional($stok->tanggal)->format('Y-m-d H:i') ?? '-',
+            $stok->user?->name ?? '-',
+            $stok->barang->jenis?->name ?? '-',
+            $stok->barang?->name ?? '-',
+            $stok->tambah ?? 0,
+            $stok->kurang ?? 0,
+            $stok->kotor ?? 0,
+            $stok->bentes ?? 0,
+            $stok->ceplok ?? 0,
+            $stok->rusak ?? 0,
+            $stok->barang?->stok ?? 0,
+        ];
     }
 }
