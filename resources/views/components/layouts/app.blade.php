@@ -147,6 +147,7 @@
 
                 @if (in_array(auth()->user()->role_id, [1, 5, 6]))
                     <x-menu-sub title="Piutang & Hutang" icon="fas.money-bill-transfer">
+                        <x-menu-item title="Bon & Titipan" icon="fas.wallet" link="/bon-titipan" />
                         <x-menu-item title="Piutang" icon="fas.money-bill-wave" link="/piutang" />
                         <x-menu-item title="Hutang" icon="fas.money-bill-wave" link="/hutang" />
                     </x-menu-sub>
@@ -158,7 +159,7 @@
                             link="/laporan-labarugi" />
                         <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced"
                             link="/laporan-neraca-saldo" />
-                        <x-menu-item title="Laporan Aset" icon="fas.scale-balanced"
+                        <x-menu-item title="Laporan Aset" icon="fas.chart-simple"
                             link="/laporan-aset" />
                     </x-menu-sub>
                 @endif

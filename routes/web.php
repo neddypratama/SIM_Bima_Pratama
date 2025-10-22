@@ -98,6 +98,8 @@ Route::middleware('auth')->group(function() {
     });
 
     Route::middleware('role:1,5,6')->group(function () {
+        Volt::route('/bon-titipan', 'bon-titipan.index');
+
         Volt::route('/piutang', 'piutang.index');
         Volt::route('/piutang/create', 'piutang.create');
         Volt::route('/piutang/{transaksi}/edit', 'piutang.edit');
