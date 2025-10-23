@@ -71,7 +71,7 @@ new class extends Component {
             'newClientName' => 'required|string|max:255|unique:clients,name',
             'newClientAlamat' => 'nullable',
             'newClientKeterangan' => 'nullable',
-            'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supllier',
+            'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier',
             'newClientBon' => 'nullable|integer',
             'newClientTitipan' => 'nullable|integer',
         ]);
@@ -107,7 +107,7 @@ new class extends Component {
                 'editingName' => 'required|string|max:255',
                 'editingAlamat' => 'nullable',
                 'editingKeterangan' => 'nullable',
-                'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supllier',
+                'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier',
                 'editingBon' => 'nullable|integer',
                 'editingTitipan' => 'nullable|integer',
             ]);
