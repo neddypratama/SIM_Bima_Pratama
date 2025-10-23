@@ -50,7 +50,7 @@ new class extends Component {
         'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
         'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB'],
         'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
-        'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok'],
+        'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
         'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
         'Kas' => ['Kas Tunai'],
         'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
@@ -63,7 +63,7 @@ new class extends Component {
         'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
         'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB'],
         'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
-        'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok'],
+        'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random'],
     ];
 
     public array $mappingEkuitas = [
