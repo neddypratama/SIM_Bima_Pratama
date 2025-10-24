@@ -115,7 +115,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1));
     }
 
     public function save(): void
@@ -141,11 +141,19 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $stok->id,
                 'kategori_id' => $this->kategori_id,
-                'value' =>  $item['value'],
+                'value' => $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ( $item['value'] ?? 0) * ( ($item['kuantitas'] ?? 1)),
+                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
             ]);
+
+            // ✅ Tambah stok barang
+            if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
+                $barang = Barang::find($item['barang_id']);
+                if ($barang) {
+                    $barang->increment('stok', $item['kuantitas']);
+                }
+            }
         }
 
         $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
@@ -164,10 +172,10 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $hutang->id,
                 'kategori_id' => $kateHutang->id,
-                'value' =>  $item['value'],
+                'value' => $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ( $item['value'] ?? 0) * ( ($item['kuantitas'] ?? 1)),
+                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
             ]);
         }
 
@@ -177,7 +185,7 @@ new class extends Component {
             $client->increment('titipan', $this->total);
         }
 
-        // Hitung HPP & stok sekali per barang unik
+        // Hitung HPP sekali per barang unik
         $barangIds = collect($this->details)->pluck('barang_id')->unique();
 
         foreach ($barangIds as $id) {
@@ -190,13 +198,9 @@ new class extends Component {
 
             $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
 
-            $stokKredit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
-
-            $stokAkhir = $stokDebit - $stokKredit;
             $hppBaru = $stokDebit > 0 ? $totalHarga / $stokDebit : 0;
 
             $barang->update([
-                'stok' => $stokAkhir,
                 'hpp' => $hppBaru,
             ]);
         }
@@ -288,7 +292,7 @@ new class extends Component {
                             <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp" money="IDR" />
                             <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
-                                type="number" min="1" step="0.01"/>
+                                type="number" min="1" step="0.01" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
 

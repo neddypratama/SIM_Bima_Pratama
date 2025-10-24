@@ -104,7 +104,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1));
     }
 
     public function updatedKategoriId($value): void
@@ -159,7 +159,7 @@ new class extends Component {
             }
 
             // Hitung ulang stok dari semua transaksi lain (tanpa transaksi ini)
-            $stokBaru = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas') - DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+            $stokBaru = Barang::find($oldDetail->barang_id)->stok - $oldDetail->kuantitas;
 
             // Hitung ulang HPP dari semua transaksi pembelian lain
             $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
@@ -196,9 +196,9 @@ new class extends Component {
                 'transaksi_id' => $hutang->id,
                 'kategori_id' => $kateHutang->id,
                 'barang_id' => $item['barang_id'],
-                'value' =>  $item['value'],
-                'kuantitas' =>  $item['kuantitas'],
-                'sub_total' => ( $item['value']) * ( $item['kuantitas']),
+                'value' => $item['value'],
+                'kuantitas' => $item['kuantitas'],
+                'sub_total' => $item['value'] * $item['kuantitas'],
             ]);
         }
 
@@ -243,10 +243,18 @@ new class extends Component {
                 'transaksi_id' => $this->transaksi->id,
                 'kategori_id' => $this->kategori_id,
                 'barang_id' => $item['barang_id'],
-                'value' =>  $item['value'],
-                'kuantitas' =>  $item['kuantitas'],
-                'sub_total' => ( $item['value']) * ( $item['kuantitas']),
+                'value' => $item['value'],
+                'kuantitas' => $item['kuantitas'],
+                'sub_total' => $item['value'] * $item['kuantitas'],
             ]);
+
+            // ✅ Tambah stok barang
+            if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
+                $barang = Barang::find($item['barang_id']);
+                if ($barang) {
+                    $barang->increment('stok', $item['kuantitas']);
+                }
+            }
         }
 
         // 5️⃣ Setelah semua detail baru disimpan, update stok & HPP berdasarkan semua transaksi aktif
@@ -259,14 +267,9 @@ new class extends Component {
             }
 
             $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
-
-            $stokKredit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
-
-            $stokBaru = $stokDebit - $stokKredit;
-
             $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
-
             $totalQty = $stokDebit;
+            $stokBaru = $barang->stok;
 
             $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
 
@@ -276,7 +279,6 @@ new class extends Component {
             }
 
             $barang->update([
-                'stok' => $stokBaru,
                 'hpp' => $hppBaru,
             ]);
         }

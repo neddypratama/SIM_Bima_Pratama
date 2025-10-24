@@ -114,7 +114,7 @@ new class extends Component {
 
     private function calculateTotal(): void
     {
-        $this->total = collect($this->details)->sum(fn($item) => ( ($item['value'] ?? 0)) * ( ($item['kuantitas'] ?? 1)));
+        $this->total = collect($this->details)->sum(fn($item) => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1));
     }
 
     public function save(): void
@@ -140,11 +140,19 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $stok->id,
                 'kategori_id' => $this->kategori_id,
-                'value' =>  $item['value'],
+                'value' => $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ( $item['value'] ?? 0) * ( $item['kuantitas'] ?? 1),
+                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
             ]);
+
+            // ✅ Tambah stok barang
+            if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
+                $barang = Barang::find($item['barang_id']);
+                if ($barang) {
+                    $barang->increment('stok', $item['kuantitas']);
+                }
+            }
         }
 
         $client = Client::find($this->client_id);
@@ -167,10 +175,10 @@ new class extends Component {
             DetailTransaksi::create([
                 'transaksi_id' => $hutang->id,
                 'kategori_id' => $kateHutang->id,
-                'value' =>  $item['value'],
+                'value' => $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ( $item['value'] ?? 0) * ( $item['kuantitas'] ?? 1),
+                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
             ]);
         }
 

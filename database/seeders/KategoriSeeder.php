@@ -371,6 +371,13 @@ class KategoriSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Piutang Sentrat Random',
+                'deskripsi' => 'Kategori untuk Piutang sentrat Random.',
+                'type' => 'Aset',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Stok Telur',
                 'deskripsi' => 'Kategori untuk stok telur.',
                 'type' => 'Aset',
@@ -545,6 +552,13 @@ class KategoriSeeder extends Seeder
             [
                 'name' => 'Hutang Sentrat Ponggok',
                 'deskripsi' => 'Kategori untuk hutang sentrat Ponggok.',
+                'type' => 'Liabilitas',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Hutang Sentrat Random',
+                'deskripsi' => 'Kategori untuk hutang sentrat Random.',
                 'type' => 'Liabilitas',
                 'created_at' => now(),
                 'updated_at' => now(),
