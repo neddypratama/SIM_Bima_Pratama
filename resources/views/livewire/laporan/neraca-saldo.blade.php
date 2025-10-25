@@ -48,7 +48,7 @@ new class extends Component {
     public array $mappingAset = [
         'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
         'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
-        'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB'],
+        'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
         'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
         'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
         'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
@@ -61,7 +61,7 @@ new class extends Component {
     public array $mappingLiabilitas = [
         'Hutang Pihak Lain' => ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang', 'Hutang Bank'],
         'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
-        'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB'],
+        'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Hutang Tray Random'],
         'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
         'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random'],
     ];
@@ -175,9 +175,9 @@ new class extends Component {
 
     public function with()
     {
-        $totalDebit = array_sum(array_column($this->neracaPendapatan, 'debit')) + array_sum(array_column($this->neracaPengeluaran, 'debit')) + array_sum(array_column($this->neracaAset, 'debit')) + array_sum(array_column($this->neracaLiabilitas, 'debit'));
+        $totalDebit = array_sum(array_column($this->neracaPendapatan, 'debit')) + array_sum(array_column($this->neracaPengeluaran, 'debit')) + array_sum(array_column($this->neracaAset, 'debit')) + array_sum(array_column($this->neracaLiabilitas, 'debit')) + array_sum(array_column($this->neracaEkuitas, 'debit'));
 
-        $totalKredit = array_sum(array_column($this->neracaPendapatan, 'kredit')) + array_sum(array_column($this->neracaPengeluaran, 'kredit')) + array_sum(array_column($this->neracaAset, 'kredit')) + array_sum(array_column($this->neracaLiabilitas, 'kredit'));
+        $totalKredit = array_sum(array_column($this->neracaPendapatan, 'kredit')) + array_sum(array_column($this->neracaPengeluaran, 'kredit')) + array_sum(array_column($this->neracaAset, 'kredit')) + array_sum(array_column($this->neracaLiabilitas, 'kredit')) + array_sum(array_column($this->neracaEkuitas, 'kredit'));
 
         return [
             'neracaPendapatan' => $this->neracaPendapatan,

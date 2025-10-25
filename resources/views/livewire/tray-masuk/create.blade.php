@@ -160,9 +160,20 @@ new class extends Component {
 
         $client = Client::find($this->client_id);
 
-        // Hilangkan spasi ganda dan ubah jadi pola LIKE-friendly
-        $clientName = 'Hutang ' . trim(str_replace(['  '], [' '], $client->name));
-        $kateHutang = Kategori::where('name', 'like', $clientName)->first();
+        // Normalisasi nama
+        $clientName = trim(str_replace(['  '], [' '], $client->name));
+
+        // Tentukan kategori hutang berdasarkan nama client
+        if (stripos($clientName, 'Diamond') !== false || stripos($clientName, 'DM') !== false) {
+            $kategoriName = 'Hutang Tray Diamond /DM';
+        } elseif (stripos($clientName, 'Super Buah') !== false || stripos($clientName, 'SB') !== false) {
+            $kategoriName = 'Hutang Tray Super Buah /SB';
+        } else {
+            $kategoriName = 'Hutang Tray Random';
+        }
+
+        // Ambil kategori dari database
+        $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
 
         $hutang = Transaksi::create([
             'invoice' => $this->invoice1,

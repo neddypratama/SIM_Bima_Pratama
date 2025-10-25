@@ -183,6 +183,6 @@ new class extends Component {
     @endforeach
 
     <div class="mt-6">
-        <x-button label="Kembali" link="/tunai" />
+        <x-button label="Kembali" link="/transaksis" />
     </div>
 </div>

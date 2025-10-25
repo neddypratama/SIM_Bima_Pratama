@@ -182,14 +182,22 @@ new class extends Component {
         $hutang = Transaksi::where('invoice', 'like', "%-UTG-$suffix")->first();
         $client = Client::find($this->client_id);
 
-        // Hilangkan spasi ganda dan ubah jadi pola LIKE-friendly
-        if ($client->name == 'Bp.Supriyadi') {
-            $clientName = 'Saldo ' . trim(str_replace(['  '], [' '], $client->name));
-            $kateHutang = Kategori::where('name', 'like', $clientName)->first();
+        // Normalisasi nama
+        $clientName = trim(str_replace(['  '], [' '], $client->name));
+
+        // Tentukan kategori hutang berdasarkan nama client
+        if (stripos($clientName, 'SK') !== false) {
+            $kategoriName = 'Hutang Sentrat Sk';
+        } elseif (stripos($clientName, 'Ponggok') !== false ) {
+            $kategoriName = 'Hutang Sentrat Ponggok';
+        } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
+            $kategoriName = 'Saldo Bp.Supriyadi';
         } else {
-            $clientName = 'Hutang ' . trim(str_replace(['  '], [' '], $client->name));
-            $kateHutang = Kategori::where('name', 'like', $clientName)->first();
+            $kategoriName = 'Hutang Sentrat Random';
         }
+
+        // Ambil kategori dari database
+        $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
 
         $hutang->update([
             'name' => $this->name,
@@ -279,7 +287,7 @@ new class extends Component {
             $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
             $totalQty = $stokDebit;
             $stokBaru = $barang->stok;
-            
+
             $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
 
             // Jika stok <= 0, reset HPP ke 0

@@ -18,6 +18,7 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice1 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -36,9 +37,6 @@ new class extends Component {
     #[Rule('required')]
     public ?string $type = null;
 
-    #[Rule('required|integer')]
-    public ?int $linked_id = null;
-
     public ?string $tanggal = null;
 
     public array $details = [];
@@ -50,23 +48,7 @@ new class extends Component {
         return [
             'users' => User::all(),
             'clients' => Client::all(),
-            // 🔥 Group Transaksi untuk x-select-group
-            'transaksi' => Transaksi::with(['client:id,name', 'details.kategori:id,name,type', 'linked.linkedTransaksi'])
-                ->whereHas('details.kategori', function ($q) {
-                    $q->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
-                })
-                ->get()
-                ->filter(function ($t) {
-                    // Hitung total transaksi yang sudah terhubung
-                    $totalLinked = $t->linked->sum(fn($l) => $l->linkedTransaksi->total ?? 0);
-                    $sisa = $t->total - $totalLinked;
-
-                    // Hanya tampilkan jika masih ada sisa
-                    return $sisa > 0;
-                })
-                ->values(),
             'kategori' => Kategori::where('name', 'like', 'Bank %')->get(),
-            // 🔥 Opsi tipe transaksi dengan nama friendly
             'optionType' => [['id' => 'Debit', 'name' => 'Kas Masuk'], ['id' => 'Kredit', 'name' => 'Kas Keluar']],
         ];
     }
@@ -85,14 +67,13 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-TFR-' . $str;
+            $this->invoice1 = 'INV-' . $tanggal . '-MDL-' . $str;
         }
     }
 
     public function save(): void
     {
         $this->validate();
-
-        $this->client_id = Transaksi::findOrFail($this->linked_id)->client_id;
 
         $tunai = Transaksi::create([
             'invoice' => $this->invoice,
@@ -112,15 +93,45 @@ new class extends Component {
             'sub_total' => $this->total,
         ]);
 
-        TransaksiLink::create([
-            'transaksi_id' => $this->linked_id,
-            'linked_id' => $tunai->id,
-        ]);
+        $kateModal = Kategori::where('name', 'like', '%Modal Awal')->first();
 
-        TransaksiLink::create([
-            'transaksi_id' => $tunai->id,
-            'linked_id' => $this->linked_id,
-        ]);
+        if ($this->type == 'Debit') {
+            $modal = Transaksi::create([
+                'invoice' => $this->invoice1,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Kredit',
+                'total' => $this->total,
+            ]);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $modal->id,
+                'kategori_id' => $kateModal->id,
+                'kuantitas' => null,
+                'value' => null,
+                'sub_total' => $this->total,
+            ]);
+        } else {
+            $modal = Transaksi::create([
+                'invoice' => $this->invoice1,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Debit',
+                'total' => $this->total,
+            ]);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $modal->id,
+                'kategori_id' => $kateModal->id,
+                'kuantitas' => null,
+                'value' => null,
+                'sub_total' => $this->total,
+            ]);
+        }
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/transfer');
     }
@@ -143,64 +154,20 @@ new class extends Component {
                         <x-input label="User" :value="auth()->user()->name" readonly />
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
-                    <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bayar Bank BCA" />
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bayar Bank BCA" />
+                        </div>
+                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategori"
                             placeholder="Pilih Kategori" single clearable searchable />
-                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
-                    </div>
-                </div>
-            </div>
-        </x-card>
-
-        <!-- SECTION: Detail Items -->
-        <x-card>
-            <div class="lg:grid grid-cols-8 gap-4">
-                <div class="col-span-2">
-                    <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
-                </div>
-                <div class="col-span-6 grid gap-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="col-span-2">
-                            <x-choices-offline label="Pilih Transaksi" wire:model="linked_id" :options="$transaksi"
-                                placeholder="Cari atau pilih transaksi" searchable clearable single>
-                                {{-- Tampilan item di dropdown --}}
-                                @scope('item', $transaksi)
-                                    <x-list-item :item="$transaksi" sub-value="invoice">
-                                        <x-slot:actions>
-                                            @php
-                                                // Hitung total transaksi yang sudah terhubung
-                                                $totalLinked = $transaksi->linked->sum(
-                                                    fn($l) => $l->linkedTransaksi->total ?? 0,
-                                                );
-                                                $sisa = $transaksi->total - $totalLinked;
-                                            @endphp
-
-                                            <x-badge :value="'Rp ' . number_format($sisa, 0, ',', '.')" class="badge-soft badge-primary badge-sm" />
-                                            <x-badge :value="$transaksi->client?->name ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
-
-                                        </x-slot:actions>
-                                    </x-list-item>
-                                @endscope
-
-                                {{-- Tampilan ketika sudah dipilih --}}
-                                @scope('selection', $transaksi)
-                                    @php
-                                        // Hitung total transaksi yang sudah terhubung
-                                        $totalLinked = $transaksi->linked->sum(
-                                            fn($l) => $l->linkedTransaksi->total ?? 0,
-                                        );
-                                        $sisa = $transaksi->total - $totalLinked;
-                                    @endphp
-                                    {{ $transaksi->invoice . ' | ' . 'Rp ' . number_format($sisa, 0, ',', '.') . ' | ' . ($transaksi->client?->name ?? 'Tanpa Client') }}
-                                @endscope
-                            </x-choices-offline>
-                        </div>
                         <x-input label="Total Pembayaran" wire:model="total" prefix="Rp" money />
                     </div>
                 </div>
             </div>
-        </x-card>
+        </x-card>   
 
         <x-slot:actions>
             <x-button spinner label="Cancel" link="/transfer" />

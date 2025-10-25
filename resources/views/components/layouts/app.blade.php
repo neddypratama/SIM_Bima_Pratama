@@ -96,6 +96,7 @@
                 {{-- ✅ Stok hanya untuk role 1 dan 2 --}}
                 @if (in_array(auth()->user()->role_id, [1, 2]))
                     <x-menu-sub title="Manage Stok" icon="fas.warehouse">
+                        <x-menu-item title="Laporan Stok" icon="fas.file" link="/kotor" /> 
                         <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok-telur" />
                         <x-menu-item title="Stok Pakan" icon="fas.wheat-awn" link="/stok-pakan" />
                         <x-menu-item title="Stok Obat" icon="fas.capsules" link="/stok-obat" />

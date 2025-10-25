@@ -336,6 +336,13 @@ class KategoriSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Piutang Tray Random',
+                'deskripsi' => 'Kategori untuk Piutang tray random.',
+                'type' => 'Aset',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Piutang Obat SK',
                 'deSKripsi' => 'Kategori untuk Piutang obat SK.',
                 'type' => 'Aset',
@@ -517,6 +524,13 @@ class KategoriSeeder extends Seeder
             [
                 'name' => 'Hutang Tray Super Buah /SB',
                 'deskripsi' => 'Kategori untuk hutang tray Super Buah.',
+                'type' => 'Liabilitas',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Hutang Tray Random',
+                'deskripsi' => 'Kategori untuk hutang sentrat random.',
                 'type' => 'Liabilitas',
                 'created_at' => now(),
                 'updated_at' => now(),

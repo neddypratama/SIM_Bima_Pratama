@@ -50,7 +50,7 @@ new class extends Component {
         $mappingAset = [
             'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
             'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
-            'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB'],
+            'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
             'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
             'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random',],
             'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
@@ -63,7 +63,7 @@ new class extends Component {
         $mappingLiabilitas = [
             'Hutang Pihak Lain' => ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang', 'Hutang Bank'],
             'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
-            'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB'],
+            'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Piutang Tray Random'],
             'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
             'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random',],
         ];

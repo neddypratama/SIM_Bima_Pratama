@@ -138,7 +138,7 @@ new class extends Component {
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-                {{-- <x-button label="Create" link="/tunai/create" responsive icon="o-plus" class="btn-primary" /> --}}
+                <x-button label="Create" link="/tunai/create" responsive icon="o-plus" class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-header>
