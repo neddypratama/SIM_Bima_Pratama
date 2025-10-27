@@ -64,6 +64,7 @@ new class extends Component {
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa', 'HPP'],
             'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
             'Beban Sedekah' => ['ZIS'],
+            'Beban Lain-Lain' => ['Beban Lain-Lain'],
         ];
 
         // --- Pendapatan per kategori ---
