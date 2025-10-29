@@ -25,7 +25,6 @@ new class extends Component {
     public array $types = [
         ['id' => 'Kotor', 'name' => 'Kotor'],
         ['id' => 'Bentes', 'name' => 'Bentes'],
-        ['id' => 'Prok', 'name' => 'Prok'],
         ['id' => 'Ceplok', 'name' => 'Ceplok'],
         ['id' => 'Prok', 'name' => 'Prok'],
         ['id' => 'Return', 'name' => 'Return'],
