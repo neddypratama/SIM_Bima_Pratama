@@ -148,13 +148,13 @@ new class extends Component {
     <x-card>
         <x-table :headers="$headers" :rows="$laporanStokTelur" :sort-by="['column' => 'nama_barang', 'direction' => 'asc']" with-pagination>
             @scope('cell_nama_barang', $row)
-                <span class="font-medium text-gray-800">
+                <span class="font-medium">
                     {{ $row->nama_barang }}
                 </span>
             @endscope
 
             @scope('cell_kondisi', $row)
-                <span class="font-semibold text-amber-600">
+                <span class="font-semibold">
                     {{ $row->kondisi }}
                 </span>
             @endscope

@@ -104,7 +104,7 @@ new class extends Component {
     <x-card>
         <x-table :headers="$headers" :rows="$pembelianTelur" :sort-by="$sortBy" with-pagination>
             @scope('cell_nama_barang', $row)
-                <span class="font-medium text-gray-800">
+                <span class="font-medium">
                     {{ $row->nama_barang }}
                 </span>
             @endscope
