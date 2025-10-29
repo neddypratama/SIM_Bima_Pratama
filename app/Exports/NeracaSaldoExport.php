@@ -70,7 +70,7 @@ class NeracaSaldoExport implements FromArray, WithHeadings, WithTitle, WithStyle
 
         // Buat array final
         $rows = [];
-        $sections = ['Pendapatan', 'Pengeluaran', 'Aset', 'Liabilitas'];
+        $sections = ['Pendapatan', 'Pengeluaran', 'Aset', 'Liabilitas', 'Ekuitas'];
 
         foreach ($sections as $section) {
             $rows[] = [$section, '', '', '']; // judul bagian
