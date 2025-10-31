@@ -49,17 +49,24 @@ class BarangSeeder extends Seeder
             ['Arab Pct', $telurArab, 0],
 
             // 📦 Tray
-            ['SB Baru', $tray, 0],
-            ['Puyuh', $tray, 0],
+            ['Puyuh Baru', $tray, 0],
+            ['Puyuh Second', $tray, 0],
+            ['Puyuh Tutup', $tray, 0],
             ['DM', $tray, 0],
+            ['Horen Baru', $tray, 0],
+            ['Horen Second', $tray, 0],
+            ['Horen Tutup', $tray, 0],
             ['PMS', $tray, 0],
+            ['Asin', $tray, 0],
+            ['Asin Tutup', $tray, 0],
+            ['Bebek', $tray, 0],
             ['KK', $tray, 0],
             ['MEDAN', $tray, 0],
-            ['TRAY ASIN SUT', $tray, 0],
+            ['CPL', $tray, 0],
 
             // 💊 Obat-Obatan
             ['NEOBRO 250gr', $obat, 0],
-            ['VITA STRESS 250gr', $obat, 0],
+            ['VITA STRESS 250gr', $obat, 0], 
             ['VITA STRESS DUS', $obat, 0],
             ['FORTEVIT 250gr', $obat, 0],
             ['EGG STIMULANT', $obat, 0],

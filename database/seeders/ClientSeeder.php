@@ -210,7 +210,7 @@ class ClientSeeder extends Seeder
             'type' => 'Peternak',
             'keterangan' => 'Pocok',
             'bon' => 0,
-                'titipan' => 0,
+            'titipan' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -222,11 +222,77 @@ class ClientSeeder extends Seeder
             'type' => 'Peternak',
             'keterangan' => 'Ternak Keluar',
             'bon' => 0,
-                'titipan' => 0,
+            'titipan' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ];
 
+        // TRUK
+        $data[] = [
+            'name' => 'Bima Pratama Biru 1',
+            'alamat' => 'AG 9964',
+            'type' => 'Truk',
+            'keterangan' => 'Bp. Subakir',
+            'bon' => 223000000,
+            'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $data[] = [
+            'name' => 'Bima Pratama Biru 2',
+            'alamat' => 'AG 8393',
+            'type' => 'Truk',
+            'keterangan' => 'Bp. Supri Handoko',
+            'bon' => 255000000,
+            'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $data[] = [
+            'name' => 'Bima Pratama Orange 1',
+            'alamat' => 'AG 8529',
+            'type' => 'Truk',
+            'keterangan' => 'Bp. Joko',
+            'bon' => 245000000,
+            'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $data[] = [
+            'name' => 'Bima Pratama Orange 2',
+            'alamat' => 'AG 8622',
+            'type' => 'Truk',
+            'keterangan' => 'Bp. Yoga',
+            'bon' => 255000000,
+            'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $data[] = [
+            'name' => 'Bima Pratama Hijau 1',
+            'alamat' => 'AG 8026 UL',
+            'type' => 'Truk',
+            'keterangan' => 'Bp. Kasan',
+            'bon' => 500000000,
+            'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $data[] = [
+            'name' => 'Bima Pratama Merah Hujau 2',
+            'alamat' => 'AG 0',
+            'type' => 'Truk',
+            'keterangan' => 'Bp. Aris Fermansyah',
+            'bon' => 110000000,
+            'titipan' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
 
         DB::table('clients')->insert($data);
     }

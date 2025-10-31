@@ -19,7 +19,7 @@ new class extends Component {
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
 
-    public $tipeClientOptions = [['id' => 'Karyawan', 'name' => 'Karyawan'], ['id' => 'Peternak', 'name' => 'Peternak'], ['id' => 'Pedagang', 'name' => 'Pedagang'], ['id' => 'Supplier', 'name' => 'Supplier']];
+    public $tipeClientOptions = [['id' => 'Karyawan', 'name' => 'Karyawan'], ['id' => 'Peternak', 'name' => 'Peternak'], ['id' => 'Pedagang', 'name' => 'Pedagang'], ['id' => 'Supplier', 'name' => 'Supplier'], ['id' => 'Truk', 'name' => 'Truk']];
     public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah'], ['id' => 'Pocok', 'name' => 'Pocok']];
     public ?string $tipePeternak = null; // <- value yang dipilih
 
@@ -71,7 +71,7 @@ new class extends Component {
             'newClientName' => 'required|string|max:255|unique:clients,name',
             'newClientAlamat' => 'nullable',
             'newClientKeterangan' => 'nullable',
-            'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier',
+            'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier,Truk',
             'newClientBon' => 'nullable|integer',
             'newClientTitipan' => 'nullable|integer',
         ]);
@@ -107,7 +107,7 @@ new class extends Component {
                 'editingName' => 'required|string|max:255',
                 'editingAlamat' => 'nullable',
                 'editingKeterangan' => 'nullable',
-                'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier',
+                'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier,Truk',
                 'editingBon' => 'nullable|integer',
                 'editingTitipan' => 'nullable|integer',
             ]);

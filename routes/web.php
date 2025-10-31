@@ -67,6 +67,13 @@ Route::middleware('auth')->group(function() {
         Volt::route('/stok-tray/{stok}/edit', 'stok-tray.edit');
         Volt::route('/stok-tray/{stok}/show', 'stok-tray.show');
 
+        Volt::route('/truk', 'truk.index');
+
+        Volt::route('/transport', 'transport.index');
+        Volt::route('/transport/create', 'transport.create');
+        Volt::route('/transport/{transaksi}/edit', 'transport.edit');
+        Volt::route('/transport/{transaksi}/show', 'transport.show');
+
     });
 
     // User Pembelian Telur 
@@ -79,6 +86,7 @@ Route::middleware('auth')->group(function() {
 
     Route::middleware('role:1,3,6')->group(function () {
         Volt::route('/laporan-telur', 'telur.index');
+        Volt::route('/laporan-tray', 'tray.index');
     });
 
     // User Pakan dan Obat
@@ -106,6 +114,8 @@ Route::middleware('auth')->group(function() {
     });
 
     Route::middleware('role:1,5,6')->group(function () {
+        Volt::route('/kas', 'kas.index');
+
         Volt::route('/bon-titipan', 'bon-titipan.index');
 
         Volt::route('/piutang', 'piutang.index');

@@ -4,6 +4,7 @@ use Livewire\Volt\Component;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
 use App\Models\Kategori;
+use App\Models\Client;
 use App\Models\User;
 use Mary\Traits\Toast;
 use Livewire\Attributes\Rule;
@@ -33,6 +34,8 @@ new class extends Component {
     public ?int $bayar_id = null; // ID kategori metode pembayaran
 
     #[Rule('required')]
+    public ?int $client_id = null;
+
     public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
@@ -43,8 +46,8 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->where('name', 'not like', '%Truk%')->get(),
-            'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
+            'clients' => Client::where('type', 'like', '%Truk%')->get(),
+            'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Pemasukkan']],
             'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
@@ -60,6 +63,7 @@ new class extends Component {
         $this->name = $this->beban->name;
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
+        $this->client_id = $this->beban->client_id;
         $this->type = $this->beban->type;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
 
@@ -146,23 +150,48 @@ new class extends Component {
         }
 
         // Update transaksi utama
-        $this->beban->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-        ]);
+        $katePemasukan = Kategori::where('name', 'Pendapatan Truk')->first()->id;
+        $katePengeluaran = Kategori::where('name', 'Pengeluaran Truk')->first()->id;
 
-        $this->beban->details()->delete();
-        DetailTransaksi::create([
-            'transaksi_id' => $this->beban->id,
-            'kategori_id' => $this->kategori_id,
-            'kuantitas' => null,
-            'value' => null,
-            'sub_total' => $this->total,
-        ]);
+        if ($this->type == 'Debit') {
+            $this->beban->update([
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Debit',
+                'total' => $this->total,
+            ]);
 
-        $this->success('Transaksi berhasil diperbarui!', redirectTo: '/beban');
+            $this->beban->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->beban->id,
+                'kategori_id' => $katePengeluaran,
+                'kuantitas' => null,
+                'value' => null,
+                'sub_total' => $this->total,
+            ]);
+        } else {
+            $this->beban->update([
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'client_id' => $this->client_id,
+                'tanggal' => $this->tanggal,
+                'type' => 'Kredit',
+                'total' => $this->total,
+            ]);
+
+            $this->beban->details()->delete();
+            DetailTransaksi::create([
+                'transaksi_id' => $this->beban->id,
+                'kategori_id' => $katePemasukan,
+                'kuantitas' => null,
+                'value' => null,
+                'sub_total' => $this->total,
+            ]);
+        }
+
+        $this->success('Transaksi berhasil diperbarui!', redirectTo: '/transport');
     }
 };
 ?>
@@ -185,8 +214,8 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
-                        <x-choices-offline label="Kategori" wire:model="kategori_id" :options="$kategoris"
-                            placeholder="Pilih Kategori" single clearable searchable />
+                        <x-choices-offline label="Client" wire:model="client_id" :options="$clients"
+                            placeholder="Pilih Client" single clearable searchable />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
@@ -199,7 +228,7 @@ new class extends Component {
         </x-card>
 
         <x-slot:actions>
-            <x-button spinner label="Cancel" link="/beban" />
+            <x-button spinner label="Cancel" link="/transport" />
             <x-button spinner label="Update" icon="o-check" spinner="save" type="submit" class="btn-primary" />
         </x-slot:actions>
     </x-form>

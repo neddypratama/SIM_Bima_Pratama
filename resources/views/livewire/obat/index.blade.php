@@ -41,12 +41,23 @@ new class extends Component {
             ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
-            ->where('kategori.name', 'like', '%Stok Telur%')
-            ->where('transaksi.invoice', 'like', '%-OBT-%')
-            ->when($this->filterType, fn($q) => $q->where('transaksi.type', $this->filterType))
+
+            // 🔹 Logika otomatis tergantung filterType
+            ->when($this->filterType === 'Debit', function ($q) {
+                // Jika Pembelian (stok masuk)
+                $q->where('kategori.name', 'like', '%Stok Obat%')->where('transaksi.type', 'Debit');
+            })
+            ->when($this->filterType === 'Kredit', function ($q) {
+                // Jika Penjualan (stok keluar)
+                $q->where('kategori.name', 'like', '%Penjualan Obat%');
+            })
+
+            // 🔍 Filter tambahan
             ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
             ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
+
+            // 🔹 Group & Sort
             ->groupBy('barang.name')
             ->orderBy('barang.name', 'asc')
             ->paginate($this->perPage);
@@ -89,8 +100,7 @@ new class extends Component {
         </div>
 
         <div class="md:col-span-2">
-            <x-select label="Tipe Transaksi" :options="$types" wire:model.live="filterType"
-                clearable />
+            <x-select label="Tipe Transaksi" :options="$types" wire:model.live="filterType" clearable />
         </div>
 
         <div class="md:col-span-2">

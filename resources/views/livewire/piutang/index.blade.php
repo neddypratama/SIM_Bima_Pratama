@@ -43,7 +43,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'kategori_id', 'filter']);
+        $this->reset(['search', 'client_id', 'kategori_id', 'filter', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -116,6 +116,8 @@ new class extends Component {
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -128,6 +130,9 @@ new class extends Component {
                 $this->filter++;
             }
             if ($this->client_id != 0) {
+                $this->filter++;
+            }
+            if ($this->startDate != null) {
                 $this->filter++;
             }
         }
@@ -215,6 +220,10 @@ new class extends Component {
             {{-- ✅ Filter User --}}
             <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" icon="o-flag"
                 single searchable />
+                
+            <!-- ✅ Tambahkan Filter Tanggal -->
+            <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
+            <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />
         </div>
 
         <x-slot:actions>

@@ -13,7 +13,7 @@ new class extends Component {
     public string $search = '';
     public string $startDate = '';
     public string $endDate = '';
-    public string $filterType = 'Debit'; // ✅ Filter untuk tipe transaksi
+    public string $filterType = 'Kredit'; // ✅ Filter untuk tipe transaksi
     public array $sortBy = ['column' => 'tanggal', 'direction' => 'desc'];
     public int $perPage = 10;
 
@@ -45,11 +45,11 @@ new class extends Component {
             // 🔹 Logika otomatis tergantung filterType
             ->when($this->filterType === 'Debit', function ($q) {
                 // Jika Pembelian (stok masuk)
-                $q->where('kategori.name', 'like', '%Stok Pakan%')->where('transaksi.type', 'Debit');
+                $q->where('kategori.name', 'like', '%Stok Tray%')->where('transaksi.type', 'Debit');
             })
             ->when($this->filterType === 'Kredit', function ($q) {
                 // Jika Penjualan (stok keluar)
-                $q->where('kategori.name', 'like', '%Penjualan Pakan%');
+                $q->where('kategori.name', 'like', '%Penjualan EggTray%');
             })
 
             // 🔍 Filter tambahan
@@ -65,6 +65,7 @@ new class extends Component {
 
     public function with(): array
     {
+        // dd( $this->pembelianTelur());
         return [
             'pembelianTelur' => $this->pembelianTelur(),
             'headers' => $this->headers(),
@@ -84,7 +85,7 @@ new class extends Component {
 ?>
 
 <div>
-    <x-header title="Laporan Transaksi Pakan" separator progress-indicator />
+    <x-header title="Laporan Transaksi Tray" separator progress-indicator />
 
     <div class="grid grid-cols-1 md:grid-cols-10 gap-4 items-end mb-4">
         <div class="md:col-span-2">
@@ -112,7 +113,7 @@ new class extends Component {
     <x-card>
         <x-table :headers="$headers" :rows="$pembelianTelur" :sort-by="$sortBy" with-pagination>
             @scope('cell_nama_barang', $row)
-                <span class="font-medium ">
+                <span class="font-medium">
                     {{ $row->nama_barang }}
                 </span>
             @endscope

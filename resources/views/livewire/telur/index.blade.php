@@ -30,28 +30,37 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [ ['key' => 'nama_barang', 'label' => 'Nama Barang', 'class' => 'w-56'], ['key' => 'total_jumlah', 'label' => 'Jumlah', 'class' => 'w-48'], ['key' => 'total_harga', 'label' => 'Total Harga (Rp)', 'class' => 'w-48']];
+        return [['key' => 'nama_barang', 'label' => 'Nama Barang', 'class' => 'w-56'], ['key' => 'total_jumlah', 'label' => 'Jumlah', 'class' => 'w-48'], ['key' => 'total_harga', 'label' => 'Total Harga (Rp)', 'class' => 'w-48']];
     }
 
     /** 🔹 Query utama */
     public function pembelianTelur(): LengthAwarePaginator
     {
         return DB::table('barangs as barang')
-        ->select('barang.name as nama_barang', 
-        DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), 
-        DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
-        ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
-        ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
-        ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
-        ->where('kategori.name', 'like', '%Stok Telur%')
-        ->where('transaksi.invoice', 'like', '%-TLR-%')
-        ->when($this->filterType, fn($q) => $q->where('transaksi.type', $this->filterType))
-        ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
-        ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
-        ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
-        ->groupBy('barang.name')
-        ->orderBy('barang.name', 'asc')
-        ->paginate($this->perPage);
+            ->select('barang.name as nama_barang', DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
+            ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
+            ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
+            ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
+
+            // 🔹 Logika otomatis tergantung filterType
+            ->when($this->filterType === 'Debit', function ($q) {
+                // Jika Pembelian (stok masuk)
+                $q->where('kategori.name', 'like', '%Stok Telur%')->where('transaksi.type', 'Debit');
+            })
+            ->when($this->filterType === 'Kredit', function ($q) {
+                // Jika Penjualan (stok keluar)
+                $q->where('kategori.name', 'like', '%Penjualan Telur%');
+            })
+
+            // 🔍 Filter tambahan
+            ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
+            ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
+
+            // 🔹 Group & Sort
+            ->groupBy('barang.name')
+            ->orderBy('barang.name', 'asc')
+            ->paginate($this->perPage);
     }
 
     public function with(): array
@@ -91,8 +100,7 @@ new class extends Component {
         </div>
 
         <div class="md:col-span-2">
-            <x-select label="Tipe Transaksi" :options="$types" wire:model.live="filterType"
-                clearable />
+            <x-select label="Tipe Transaksi" :options="$types" wire:model.live="filterType" clearable />
         </div>
 
         <div class="md:col-span-2">

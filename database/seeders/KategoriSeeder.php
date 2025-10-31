@@ -584,6 +584,20 @@ class KategoriSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+             [
+                'name' => 'Pendapatan Truk',
+                'deskripsi' => 'Kategori untuk Pendapatan Truk.',
+                'type' => 'Pendapatan',
+                'created_at' => now(),
+                'updated_at' => now(),
+             ],
+            [
+                'name' => 'Pengeluaran Truk',
+                'deskripsi' => 'Kategori untuk Pengeluaran Truk.',
+                'type' => 'Pengeluaran',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
         ]);
     }
 }

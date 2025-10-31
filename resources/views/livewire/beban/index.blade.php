@@ -44,7 +44,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'kategori_id', 'filter']);
+        $this->reset(['search', 'kategori_id', 'filter', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -98,7 +98,7 @@ new class extends Component {
         return Transaksi::query()
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
+                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->where('name', 'not like', '%Truk%');
             })
             ->when($this->kategori_id, function (Builder $q) {
                 $q->whereHas('details', function ($query) {
@@ -111,6 +111,8 @@ new class extends Component {
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -128,12 +130,15 @@ new class extends Component {
             if ($this->kategori_id != 0) {
                 $this->filter++;
             }
+            if ($this->startDate != null) {
+                $this->filter++;
+            }
         }
 
         return [
             'transaksi' => $this->transaksi(),
             'client' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
-            'kategori' => Kategori::where('type', 'Pengeluaran')->get(),
+            'kategori' => Kategori::where('type', 'Pengeluaran')->where('name', 'not like', '%HPP%')->where('name', 'not like', '%Truk%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -189,7 +194,7 @@ new class extends Component {
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                     @if (Auth::user()->role_id == 1 ||
+                    @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
                         <x-button icon="o-pencil" link="/beban/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
@@ -209,6 +214,9 @@ new class extends Component {
 
             <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori"
                 icon="o-flag" single searchable />
+
+            <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
+            <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />
         </div>
 
         <x-slot:actions>

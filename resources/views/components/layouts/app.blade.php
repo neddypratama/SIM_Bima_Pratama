@@ -96,10 +96,16 @@
                 {{-- ✅ Stok hanya untuk role 1 dan 2 --}}
                 @if (in_array(auth()->user()->role_id, [1, 2]))
                     <x-menu-sub title="Manage Stok" icon="fas.warehouse">
-                        <x-menu-item title="Laporan Stok" icon="fas.file" link="/kotor" /> 
+                        <x-menu-item title="Laporan Stok" icon="fas.file" link="/kotor" />
                         <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok-telur" />
+                        <x-menu-item title="Stok Tray" icon="fas.box-open" link="/stok-tray" />
                         <x-menu-item title="Stok Pakan" icon="fas.wheat-awn" link="/stok-pakan" />
                         <x-menu-item title="Stok Obat" icon="fas.capsules" link="/stok-obat" />
+                    </x-menu-sub>
+
+                    <x-menu-sub title="Manage Truk" icon="fas.truck">
+                        <x-menu-item title="Laporan Truk" icon="fas.truck-front" link="/truk" />
+                        <x-menu-item title="Transaksi Truk" icon="fas.truck-fast" link="/transport" />
                     </x-menu-sub>
                 @endif
 
@@ -113,6 +119,7 @@
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 6]))
                         <x-menu-item title="Penjualan Telur" icon="fas.file-invoice-dollar" link="/telur-keluar" />
+                        <x-menu-item title="Laporan Tray" icon="fas.store" link="/laporan-tray" />
                         <x-menu-item title="Pembelian Tray" icon="fas.cart-plus" link="/tray-masuk" />
                         <x-menu-item title="Penjualan Tray" icon="fas.file-invoice-dollar" link="/tray-keluar" />
                     @endif
@@ -136,6 +143,9 @@
                 </x-menu-sub>
 
                 <x-menu-sub title="Kas" icon="fas.building-columns">
+                    @if (in_array(auth()->user()->role_id, [1, 5, 6]))
+                        <x-menu-item title="Laporan Kas" icon="fas.cash-register" link="/kas" />
+                    @endif
                     @if (in_array(auth()->user()->role_id, [1, 5]))
                         <x-menu-item title="Transaksi Kas Tunai" icon="fas.money-bill-wave" link="/tunai" />
                     @endif

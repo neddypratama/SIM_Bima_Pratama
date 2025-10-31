@@ -40,7 +40,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'filter']);
+        $this->reset(['search', 'client_id', 'filter', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -118,7 +118,7 @@ new class extends Component {
 
         // 3️⃣ Hapus transaksi utama
         $transaksi->delete();
-        
+
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
@@ -135,6 +135,8 @@ new class extends Component {
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Tray%'))
             ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -147,6 +149,9 @@ new class extends Component {
                 $this->filter++;
             }
             if ($this->client_id != 0) {
+                $this->filter++;
+            }
+            if ($this->startDate != null) {
                 $this->filter++;
             }
         }
@@ -227,6 +232,10 @@ new class extends Component {
                 icon="o-magnifying-glass" />
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client"
                 option-label="name" option-value="id" icon="o-user" placeholder-value="0" searchable single />
+
+            <!-- ✅ Tambahkan Filter Tanggal -->
+            <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
+            <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />
         </div>
 
         <x-slot:actions>

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->text('alamat');
-            $table->enum('type', ['Karyawan', 'Peternak', 'Pedagang', 'Supplier']);
+            $table->enum('type', ['Karyawan', 'Peternak', 'Pedagang', 'Supplier', 'Truk']);
             $table->string('keterangan')->nullable();
             $table->decimal('bon', 15, 2)->nullable();
             $table->decimal('titipan', 15, 2)->nullable();

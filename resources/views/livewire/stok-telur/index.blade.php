@@ -38,7 +38,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'barang_id', 'filter']);
+        $this->reset(['search', 'barang_id', 'filter', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -132,6 +132,8 @@ new class extends Component {
                 },
                 fn(Builder $q) => $q->orderBy('created_at', 'desc'),
             )
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->paginate($this->perPage);
     }
 
@@ -143,6 +145,9 @@ new class extends Component {
                 $this->filter++;
             }
             if ($this->barang_id != 0) {
+                $this->filter++;
+            }
+            if ($this->startDate != null) {
                 $this->filter++;
             }
         }
@@ -224,6 +229,11 @@ new class extends Component {
 
             <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barang" icon="o-flag"
                 single searchable />
+
+            <!-- ✅ Tambahkan Filter Tanggal -->
+            <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
+            <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />
+
         </div>
 
         <x-slot:actions>
