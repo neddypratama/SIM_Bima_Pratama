@@ -26,7 +26,7 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+        return Transaksi::with(['client:id,name, keterangan', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', callback: function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Pakan%');
@@ -47,6 +47,7 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
             'Rincian',
             'Tanggal',
             'Client',
+            'Tipe Client',
             'Kategori',
             'Barang',
             'Kuantitas',
@@ -69,6 +70,7 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
                 $transaksi->name,
                 $transaksi->tanggal,
                 $transaksi->client?->name ?? '-',
+                $transaksi->client?->keterangan ?? '-',
                 $detail->kategori?->name ?? '-',
                 $detail->barang?->name ?? '-',
                 $detail->kuantitas,

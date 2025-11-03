@@ -26,6 +26,7 @@ class PembelianSentratExport implements FromCollection, WithHeadings, ShouldAuto
     public function collection()
     {
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+            ->where('invoice', 'like', '%-STR-%')
             ->where('type', 'Debit')
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Pakan%'))
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
