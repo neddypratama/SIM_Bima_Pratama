@@ -55,7 +55,7 @@ new class extends Component {
     // Table headers
     public function headers(): array
     {
-        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'jenis_name', 'label' => 'Jenis Barang'], ['key' => 'name', 'label' => 'Name'], ['key' => 'stok', 'label' => 'Stok'], ['key' => 'hpp', 'label' => 'Harga Pokok Penjualan', 'class' => 'w-1'], ['key' => 'created_at', 'label' => 'Tanggal Dibuat', 'class' => 'w-1']];
+        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'jenis_name', 'label' => 'Jenis Barang'], ['key' => 'name', 'label' => 'Name'], ['key' => 'stok', 'label' => 'Stok'], ['key' => 'hpp', 'label' => 'Harga Pokok Penjualan', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'created_at', 'label' => 'Tanggal Dibuat', 'class' => 'w-1']];
     }
 
     public function barangs(): LengthAwarePaginator

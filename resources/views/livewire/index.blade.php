@@ -471,9 +471,9 @@ new class extends Component {
                                 class="flex-1" />
                             <x-input type="date" label="Sampai Tanggal" wire:model="endDate" :min="$startDate"
                                 :max="now()->format('Y-m-d')" class="flex-1" />
-                            <x-button spinner label="Terapkan" type="submit" icon="o-check"
-                                class="btn-primary w-full md:w-auto" />
                         </div>
+                        <x-button spinner label="Terapkan" type="submit" icon="o-check"
+                            class="btn-primary w-full md:w-auto" />
 
                         @error('endDate')
                             <div class="text-red-500 text-sm">{{ $message }}</div>
@@ -496,7 +496,7 @@ new class extends Component {
             <div class="flex items-center justify-center gap-3">
                 <x-icon name="fas.money-bill-wave" class="text-purple-500 w-10 h-10 shrink-0" />
                 <div>
-                    <p class="text-sm text-gray-600">Pendapatan</p>
+                    <p class="text-sm">Pendapatan</p>
                     <p class="text-xl font-bold">Rp. {{ number_format($incomeTotal) }}</p>
                 </div>
             </div>
@@ -507,7 +507,7 @@ new class extends Component {
             <div class="flex items-center justify-center gap-3">
                 <x-icon name="fas.shopping-bag" class="text-blue-500 w-10 h-10 shrink-0" />
                 <div>
-                    <p class="text-sm text-gray-600">Pengeluaran</p>
+                    <p class="text-sm">Pengeluaran</p>
                     <p class="text-xl font-bold">Rp. {{ number_format($expenseTotal) }}</p>
                 </div>
             </div>
@@ -518,7 +518,7 @@ new class extends Component {
             <div class="flex items-center justify-center gap-3">
                 <x-icon name="fas.sack-dollar" class="text-green-500 w-10 h-10 shrink-0" />
                 <div>
-                    <p class="text-sm text-gray-600">Aset</p>
+                    <p class="text-sm">Aset</p>
                     <p class="text-xl font-bold">Rp. {{ number_format($assetTotal) }}</p>
                 </div>
             </div>
@@ -529,7 +529,7 @@ new class extends Component {
             <div class="flex items-center justify-center gap-3">
                 <x-icon name="fas.money-check-dollar" class="text-yellow-500 w-10 h-10 shrink-0" />
                 <div>
-                    <p class="text-sm text-gray-600">Liabilitas</p>
+                    <p class="text-sm">Liabilitas</p>
                     <p class="text-xl font-bold">Rp. {{ number_format($liabiliatsTotal) }}</p>
                 </div>
             </div>

@@ -143,7 +143,7 @@ new class extends Component {
     // Table headers
     public function headers(): array
     {
-        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'type', 'label' => 'Tipe Client'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], ['key' => 'alamat', 'label' => 'Alamat', 'sortable' => false], ['key' => 'keterangan', 'label' => 'Keterangan', 'sortable' => false], ['key' => 'bon', 'label' => 'Bon'], ['key' => 'titipan', 'label' => 'Titipan', 'class' => 'w-1']];
+        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'type', 'label' => 'Tipe Client', 'class' => 'w-32'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-32'], ['key' => 'alamat', 'label' => 'Alamat', 'sortable' => false, 'class' => 'w-48'], ['key' => 'keterangan', 'label' => 'Keterangan', 'sortable' => false, 'class' => 'w-48'], ['key' => 'bon', 'label' => 'Bon', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'titipan', 'label' => 'Titipan', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function clients(): LengthAwarePaginator
@@ -226,14 +226,14 @@ new class extends Component {
             {{-- Kolom Bon --}}
             @scope('cell_bon', $client)
                 <span class="font-bold text-blue-600">
-                    {{ number_format($client->bon, 0, ',', '.') }}
+                    Rp {{ number_format($client->bon, 0, ',', '.') }}
                 </span>
             @endscope
 
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
                 <span class="font-bold text-green-600">
-                    {{ number_format($client->titipan, 0, ',', '.') }}
+                   Rp {{ number_format($client->titipan, 0, ',', '.') }}
                 </span>
             @endscope
 

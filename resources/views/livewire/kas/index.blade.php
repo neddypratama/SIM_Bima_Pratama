@@ -141,7 +141,7 @@ new class extends Component {
     <x-card>
         <x-table :headers="$headers" :rows="$laporanKas" with-pagination>
             @scope('cell_kategori_kas', $row)
-                <span class="font-semibold text-gray-800">
+                <span class="font-semibold">
                     {{ $row->kategori_kas }}
                 </span>
             @endscope
