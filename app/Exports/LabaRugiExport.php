@@ -41,7 +41,7 @@ class LabaRugiExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSi
         $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name');
         $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name');
 
-        // === Pendapatan ===
+        // == Pendapatan ==
         $pendapatan = Transaksi::with('details.kategori')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [$start, $end])
@@ -50,12 +50,12 @@ class LabaRugiExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSi
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pendapatan')
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(function ($group) {
-                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total');
-                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total');
+                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total');
+                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total');
                 return $kredit - $debit;
             });
 
-        // === Pengeluaran ===
+        // == Pengeluaran ==
         $pengeluaran = Transaksi::with('details.kategori')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [$start, $end])
@@ -64,8 +64,8 @@ class LabaRugiExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSi
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pengeluaran')
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(function ($group) {
-                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total');
-                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total');
+                $debit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total');
+                $kredit = $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total');
                 return $debit - $kredit;
             });
 

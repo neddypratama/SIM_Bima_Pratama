@@ -269,7 +269,7 @@ new class extends Component {
 
                 </tbody>
             </table>
-            @if ($totalDebit !== $totalKredit)
+            @if ($totalDebit != $totalKredit)
                 <div class="mt-4 p-3 text-yellow-800 rounded bg-yellow-100 flex items-center">
                     <i class="fas fa-exclamation-triangle mr-3"></i>
                     <span>

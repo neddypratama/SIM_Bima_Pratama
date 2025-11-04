@@ -43,8 +43,8 @@ class TrukExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMa
 
         $flattened = new Collection();
 
-        // =============== MODE REKAP SEMUA CLIENT =================
-        if ($this->clientId == 0 || $this->client === null) {
+        // == MODE REKAP SEMUA CLIENT ====
+        if ($this->clientId == 0 || $this->client == null) {
 
             $grouped = $query->groupBy('client_id');
 
@@ -62,8 +62,8 @@ class TrukExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMa
                         $kategori = $detail->kategori?->name;
                         if (!in_array($kategori, ['Pendapatan Truk', 'Pengeluaran Truk'])) continue;
 
-                        $pemasukan = $kategori === 'Pendapatan Truk' ? ($detail->sub_total ?? 0) : 0;
-                        $pengeluaran = $kategori === 'Pengeluaran Truk' ? ($detail->sub_total ?? 0) : 0;
+                        $pemasukan = $kategori == 'Pendapatan Truk' ? ($detail->sub_total ?? 0) : 0;
+                        $pengeluaran = $kategori == 'Pengeluaran Truk' ? ($detail->sub_total ?? 0) : 0;
 
                         $pemasukanClient += $pemasukan;
                         $pengeluaranClient += $pengeluaran;
@@ -85,15 +85,15 @@ class TrukExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMa
             return $flattened;
         }
 
-        // =============== MODE DETAIL PER CLIENT =================
+        // == MODE DETAIL PER CLIENT ====
         foreach ($query as $transaksi) {
             foreach ($transaksi->details as $detail) {
                 $kategori = $detail->kategori?->name;
 
                 if (!in_array($kategori, ['Pendapatan Truk', 'Pengeluaran Truk'])) continue;
 
-                $pemasukan = $kategori === 'Pendapatan Truk' ? ($detail->sub_total ?? 0) : 0;
-                $pengeluaran = $kategori === 'Pengeluaran Truk' ? ($detail->sub_total ?? 0) : 0;
+                $pemasukan = $kategori == 'Pendapatan Truk' ? ($detail->sub_total ?? 0) : 0;
+                $pengeluaran = $kategori == 'Pengeluaran Truk' ? ($detail->sub_total ?? 0) : 0;
 
                 $this->totalPemasukan += $pemasukan;
                 $this->totalPengeluaran += $pengeluaran;
@@ -112,7 +112,7 @@ class TrukExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMa
 
     public function headings(): array
     {
-        if ($this->clientId == 0 || $this->client === null) {
+        if ($this->clientId == 0 || $this->client == null) {
             return ['NOPOL', 'PROYEK', 'DRIVER', 'Pemasukan', 'Pengeluaran'];
         } else {
             return ['Tanggal', 'Keterangan', 'Pemasukan', 'Pengeluaran'];
@@ -121,7 +121,7 @@ class TrukExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMa
 
     public function map($row): array
     {
-        if ($this->clientId == 0 || $this->client === null) {
+        if ($this->clientId == 0 || $this->client == null) {
             return [
                 $row->NOPOL,
                 $row->PROYEK,
@@ -145,14 +145,14 @@ class TrukExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMa
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet;
 
-                $colEnd = ($this->clientId == 0 || $this->client === null) ? 'E' : 'D';
+                $colEnd = ($this->clientId == 0 || $this->client == null) ? 'E' : 'D';
 
                 // Header laporan di atas tabel
                 $sheet->insertNewRowBefore(1, 9);
                 $sheet->mergeCells("A1:{$colEnd}1");
                 $sheet->setCellValue('A1', 'PT BIMA PRATAMA PERSADA');
                 $sheet->mergeCells("A2:{$colEnd}2");
-                $sheet->setCellValue('A2', $this->clientId == 0 || $this->client === null
+                $sheet->setCellValue('A2', $this->clientId == 0 || $this->client == null
                     ? 'Laporan Laba Rugi Realisasi Proyek Rekap'
                     : 'Laporan Laba Rugi Realisasi Proyek Detail'
                 );
