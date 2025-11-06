@@ -60,7 +60,7 @@ new class extends Component {
                 ->where('d.kategori_id', $id)
                 ->where('t.type', 'Debit')
                 ->when($this->search, fn($q) => $q->where('t.keterangan', 'like', "%{$this->search}%"))
-                ->whereBetween('t.tanggal', [$this->startDate, $this->endDate])
+                ->whereBetween('t.tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
                 ->sum('t.total');
 
             // Pengeluaran hari ini (Kredit)
@@ -69,7 +69,7 @@ new class extends Component {
                 ->where('d.kategori_id', $id)
                 ->where('t.type', 'Kredit')
                 ->when($this->search, fn($q) => $q->where('t.keterangan', 'like', "%{$this->search}%"))
-                ->whereBetween('t.tanggal', [$this->startDate, $this->endDate])
+                ->whereBetween('t.tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
                 ->sum('t.total');
 
             $saldoAkhir = $saldoAwal + $pemasukan - $pengeluaran;
