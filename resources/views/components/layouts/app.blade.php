@@ -169,7 +169,7 @@
                     </x-menu-sub>
                 @endif
 
-                @if (in_array(auth()->user()->role_id, [1, 2, 7]))
+                @if (in_array(auth()->user()->role_id, [1, 7]))
                     <x-menu-sub title="Laporan" icon="fas.chart-bar">
                         <x-menu-item title="Laporan Laba Rugi" icon="fas.money-bill-transfer"
                             link="/laporan-labarugi" />

@@ -13,7 +13,7 @@ new class extends Component {
     public string $search = '';
     public string $startDate = '';
     public string $endDate = '';
-    public string $filterType = 'Debit'; // ✅ Filter untuk tipe transaksi
+    public string $filterType = 'Kredit'; // ✅ Filter untuk tipe transaksi
     public array $sortBy = ['column' => 'tanggal', 'direction' => 'desc'];
     public int $perPage = 10;
 

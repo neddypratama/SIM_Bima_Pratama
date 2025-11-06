@@ -33,9 +33,6 @@ new class extends Component {
     public ?int $client_id = null;
 
     #[Rule('required')]
-    public ?int $bayar_id = null;
-
-    #[Rule('required')]
     public ?string $type = null;
 
     public ?string $tanggal = null;
@@ -117,49 +114,6 @@ new class extends Component {
             ]);
         }
 
-        $bayar = Kategori::find($this->bayar_id);
-        if ($this->type == 'Debit') {
-            $tipe = 'Kredit';
-        } else {
-            $tipe = 'Debit';
-        }
-
-        if ($bayar->name == 'Kas Tunai') {
-            $tunai = Transaksi::create([
-                'invoice' => $this->invoice2,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => $tipe,
-                'total' => $this->total,
-            ]);
-
-            DetailTransaksi::create([
-                'transaksi_id' => $tunai->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        } else {
-            $bank = Transaksi::create([
-                'invoice' => $this->invoice3,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => $tipe,
-                'total' => $this->total,
-            ]);
-
-            DetailTransaksi::create([
-                'transaksi_id' => $bank->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
-
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/transport');
     }
 };
@@ -182,13 +136,11 @@ new class extends Component {
                         <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />
+                        <x-input label="Rincian" wire:model="name" placeholder="Contoh: Setoran Transportasi" />
                         <x-choices-offline label="Client" wire:model="client_id" :options="$clients"
                             placeholder="Pilih Client" single clearable searchable />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
-                            placeholder="Pilih Metode" single clearable searchable />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                         <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
                     </div>

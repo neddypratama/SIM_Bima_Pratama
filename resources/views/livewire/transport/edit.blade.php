@@ -31,9 +31,6 @@ new class extends Component {
     public ?string $type = null;
 
     #[Rule('required')]
-    public ?int $bayar_id = null; // ID kategori metode pembayaran
-
-    #[Rule('required')]
     public ?int $client_id = null;
 
     public ?int $kategori_id = null;
@@ -67,27 +64,6 @@ new class extends Component {
         $this->type = $this->beban->type;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
 
-        $inv = substr($transaksi->invoice, -4);
-
-        // Cari transaksi pembayaran (Tunai / Transfer)
-        $bayar = Transaksi::where('invoice', 'like', "%-TNI-$inv")->first();
-
-        if (!$bayar) {
-            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$inv")->first();
-        }
-
-        // Set jika ditemukan
-        if ($bayar) {
-            $this->bayar = $bayar;
-
-            $firstDetail = $bayar->details()->first();
-            $this->bayar_id = $firstDetail ? $firstDetail->kategori_id : null;
-        } else {
-            // Jika tidak ditemukan, hindari error dan beri nilai default
-            $this->bayar = null;
-            $this->bayar_id = null;
-        }
-
         foreach ($transaksi->details as $detail) {
             $this->details[] = [
                 'kategori_id' => $detail->kategori_id,
@@ -101,53 +77,6 @@ new class extends Component {
     public function save(): void
     {
         $this->validate();
-
-        // Ambil kategori pembayaran
-        $kategoriBayar = Kategori::find($this->bayar_id);
-        $inv = substr($this->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
-
-        if ($this->type == 'Debit') {
-            $tipe = 'Kredit';
-        } else {
-            $tipe = 'Debit';
-        }
-
-        if ($kategoriBayar->name == 'Kas Tunai') {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => $tipe,
-                'total' => $this->total,
-            ]);
-            $this->bayar->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        } else {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => $tipe,
-                'total' => $this->total,
-            ]);
-            $this->bayar->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
 
         // Update transaksi utama
         $katePemasukan = Kategori::where('name', 'Pendapatan Truk')->first()->id;
@@ -217,9 +146,7 @@ new class extends Component {
                         <x-choices-offline label="Client" wire:model="client_id" :options="$clients"
                             placeholder="Pilih Client" single clearable searchable />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <x-choices-offline label="Metode Pembayaran" wire:model="bayar_id" :options="$kateBayar"
-                            placeholder="Pilih Metode" single clearable searchable />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                         <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
                     </div>

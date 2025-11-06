@@ -53,7 +53,6 @@ new class extends Component {
             'Pendapatan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
             'Pendapatan Obat' => ['Penjualan Obat-Obatan'],
             'Pendapatan Eggtray' => ['Penjualan EggTray'],
-            'Pendapatan Truk' => ['Pendapatan Truk'],
             'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
             'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
             'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
@@ -61,7 +60,6 @@ new class extends Component {
 
         $mappingPengeluaran = [
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
-            'Beban Truk' => ['Pengeluaran Truk'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa', 'HPP'],
             'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
