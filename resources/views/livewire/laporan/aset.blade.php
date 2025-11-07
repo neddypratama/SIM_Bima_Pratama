@@ -20,8 +20,8 @@ new class extends Component {
 
     public function mount()
     {
-        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
+        $this->startDate = null;
+        $this->endDate = null;
         $this->generateReport();
     }
 
@@ -39,8 +39,21 @@ new class extends Component {
 
     public function generateReport()
     {
-        $start = Carbon::parse($this->startDate)->startOfDay();
-        $end = Carbon::parse($this->endDate)->endOfDay();
+        // Ambil tanggal paling awal dan paling akhir di tabel transaksi
+        $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
+        $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
+
+        // Jika tidak ada data sama sekali
+        if (!$firstTransaction || !$lastTransaction) {
+            $this->asetData = [];
+            $this->liabilitasData = [];
+            return;
+        }
+
+        // Gunakan tanggal transaksi pertama & terakhir jika tanggal tidak diisi
+        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
+
+        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
 
         // Semua kategori
         $kategoriAset = Kategori::where('type', 'Aset')->pluck('name')->toArray();
@@ -52,7 +65,7 @@ new class extends Component {
             'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
             'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
             'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
-            'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random',],
+            'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
             'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
             'Kas' => ['Kas Tunai'],
             'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
@@ -65,7 +78,7 @@ new class extends Component {
             'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
             'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Piutang Tray Random'],
             'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
-            'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random',],
+            'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random'],
         ];
 
         // --- Aset per kategori ---

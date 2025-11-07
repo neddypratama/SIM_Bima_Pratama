@@ -21,8 +21,8 @@ new class extends Component {
 
     public function mount()
     {
-        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
+        $this->startDate = null;
+        $this->endDate = null;
         $this->generateReport();
     }
 
@@ -40,8 +40,21 @@ new class extends Component {
 
     public function generateReport()
     {
-        $start = Carbon::parse($this->startDate)->startOfDay();
-        $end = Carbon::parse($this->endDate)->endOfDay();
+        // Ambil tanggal paling awal dan paling akhir di tabel transaksi
+        $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
+        $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
+
+        // Jika tidak ada data sama sekali
+        if (!$firstTransaction || !$lastTransaction) {
+            $this->asetData = [];
+            $this->liabilitasData = [];
+            return;
+        }
+
+        // Gunakan tanggal transaksi pertama & terakhir jika tanggal tidak diisi
+        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
+
+        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
 
         // Semua kategori
         $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name')->toArray();
@@ -49,10 +62,10 @@ new class extends Component {
 
         // Mapping kelompok
         $mappingPendapatan = [
-            'Pendapatan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
-            'Pendapatan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
-            'Pendapatan Obat' => ['Penjualan Obat-Obatan'],
-            'Pendapatan Eggtray' => ['Penjualan EggTray'],
+            'Penjualan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
+            'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
+            'Penjualan Obat' => ['Penjualan Obat-Obatan'],
+            'Penjualan Eggtray' => ['Penjualan EggTray'],
             'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
             'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
             'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
@@ -75,10 +88,7 @@ new class extends Component {
             ->flatMap(fn($trx) => $trx->details)
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pendapatan')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => 
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') -
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total')
-            )
+            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total'))
             ->toArray();
 
         // --- Pengeluaran per kategori ---
@@ -89,10 +99,7 @@ new class extends Component {
             ->flatMap(fn($trx) => $trx->details)
             ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pengeluaran')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => 
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') -
-                $group->filter(fn($d)=>strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total')
-            )
+            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
             ->toArray();
 
         // Beban Pajak
@@ -174,8 +181,8 @@ new class extends Component {
             <h3 class="text-lg font-semibold">
                 <i class="fas fa-chart-line text-blue-600"></i>Laba Sebelum Pajak
             </h3>
-            <p class="text-2xl font-bold {{ $labaSebelumPajak >=0 ? 'text-green-700':'text-red-700' }} mt-2">
-                Rp {{ number_format($labaSebelumPajak,0,',','.') }}
+            <p class="text-2xl font-bold {{ $labaSebelumPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
+                Rp {{ number_format($labaSebelumPajak, 0, ',', '.') }}
             </p>
         </x-card>
 
@@ -183,10 +190,10 @@ new class extends Component {
             <h3 class="text-lg font-semibold">
                 <i class="fas fa-calculator text-purple-600"></i>Laba Setelah Pajak
             </h3>
-            <p class="text-2xl font-bold {{ $labaSetelahPajak >=0 ? 'text-green-700':'text-red-700' }} mt-2">
-                Rp {{ number_format($labaSetelahPajak,0,',','.') }}
+            <p class="text-2xl font-bold {{ $labaSetelahPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
+                Rp {{ number_format($labaSetelahPajak, 0, ',', '.') }}
             </p>
-            <p class="text-sm text-gray-500 mt-1">(Beban Pajak: Rp {{ number_format($bebanPajak,0,',','.') }})</p>
+            <p class="text-sm text-gray-500 mt-1">(Beban Pajak: Rp {{ number_format($bebanPajak, 0, ',', '.') }})</p>
         </x-card>
     </div>
 
@@ -196,20 +203,22 @@ new class extends Component {
 
             <!-- Pendapatan -->
             <div>
-                <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up"></i>Pendapatan per Kelompok</h4>
+                <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up"></i>Pendapatan per
+                    Kelompok</h4>
                 <ul class="divide-y divide-gray-200">
-                    @foreach($pendapatanData as $kelompok => $data)
+                    @foreach ($pendapatanData as $kelompok => $data)
                         <li class="py-2">
-                            <div class="flex justify-between cursor-pointer" wire:click="$toggle('expanded.{{ $kelompok }}')">
+                            <div class="flex justify-between cursor-pointer"
+                                wire:click="$toggle('expanded.{{ $kelompok }}')">
                                 <span class="font-medium">{{ $kelompok }}</span>
-                                <span class="text-green-700">Rp {{ number_format($data['total'],0,',','.') }}</span>
+                                <span class="text-green-700">Rp {{ number_format($data['total'], 0, ',', '.') }}</span>
                             </div>
-                            @if($expanded[$kelompok] ?? false)
+                            @if ($expanded[$kelompok] ?? false)
                                 <ul class="pl-4 mt-2">
-                                    @foreach($data['detail'] as $sub => $val)
+                                    @foreach ($data['detail'] as $sub => $val)
                                         <li class="flex justify-between py-1 text-green-600">
                                             <span>{{ $sub }}</span>
-                                            <span>Rp {{ number_format($val,0,',','.') }}</span>
+                                            <span>Rp {{ number_format($val, 0, ',', '.') }}</span>
                                         </li>
                                     @endforeach
                                 </ul>
@@ -221,20 +230,22 @@ new class extends Component {
 
             <!-- Pengeluaran -->
             <div>
-                <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down"></i>Pengeluaran per Kelompok</h4>
+                <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down"></i>Pengeluaran per
+                    Kelompok</h4>
                 <ul class="divide-y divide-gray-200">
-                    @foreach($pengeluaranData as $kelompok => $data)
+                    @foreach ($pengeluaranData as $kelompok => $data)
                         <li class="py-2">
-                            <div class="flex justify-between cursor-pointer" wire:click="$toggle('expanded.{{ $kelompok }}')">
+                            <div class="flex justify-between cursor-pointer"
+                                wire:click="$toggle('expanded.{{ $kelompok }}')">
                                 <span class="font-medium">{{ $kelompok }}</span>
-                                <span class="text-red-700">Rp {{ number_format($data['total'],0,',','.') }}</span>
+                                <span class="text-red-700">Rp {{ number_format($data['total'], 0, ',', '.') }}</span>
                             </div>
-                            @if($expanded[$kelompok] ?? false)
+                            @if ($expanded[$kelompok] ?? false)
                                 <ul class="pl-4 mt-2">
-                                    @foreach($data['detail'] as $sub => $val)
+                                    @foreach ($data['detail'] as $sub => $val)
                                         <li class="flex justify-between py-1 text-red-600">
                                             <span>{{ $sub }}</span>
-                                            <span>Rp {{ number_format($val,0,',','.') }}</span>
+                                            <span>Rp {{ number_format($val, 0, ',', '.') }}</span>
                                         </li>
                                     @endforeach
                                 </ul>

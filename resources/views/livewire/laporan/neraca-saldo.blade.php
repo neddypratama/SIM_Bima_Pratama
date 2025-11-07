@@ -11,8 +11,8 @@ use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 new class extends Component {
-    public string $startDate;
-    public string $endDate;
+    public $startDate;
+    public $endDate;
 
     public array $neracaPendapatan = [];
     public array $neracaPengeluaran = [];
@@ -28,10 +28,10 @@ new class extends Component {
 
     // Mapping kategori ke kelompok
     public array $mappingPendapatan = [
-        'Pendapatan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
-        'Pendapatan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
-        'Pendapatan Obat' => ['Penjualan Obat-Obatan'],
-        'Pendapatan Eggtray' => ['Penjualan EggTray'],
+        'Penjualan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
+        'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
+        'Penjualan Obat' => ['Penjualan Obat-Obatan'],
+        'Penjualan Eggtray' => ['Penjualan EggTray'],
         'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
         'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
         'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
@@ -73,8 +73,8 @@ new class extends Component {
 
     public function mount()
     {
-        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
+        $this->startDate = null;
+        $this->endDate = null;
         $this->generateNeraca();
     }
 
@@ -92,8 +92,21 @@ new class extends Component {
 
     public function generateNeraca()
     {
-        $start = Carbon::parse($this->startDate)->startOfDay();
-        $end = Carbon::parse($this->endDate)->endOfDay();
+        // Ambil tanggal paling awal dan paling akhir di tabel transaksi
+        $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
+        $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
+
+        // Jika tidak ada data sama sekali
+        if (!$firstTransaction || !$lastTransaction) {
+            $this->asetData = [];
+            $this->liabilitasData = [];
+            return;
+        }
+
+        // Gunakan tanggal transaksi pertama & terakhir jika tanggal tidak diisi
+        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
+
+        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
 
         $this->neracaPendapatan = [];
         $this->neracaPengeluaran = [];
@@ -267,8 +280,8 @@ new class extends Component {
 
                 </tbody>
             </table>
-            @if ($totalDebit != $totalKredit && ($totalDebit - $totalKredit) == 0)
-            {{-- @dd($totalDebit, $totalKredit) --}}
+            @if ($totalDebit != $totalKredit && $totalDebit - $totalKredit == 0)
+                {{-- @dd($totalDebit, $totalKredit) --}}
                 <div class="mt-4 p-3 text-yellow-800 rounded bg-yellow-100 flex items-center">
                     <i class="fas fa-exclamation-triangle mr-3"></i>
                     <span>
