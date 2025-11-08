@@ -26,7 +26,9 @@ class NeracaSaldoExport implements FromArray, WithHeadings, WithTitle, WithStyle
     {
         // Ambil transaksi dalam rentang tanggal
         $transaksis = Transaksi::with(['details.kategori'])
-        ->where('name', 'not like' ,'%Truk%')
+            ->whereHas('details.kategori', function ($q) {
+                $q->where('name', 'not like', '%Truk%');
+            })
             ->whereBetween('tanggal', [$this->startDate, $this->endDate])
             ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get();
