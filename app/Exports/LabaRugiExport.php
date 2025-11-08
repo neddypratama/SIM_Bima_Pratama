@@ -38,8 +38,8 @@ class LabaRugiExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSi
         $start = Carbon::parse($this->startDate)->startOfDay();
         $end = Carbon::parse($this->endDate)->endOfDay();
 
-        $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name');
-        $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name');
+        $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->where('name', 'not like' ,'%Truk%')->pluck('name');
+        $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->where('name', 'not like' ,'%Truk%')->pluck('name');
 
         // == Pendapatan ==
         $pendapatan = Transaksi::with('details.kategori')
