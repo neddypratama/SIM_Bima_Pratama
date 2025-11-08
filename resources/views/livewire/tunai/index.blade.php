@@ -70,13 +70,15 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
+        $suffix = substr($transaksi->invoice, -4);
+        $tunai = Transaksi::where('invoice', 'like', "%-MDL-$suffix")->first();
+        
+        $tunai->details()->delete();
+        $tunai->delete();
 
-        $link = TransaksiLink::where('linked_id', $id)->first();
-        $link?->delete();
-
-        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
-        $transaksi->details()->delete(); // Hapus detail transaksi terkait
+        $transaksi->details()->delete();
         $transaksi->delete();
+
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }

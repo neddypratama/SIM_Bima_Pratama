@@ -71,10 +71,12 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        $link = TransaksiLink::where('linked_id', $id)->first();
-        $link?->delete();
-
-        $transaksi->linked()->delete(); // ✅ Hapus semua relasi di transaksi_links
+        $suffix = substr($transaksi->invoice, -4);
+        $tunai = Transaksi::where('invoice', 'like', "%-MDL-$suffix")->first();
+        
+        $tunai->details()->delete();
+        $tunai->delete();
+        
         $transaksi->details()->delete(); // Hapus detail transaksi terkait
         $transaksi->delete();
 
