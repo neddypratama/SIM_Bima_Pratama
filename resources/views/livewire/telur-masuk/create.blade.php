@@ -120,70 +120,70 @@ new class extends Component {
 
     public function save(): void
     {
-        $this->validate();
-        $this->validate([
-            'details.*.value' => 'required|numeric|min:0',
-            'details.*.barang_id' => 'required|exists:barangs,id',
-            'details.*.kuantitas' => 'required|numeric|min:1',
-        ]);
+        // $this->validate();
+        // $this->validate([
+        //     'details.*.value' => 'required|numeric|min:0',
+        //     'details.*.barang_id' => 'required|exists:barangs,id',
+        //     'details.*.kuantitas' => 'required|numeric|min:1',
+        // ]);
 
-        $stok = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Debit',
-            'total' => $this->total,
-        ]);
+        // $stok = Transaksi::create([
+        //     'invoice' => $this->invoice,
+        //     'name' => $this->name,
+        //     'user_id' => $this->user_id,
+        //     'tanggal' => $this->tanggal,
+        //     'client_id' => $this->client_id,
+        //     'type' => 'Debit',
+        //     'total' => $this->total,
+        // ]);
 
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $stok->id,
-                'kategori_id' => $this->kategori_id,
-                'value' => $item['value'],
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
-            ]);
+        // foreach ($this->details as $item) {
+        //     DetailTransaksi::create([
+        //         'transaksi_id' => $stok->id,
+        //         'kategori_id' => $this->kategori_id,
+        //         'value' => $item['value'],
+        //         'barang_id' => $item['barang_id'] ?? null,
+        //         'kuantitas' => $item['kuantitas'] ?? null,
+        //         'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+        //     ]);
 
-            // ✅ Tambah stok barang
-            if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
-                $barang = Barang::find($item['barang_id']);
-                if ($barang) {
-                    $barang->increment('stok', $item['kuantitas']);
-                }
-            }
-        }
+        //     // ✅ Tambah stok barang
+        //     if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
+        //         $barang = Barang::find($item['barang_id']);
+        //         if ($barang) {
+        //             $barang->increment('stok', $item['kuantitas']);
+        //         }
+        //     }
+        // }
 
-        $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
+        // $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
 
-        $hutang = Transaksi::create([
-            'invoice' => $this->invoice1,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Kredit',
-            'total' => $this->total,
-        ]);
+        // $hutang = Transaksi::create([
+        //     'invoice' => $this->invoice1,
+        //     'name' => $this->name,
+        //     'user_id' => $this->user_id,
+        //     'tanggal' => $this->tanggal,
+        //     'client_id' => $this->client_id,
+        //     'type' => 'Kredit',
+        //     'total' => $this->total,
+        // ]);
 
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $hutang->id,
-                'kategori_id' => $kateHutang->id,
-                'value' => $item['value'],
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
-            ]);
-        }
+        // foreach ($this->details as $item) {
+        //     DetailTransaksi::create([
+        //         'transaksi_id' => $hutang->id,
+        //         'kategori_id' => $kateHutang->id,
+        //         'value' => $item['value'],
+        //         'barang_id' => $item['barang_id'] ?? null,
+        //         'kuantitas' => $item['kuantitas'] ?? null,
+        //         'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+        //     ]);
+        // }
 
-        $client = Client::find($this->client_id);
+        // $client = Client::find($this->client_id);
 
-        if ($client) {
-            $client->increment('titipan', $this->total);
-        }
+        // if ($client) {
+        //     $client->increment('titipan', $this->total);
+        // }
 
         // Hitung HPP sekali per barang unik
         $barangIds = collect($this->details)->pluck('barang_id')->unique();
@@ -194,9 +194,9 @@ new class extends Component {
                 continue;
             }
 
-            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
+            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->sum('kuantitas');
 
-            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
+            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Telur'))->sum(\DB::raw('value * kuantitas'));
 
             $hppBaru = $stokDebit > 0 ? $totalHarga / $stokDebit : 0;
 
