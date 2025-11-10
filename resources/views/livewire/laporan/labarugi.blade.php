@@ -4,11 +4,14 @@ namespace App\Livewire;
 
 use App\Models\Transaksi;
 use App\Models\Kategori;
+use App\Models\Barang;
+use App\Models\JenisBarang;
 use Livewire\Volt\Component;
 use App\Exports\LabaRugiExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component {
     public $startDate;
@@ -44,21 +47,14 @@ new class extends Component {
         $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
         $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
 
-        // Jika tidak ada data sama sekali
         if (!$firstTransaction || !$lastTransaction) {
-            $this->asetData = [];
-            $this->liabilitasData = [];
+            $this->pendapatanData = [];
+            $this->pengeluaranData = [];
             return;
         }
 
-        // Gunakan tanggal transaksi pertama & terakhir jika tanggal tidak diisi
         $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
-
         $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
-
-        // Semua kategori
-        $kategoriPendapatan = Kategori::where('type', 'Pendapatan')->pluck('name')->toArray();
-        $kategoriPengeluaran = Kategori::where('type', 'Pengeluaran')->pluck('name')->toArray();
 
         // Mapping kelompok
         $mappingPendapatan = [
@@ -72,9 +68,13 @@ new class extends Component {
         ];
 
         $mappingPengeluaran = [
+            'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
+            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
+            'HPP Obat' => ['HPP Obat-Obatan'],
+            'HPP Eggtray' => ['HPP Tray'],
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
-            'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa', 'HPP'],
+            'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa'],
             'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
             'Beban Sedekah' => ['ZIS'],
             'Beban Lain-Lain' => ['Beban Lain-Lain'],
@@ -91,8 +91,8 @@ new class extends Component {
             ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total'))
             ->toArray();
 
-        // --- Pengeluaran per kategori ---
-        $pengeluaranFlat = Transaksi::with('details.kategori')
+        // --- Pengeluaran per kategori umum ---
+        $pengeluaranFlat = Transaksi::with('details.kategori', 'details.barang')
             ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [$start, $end])
             ->get()
@@ -101,6 +101,50 @@ new class extends Component {
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
             ->toArray();
+
+        // --- KHUSUS HPP: perhitungan berdasarkan jenis barang ---
+
+        // Mapping kelompok HPP utama
+        $hppKelompok = [
+            'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
+            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
+            'HPP Obat' => ['HPP Obat-Obatan'],
+            'HPP Eggtray' => ['HPP Tray'],
+        ];
+
+        // Ambil hasil total HPP per jenis barang langsung dari DB
+        $hppResults = DB::table('detail_transaksis as td')
+            ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+            ->join('barangs as b', 'b.id', '=', 'td.barang_id')
+            ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
+            ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+            ->select(DB::raw("CONCAT('HPP ', jb.name) AS hpp_name"), 'jb.name as jenis_name', DB::raw('SUM(td.sub_total) AS total_hpp'))
+            ->where('k.name', 'HPP')
+            ->whereBetween('t.tanggal', [$start, $end])
+            ->groupBy('jb.name')
+            ->orderBy('jb.name')
+            ->get()
+            ->keyBy('hpp_name'); // supaya mudah diakses per nama HPP
+        // dd($hppResults);
+
+        // Siapkan struktur pengeluaranFlat sesuai kelompok
+        foreach ($hppKelompok as $kelompok => $jenisList) {
+            $detail = [];
+            $total = 0;
+
+            foreach ($jenisList as $jenis) {
+                $hppName = $jenis; // ← perbaikan di sini
+                $nilai = $hppResults[$hppName]->total_hpp ?? 0;
+                $detail[$hppName] = $nilai;
+                $total += $nilai;
+            }
+
+            // Simpan dalam pengeluaranFlat (mengikuti format laporan laba rugi)
+            $pengeluaranFlat[$kelompok] = [
+                'total' => $total,
+                'detail' => $detail,
+            ];
+        }
 
         // Beban Pajak
         $this->bebanPajak = $pengeluaranFlat['Beban Pajak'] ?? 0;
@@ -120,15 +164,39 @@ new class extends Component {
 
         // --- Kelompokkan pengeluaran ---
         $this->pengeluaranData = [];
+
         foreach ($mappingPengeluaran as $kelompok => $subs) {
             $detail = [];
             $total = 0;
+
             foreach ($subs as $sub) {
-                $nilai = $pengeluaranFlat[$sub] ?? 0;
+                $nilai = 0;
+
+                // 1️⃣ Jika subkategori langsung ada di pengeluaranFlat
+                if (isset($pengeluaranFlat[$sub])) {
+                    $nilai = $pengeluaranFlat[$sub];
+                }
+                // 2️⃣ Jika tidak ada di level utama, cek di dalam HPP (bertumpuk)
+                else {
+                    foreach ($pengeluaranFlat as $kelompokHPP => $dataHPP) {
+                        // pastikan struktur array-nya memiliki 'detail'
+                        if (isset($dataHPP['detail'][$sub])) {
+                            $nilai = $dataHPP['detail'][$sub];
+                            break; // stop setelah ketemu
+                        }
+                    }
+                }
+
+                // 3️⃣ Tambahkan ke detail & total
                 $detail[$sub] = $nilai;
                 $total += $nilai;
             }
-            $this->pengeluaranData[$kelompok] = ['total' => $total, 'detail' => $detail];
+
+            // Simpan hasil akhir kategori besar
+            $this->pengeluaranData[$kelompok] = [
+                'total' => $total,
+                'detail' => $detail,
+            ];
         }
     }
 
@@ -200,8 +268,6 @@ new class extends Component {
     <x-card class="mt-4">
         <h3 class="text-xl font-semibold mb-4"><i class="fas fa-list-ul"></i>Rincian</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            <!-- Pendapatan -->
             <div>
                 <h4 class="text-lg font-semibold text-green-700 mb-2"><i class="fas fa-arrow-up"></i>Pendapatan per
                     Kelompok</h4>
@@ -228,7 +294,6 @@ new class extends Component {
                 </ul>
             </div>
 
-            <!-- Pengeluaran -->
             <div>
                 <h4 class="text-lg font-semibold text-red-700 mb-2"><i class="fas fa-arrow-down"></i>Pengeluaran per
                     Kelompok</h4>
@@ -254,7 +319,6 @@ new class extends Component {
                     @endforeach
                 </ul>
             </div>
-
         </div>
     </x-card>
 </div>
