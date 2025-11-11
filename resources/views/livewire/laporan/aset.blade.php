@@ -140,6 +140,7 @@ new class extends Component {
             'liabilitasData' => $this->liabilitasData,
             'totalAset' => $totalAset,
             'totalLiabilitas' => $totalLiabilitas,
+            'totalModal' => $totalAset - $totalLiabilitas,
         ];
     }
 };
@@ -156,7 +157,7 @@ new class extends Component {
         </x-slot:actions>
     </x-header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <x-card>
             <h3 class="text-lg font-semibold text-green-800">
                 <i class="fas fa-coins text-green-600"></i> Total Aset
@@ -169,6 +170,13 @@ new class extends Component {
                 <i class="fas fa-wallet text-red-600"></i> Total Liabilitas
             </h3>
             <p class="text-2xl font-bold text-red-700 mt-2">Rp {{ number_format($totalLiabilitas, 0, ',', '.') }}</p>
+        </x-card>
+
+        <x-card>
+            <h3 class="text-lg font-semibold text-blue-800">
+                <i class="fas fa-wallet text-blue-600"></i> Total Modal
+            </h3>
+            <p class="text-2xl font-bold text-blue-700 mt-2">Rp {{ number_format($totalModal, 0, ',', '.') }}</p>
         </x-card>
     </div>
 
