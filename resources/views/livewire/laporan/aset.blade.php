@@ -147,7 +147,7 @@ new class extends Component {
 ?>
 
 <div class="p-6 space-y-6">
-    <x-header title="Laporan Laba Rugi" separator>
+    <x-header title="Laporan Aset" separator>
         <x-slot:actions>
             <x-button wire:click="export" icon="fas.download" primary>Export Excel</x-button>
             <div class="flex grid grid-cols-1 md:grid-cols-2 items-end">
