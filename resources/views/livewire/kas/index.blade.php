@@ -44,14 +44,12 @@ new class extends Component {
         $data = collect();
 
         foreach ($kategoriKas as $nama => $id) {
-            // Hitung tanggal kemarin dari startDate
-            $kemarin = Carbon::parse($this->startDate)->subDay()->toDateString();
+            // Hitung saldo awal dari semua transaksi sebelum startDate
+            $saldoAwalDebit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '=', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Debit')->whereDate('t.tanggal', '<', $this->startDate)->sum('t.total');
 
-            // Saldo awal = total Debit - total Kredit pada tanggal kemarin saja
-            $saldoAwalDebit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '<', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Debit')->whereDate('t.tanggal', '=', $kemarin)->sum('t.total');
+            $saldoAwalKredit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '=', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Kredit')->whereDate('t.tanggal', '<', $this->startDate)->sum('t.total');
 
-            $saldoAwalKredit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '<', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Kredit')->whereDate('t.tanggal', '=', $kemarin)->sum('t.total');
-
+            // Saldo awal = total debit - total kredit sebelum startDate
             $saldoAwal = $saldoAwalDebit - $saldoAwalKredit;
 
             // Pemasukan hari ini (Debit)
