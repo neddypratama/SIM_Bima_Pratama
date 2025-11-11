@@ -48,9 +48,9 @@ new class extends Component {
             $kemarin = Carbon::parse($this->startDate)->subDay()->toDateString();
 
             // Saldo awal = total Debit - total Kredit pada tanggal kemarin saja
-            $saldoAwalDebit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '=', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Debit')->whereDate('t.tanggal', '=', $kemarin)->sum('t.total');
+            $saldoAwalDebit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '<', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Debit')->whereDate('t.tanggal', '=', $kemarin)->sum('t.total');
 
-            $saldoAwalKredit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '=', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Kredit')->whereDate('t.tanggal', '=', $kemarin)->sum('t.total');
+            $saldoAwalKredit = DB::table('transaksis as t')->join('detail_transaksis as d', 't.id', '<', 'd.transaksi_id')->where('d.kategori_id', $id)->where('t.type', 'Kredit')->whereDate('t.tanggal', '=', $kemarin)->sum('t.total');
 
             $saldoAwal = $saldoAwalDebit - $saldoAwalKredit;
 
