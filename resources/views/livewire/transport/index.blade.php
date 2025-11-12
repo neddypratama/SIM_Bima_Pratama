@@ -67,14 +67,6 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
-        $suffix = substr($transaksi->invoice, -4);
-        $tunai = Transaksi::where('invoice', 'like', "%-TNI-$suffix")->first();
-        $bayar = $tunai ?: Transaksi::where('invoice', 'like', "%-TFR-$suffix")->first();
-
-        if ($bayar) {
-            $bayar->details()->delete();
-            $bayar->delete();
-        }
 
         $transaksi->details()->delete();
         $transaksi->delete();
