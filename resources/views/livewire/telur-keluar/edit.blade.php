@@ -175,10 +175,11 @@ new class extends Component {
         }
 
         $inv = substr($this->transaksi->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
 
-        $bonTransaksi = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
-        $hppTransaksi = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
-        $stokTransaksi = Transaksi::where('invoice', 'like', "%-TLR-$inv")->first();
+        $bonTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-BON-$inv")->first();
+        $hppTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-HPP-$inv")->first();
+        $stokTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-TLR-$inv")->first();
 
         // dd($bonTransaksi, $hppTransaksi, $stokTransaksi);
 

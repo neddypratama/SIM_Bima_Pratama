@@ -19,28 +19,29 @@ new class extends Component {
 
         // Ambil 4 digit terakhir dari invoice stok (misalnya "0001")
         $suffix = substr($stok->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($stok->tanggal)->format('Ymd');
 
         // Cari transaksi Telur Kotor (INV-...-KTR-xxxx)
         $this->kotor = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-KTR-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-KTR-" . $suffix)
             ->first();
 
         $this->bentes = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-BTS-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-BTS-" . $suffix)
             ->first();
 
         $this->ceplok = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-CLK-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-CLK-" . $suffix)
             ->first();
 
         // Cari transaksi Telur Pecah (INV-...-PCH-xxxx)
         $this->pecah = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-PRK-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-PRK-" . $suffix)
             ->first();
 
         // Cari semua transaksi telur yang berhubungan dengan stok ini
         $this->telur = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-TLR%-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-TLR%-" . $suffix)
             ->get();
     }
 };

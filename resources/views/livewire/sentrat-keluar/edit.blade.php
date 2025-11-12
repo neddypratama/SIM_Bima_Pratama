@@ -138,10 +138,11 @@ new class extends Component {
         }
 
         $inv = substr($this->transaksi->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
 
-        $bonTransaksi = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
-        $hppTransaksi = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
-        $stokTransaksi = Transaksi::where('invoice', 'like', "%-STR-$inv")->first();
+        $bonTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-BON-$inv")->first();
+        $hppTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-HPP-$inv")->first();
+        $stokTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-STR-$inv")->first();
 
         $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
         $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();

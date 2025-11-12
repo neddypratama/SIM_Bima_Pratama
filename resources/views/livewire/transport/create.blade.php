@@ -1,8 +1,7 @@
 <?php
 
 use Livewire\Volt\Component;
-use App\Models\Transaksi;
-use App\Models\DetailTransaksi;
+use App\Models\Truk;
 use App\Models\Barang;
 use App\Models\Kategori;
 use App\Models\Client;
@@ -17,8 +16,6 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
-    public string $invoice1 = '';
-    public string $invoice2 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -67,10 +64,7 @@ new class extends Component {
         if ($value) {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
-            $this->invoice = 'INV-' . $tanggal . '-PGN-' . $str;
-            $this->invoice1 = 'INV-' . $tanggal . '-PDT-' . $str;
-            $this->invoice2 = 'INV-' . $tanggal . '-TNI-' . $str;
-            $this->invoice3 = 'INV-' . $tanggal . '-TFR-' . $str;
+            $this->invoice = 'INV-' . $tanggal . '-TRK-' . $str;
         }
     }
 
@@ -79,11 +73,8 @@ new class extends Component {
         // ✅ Validasi seluruh input sekaligus
         $this->validate();
 
-        $katePemasukan = Kategori::where('name', 'Pendapatan Truk')->first()->id;
-        $katePengeluaran = Kategori::where('name', 'Pengeluaran Truk')->first()->id;
-
         if ($this->type == 'Debit') {
-            $beban = Transaksi::create([
+            $beban = Truk::create([
                 'invoice' => $this->invoice,
                 'name' => $this->name,
                 'user_id' => $this->user_id,
@@ -92,25 +83,15 @@ new class extends Component {
                 'type' => 'Debit',
                 'total' => $this->total,
             ]);
-            DetailTransaksi::create([
-                'transaksi_id' => $beban->id,
-                'kategori_id' => $katePengeluaran,
-                'sub_total' => $this->total,
-            ]);
         } else {
-            $beban = Transaksi::create([
-                'invoice' => $this->invoice1,
+            $beban = Truk::create([
+                'invoice' => $this->invoice,
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
                 'type' => 'Kredit',
                 'total' => $this->total,
-            ]);
-            DetailTransaksi::create([
-                'transaksi_id' => $beban->id,
-                'kategori_id' => $katePemasukan,
-                'sub_total' => $this->total,
             ]);
         }
 
@@ -142,7 +123,7 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
-                        <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
+                        <x-input label="Total Transaksi" wire:model="total" prefix="Rp" money />
                     </div>
                 </div>
             </div>
@@ -155,3 +136,5 @@ new class extends Component {
         </x-slot:actions>
     </x-form>
 </div>
+
+

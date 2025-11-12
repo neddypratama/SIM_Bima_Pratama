@@ -94,8 +94,8 @@ Route::middleware('auth')->group(function () {
         // Transport
         Volt::route('/transport', 'transport.index');
         Volt::route('/transport/create', 'transport.create');
-        Volt::route('/transport/{transaksi}/edit', 'transport.edit');
-        Volt::route('/transport/{transaksi}/show', 'transport.show');
+        Volt::route('/transport/{truk}/edit', 'transport.edit');
+        Volt::route('/transport/{truk}/show', 'transport.show');
     });
 
     /*

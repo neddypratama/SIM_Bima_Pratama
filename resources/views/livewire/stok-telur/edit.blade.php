@@ -135,10 +135,11 @@ new class extends Component {
 
             // === 4. Ambil suffix invoice stok ===
             $suffix = substr($this->stokModel->invoice, -4);
+            $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
 
             if ($this->kotor > 0) {
                 // === 5. Update transaksi Telur Kotor ===
-                $trxKotor = Transaksi::where('invoice', 'like', "INV-%-KTR-$suffix")->first();
+                $trxKotor = Transaksi::where('invoice', 'like', "INV-$tanggal-KTR-$suffix")->first();
                 if ($trxKotor) {
                     $totalKotor = ($barang->hpp ?? 0) * ($this->kotor ?? 0);
                     $trxKotor->update([
@@ -158,7 +159,7 @@ new class extends Component {
                 }
 
                 // === 7. Update dua transaksi stok telur: TLR1 dan TLR2 ===
-                $trxTelur1 = Transaksi::where('invoice', 'like', "INV-%-TLR1-$suffix")->first();
+                $trxTelur1 = Transaksi::where('invoice', 'like', "INV-$tanggal-TLR1-$suffix")->first();
                 if ($trxTelur1) {
                     $totalKotor = ($barang->hpp ?? 0) * ($this->kotor ?? 0);
                     $trxTelur1->update([
@@ -178,7 +179,7 @@ new class extends Component {
                 }
             } else {
                 // === 5. Update transaksi Telur Kotor ===
-                $trxKotor = Transaksi::where('invoice', 'like', "INV-%-KTR-$suffix")->first();
+                $trxKotor = Transaksi::where('invoice', 'like', "INV-$tanggal-KTR-$suffix")->first();
                 if ($trxKotor) {
                     $totalKotor = ($barang->hpp ?? 0) * ($this->kotor ?? 0);
                     $trxKotor->update([
@@ -198,7 +199,7 @@ new class extends Component {
                 }
 
                 // === 7. Update dua transaksi stok telur: TLR1 dan TLR2 ===
-                $trxTelur1 = Transaksi::where('invoice', 'like', "INV-%-TLR1-$suffix")->first();
+                $trxTelur1 = Transaksi::where('invoice', 'like', "INV-$tanggal-TLR1-$suffix")->first();
                 if ($trxTelur1) {
                     $totalKotor = ($barang->hpp ?? 0) * ($this->kotor ?? 0);
                     $trxTelur1->update([
@@ -219,7 +220,7 @@ new class extends Component {
             }
 
             // === 6. Update transaksi Telur Pecah ===
-            $trxBentes = Transaksi::where('invoice', 'like', "INV-%-BTS-$suffix")->first();
+            $trxBentes = Transaksi::where('invoice', 'like', "INV-$tanggal-BTS-$suffix")->first();
             if ($trxBentes) {
                 $totalPecah = ($barang->hpp ?? 0) * ($this->bentes ?? 0);
                 $trxBentes->update([
@@ -237,7 +238,7 @@ new class extends Component {
                 }
             }
 
-            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-%-TLR2-$suffix")->first();
+            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-$tanggal-TLR2-$suffix")->first();
             if ($trxTelur2) {
                 $totalPecah = ($barang->hpp ?? 0) * ($this->bentes ?? 0);
                 $trxTelur2->update([
@@ -256,7 +257,7 @@ new class extends Component {
             }
 
             // === 6. Update transaksi Telur Pecah ===
-            $trxCeplok = Transaksi::where('invoice', 'like', "INV-%-CLK-$suffix")->first();
+            $trxCeplok = Transaksi::where('invoice', 'like', "INV-$tanggal-CLK-$suffix")->first();
             if ($trxCeplok) {
                 $totalPecah = ($barang->hpp ?? 0) * ($this->ceplok ?? 0);
                 $trxCeplok->update([
@@ -274,7 +275,7 @@ new class extends Component {
                 }
             }
 
-            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-%-TLR3-$suffix")->first();
+            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-$tanggal-TLR3-$suffix")->first();
             if ($trxTelur2) {
                 $totalPecah = ($barang->hpp ?? 0) * ($this->ceplok ?? 0);
                 $trxTelur2->update([
@@ -293,7 +294,7 @@ new class extends Component {
             }
 
             // === 6. Update transaksi Telur Pecah ===
-            $trxPecah = Transaksi::where('invoice', 'like', "INV-%-PRK-$suffix")->first();
+            $trxPecah = Transaksi::where('invoice', 'like', "INV-$tanggal-PRK-$suffix")->first();
             if ($trxPecah) {
                 $totalPecah = ($barang->hpp ?? 0) * ($this->prok ?? 0);
                 $trxPecah->update([
@@ -311,7 +312,7 @@ new class extends Component {
                 }
             }
 
-            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-%-TLR4-$suffix")->first();
+            $trxTelur2 = Transaksi::where('invoice', 'like', "INV-$tanggal-TLR4-$suffix")->first();
             if ($trxTelur2) {
                 $totalPecah = ($barang->hpp ?? 0) * ($this->prok ?? 0);
                 $trxTelur2->update([

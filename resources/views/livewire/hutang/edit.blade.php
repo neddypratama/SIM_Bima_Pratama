@@ -60,12 +60,13 @@ new class extends Component {
         $this->tanggal = \Carbon\Carbon::parse($this->hutang->tanggal)->format('Y-m-d\TH:i');
 
         $inv = substr($transaksi->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
 
         // Cari transaksi pembayaran (Tunai / Transfer)
-        $bayar = Transaksi::where('invoice', 'like', "%-TNI-$inv")->first();
-        
+        $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$inv")->first();
+
         if (!$bayar) {
-            $bayar = Transaksi::where('invoice', 'like', "%-TFR-$inv")->first();
+            $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TFR-$inv")->first();
         }
 
         // Set jika ditemukan
@@ -79,7 +80,6 @@ new class extends Component {
             $this->bayar = null;
             $this->bayar_id = null;
         }
-
 
         foreach ($transaksi->details as $detail) {
             $this->details[] = [

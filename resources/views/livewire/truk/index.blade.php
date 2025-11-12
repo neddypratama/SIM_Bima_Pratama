@@ -45,17 +45,15 @@ new class extends Component {
 
     public function laporanTrukPerClient(): LengthAwarePaginator
     {
-        return DB::table('transaksis as t')
+        return DB::table('truks as t')
             ->join('clients as c', 't.client_id', '=', 'c.id')
-            ->join('detail_transaksis as d', 't.id', '=', 'd.transaksi_id')
-            ->join('kategoris as k', 'd.kategori_id', '=', 'k.id')
             
             // 🔹 Kondisi berdasarkan tipe transaksi
             ->when($this->filterType === 'Pemasukan', fn($q) => 
-                $q->where('k.name', 'Pendapatan Truk')
+                $q->where('t.type', 'Kredit')
             )
             ->when($this->filterType === 'Pengeluaran', fn($q) => 
-                $q->where('k.name', 'Pengeluaran Truk')
+                $q->where('t.type', 'Debit')
             )
             
             // 🔹 Filter pencarian dan tanggal

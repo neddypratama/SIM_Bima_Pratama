@@ -1,8 +1,8 @@
 <?php
 
 use Livewire\Volt\Component;
-use App\Models\Transaksi;
-use App\Models\DetailTransaksi;
+use App\Models\Truk;
+use App\Models\DetailTruk;
 use App\Models\Kategori;
 use App\Models\Client;
 use App\Models\User;
@@ -12,8 +12,8 @@ use Livewire\Attributes\Rule;
 new class extends Component {
     use Toast;
 
-    public Transaksi $beban; // transaksi utama
-    public ?Transaksi $bayar; // transaksi linked
+    public Truk $beban; // Truk utama
+    public ?Truk $bayar; // Truk linked
 
     #[Rule('required')]
     public string $invoice = '';
@@ -49,38 +49,24 @@ new class extends Component {
         ];
     }
 
-    public function mount(Transaksi $transaksi): void
+    public function mount(Truk $truk): void
     {
-        // Ambil transaksi utama
-        $this->beban = Transaksi::with('details.kategori')->findOrFail($transaksi->id);
+        // Ambil Truk utama
+        $this->beban = Truk::findOrFail($truk->id);
 
         // Set data form
         $this->invoice = $this->beban->invoice;
-        $this->invoice2 = $this->kas?->invoice ?? '';
         $this->name = $this->beban->name;
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
         $this->client_id = $this->beban->client_id;
         $this->type = $this->beban->type;
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
-
-        foreach ($transaksi->details as $detail) {
-            $this->details[] = [
-                'kategori_id' => $detail->kategori_id,
-                'sub_total' => $detail->sub_total,
-            ];
-
-            $this->kategori_id = $detail->kategori_id;
-        }
     }
 
     public function save(): void
     {
         $this->validate();
-
-        // Update transaksi utama
-        $katePemasukan = Kategori::where('name', 'Pendapatan Truk')->first()->id;
-        $katePengeluaran = Kategori::where('name', 'Pengeluaran Truk')->first()->id;
 
         if ($this->type == 'Debit') {
             $this->beban->update([
@@ -91,15 +77,6 @@ new class extends Component {
                 'type' => 'Debit',
                 'total' => $this->total,
             ]);
-
-            $this->beban->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->beban->id,
-                'kategori_id' => $katePengeluaran,
-                'kuantitas' => null,
-                'value' => null,
-                'sub_total' => $this->total,
-            ]);
         } else {
             $this->beban->update([
                 'name' => $this->name,
@@ -109,31 +86,22 @@ new class extends Component {
                 'type' => 'Kredit',
                 'total' => $this->total,
             ]);
-
-            $this->beban->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->beban->id,
-                'kategori_id' => $katePemasukan,
-                'kuantitas' => null,
-                'value' => null,
-                'sub_total' => $this->total,
-            ]);
         }
 
-        $this->success('Transaksi berhasil diperbarui!', redirectTo: '/transport');
+        $this->success('Truk berhasil diperbarui!', redirectTo: '/transport');
     }
 };
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Update Transaksi {{ $this->invoice }}" separator progress-indicator />
+    <x-header title="Update Truk {{ $this->invoice }}" separator progress-indicator />
 
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
             <div class="lg:grid grid-cols-8 gap-4">
                 <div class="col-span-2">
-                    <x-header title="Basic Info" subtitle="Buat transaksi baru" size="text-2xl" />
+                    <x-header title="Basic Info" subtitle="Buat Truk baru" size="text-2xl" />
                 </div>
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -147,7 +115,7 @@ new class extends Component {
                             placeholder="Pilih Client" single clearable searchable />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
+                        <x-select label="Tipe Truk" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                         <x-input label="Total Pengeluaran" wire:model="total" prefix="Rp" money />
                     </div>
                 </div>

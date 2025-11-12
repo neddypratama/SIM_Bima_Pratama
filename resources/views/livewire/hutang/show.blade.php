@@ -11,11 +11,12 @@ new class extends Component {
     {
         $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang.satuan']);
         $suffix = substr($this->transaksi->invoice, -4);
-        $bayar = Transaksi::where('invoice', 'like', "%-TNI-$suffix")->first();
+         $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+        $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$suffix")->first();
         if (isset($bayar)) {
             $this->bayar = $bayar;
         } else {
-            $this->bayar = Transaksi::where('invoice', 'like', "%-TRF-$suffix")->first();
+            $this->bayar = Transaksi::where('invoice', 'like', "%$tanggal-TRF-$suffix")->first();
         }
         $this->bayar = $this->bayar->load(['client', 'details.kategori', 'details.barang']);
     }

@@ -17,20 +17,21 @@ new class extends Component {
 
         // Ambil 4 digit terakhir dari invoice stok (misalnya "0001")
         $suffix = substr($stok->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($stok->tanggal)->format('Ymd');
 
         // Cari transaksi Telur Kotor (INV-...-KTR-xxxx)
         $this->kotor = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-RTN-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-RTN-". $suffix)
             ->first();
 
         // Cari transaksi Telur Pecah (INV-...-PCH-xxxx)
         $this->pecah = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-KDL-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-KDL-". $suffix)
             ->first();
 
         // Cari semua transaksi telur yang berhubungan dengan stok ini
         $this->telur = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', 'INV-%-PKN%-' . $suffix)
+            ->where('invoice', 'like', "INV-$tanggal-PKN%" . $suffix)
             ->get();
     }
 };

@@ -10,8 +10,11 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
+
         $suffix = substr($this->transaksi->invoice, -4);
-        $this->hutang = Transaksi::where('invoice', 'like', "%-UTG-$suffix")->first();
+        $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+
+        $this->hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
         $this->hutang = $this->hutang->load(['client', 'details.kategori', 'details.barang']);
     }
 };

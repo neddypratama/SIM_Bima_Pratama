@@ -1,15 +1,14 @@
 <?php
 
 use Livewire\Volt\Component;
-use App\Models\Transaksi;
+use App\Models\Truk;
 
 new class extends Component {
-    public Transaksi $transaksi;
-    public Transaksi $bayar;
+    public Truk $transaksi;
 
-    public function mount(Transaksi $transaksi): void
+    public function mount(Truk $truk): void
     {
-        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang.satuan']);
+        $this->transaksi = Truk::findOrFail($truk->id)->load('client');
     }
 };
 ?>
@@ -40,50 +39,18 @@ new class extends Component {
         <div class="p-7 mt-4 rounded-lg shadow-md">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <p class="mb-3">Nama Client</p>
+                    <p class="mb-3">Nama Truk</p>
                     <p class="font-semibold">{{ $transaksi->client?->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">Alamat Client</p>
+                    <p class="mb-3">Nopol</p>
                     <p class="font-semibold">{{ $transaksi->client?->alamat ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="mb-3">User</p>
-                    <p class="font-semibold">{{ $transaksi->user?->name ?? '-' }}</p>
+                    <p class="mb-3">Pengemudi</p>
+                    <p class="font-semibold">{{ $transaksi->client?->keterangan ?? '-' }}</p>
                 </div>
             </div>
-        </div>
-
-        {{-- Detail Barang --}}
-        <div class="p-7 mt-4 rounded-lg shadow-md">
-            <p class="mb-3 font-semibold">Detail Barang</p>
-            @forelse ($transaksi->details as $detail)
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3 rounded-lg p-5 ">
-                    <div>
-                        <p class="mb-1 text-gray-500">Barang</p>
-                        <p class="font-semibold">{{ $detail->barang?->name ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Qty</p>
-                        <p class="font-semibold">{{ $detail->kuantitas }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Harga</p>
-                        <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Total</p>
-                        <p class="font-semibold">Rp
-                            {{ number_format($detail->sub_total, 0, ',', '.') }}</p>
-                    </div>
-                    <div>
-                        <p class="mb-1 text-gray-500">Kategori</p>
-                        <p class="font-semibold">{{ $detail->kategori?->name ?? '-' }}</p>
-                    </div>
-                </div>
-            @empty
-                <p class="text-gray-500 text-sm">Tidak ada detail barang untuk transaksi ini.</p>
-            @endforelse
         </div>
 
         {{-- Total --}}
