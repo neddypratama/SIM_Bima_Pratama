@@ -17,7 +17,8 @@ new class extends Component {
 
         // Ambil 4 digit terakhir dari invoice stok (misalnya "0001")
         $suffix = substr($stok->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($stok->tanggal)->format('Ymd');
+        $part = explode('-', $stok->invoice);
+        $tanggal = $part[1];
 
         // Cari transaksi Telur Kotor (INV-...-KTR-xxxx)
         $this->kotor = Transaksi::with(['client', 'details.kategori', 'details.barang'])

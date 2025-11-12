@@ -64,7 +64,8 @@ new class extends Component {
         $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
 
         $inv = substr($transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
 
         // Cari transaksi pembayaran (Tunai / Transfer)
         $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$inv")->first();

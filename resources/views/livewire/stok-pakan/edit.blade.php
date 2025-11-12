@@ -129,7 +129,8 @@ new class extends Component {
 
             // === 4. Ambil suffix invoice stok ===
             $suffix = substr($this->stokModel->invoice, -4);
-            $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+            $part = explode('-', $this->stokModel->invoice);
+            $tanggal = $part[1];
 
             if ($this->kotor > 0) {
                 // === 5. Update transaksi Telur Kotor ===
@@ -289,10 +290,13 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Pakan Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
-                        <x-input label="Pakan Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
-                        <x-input label="Pakan Return" wire:model.lazy="kotor" type="number" step="0.01"/>
-                        <x-input label="Pakan Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01" min="0" />
+                        <x-input label="Pakan Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Pakan Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Pakan Return" wire:model.lazy="kotor" type="number" step="0.01" />
+                        <x-input label="Pakan Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
+                            min="0" />
                     </div>
                 </div>
             </div>

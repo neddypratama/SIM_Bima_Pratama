@@ -104,7 +104,8 @@ new class extends Component {
 
         $kateModal = Kategori::where('name', 'like', '%Modal Awal')->first();
         $suffix = substr($this->transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $this->transaksi->invoice);
+        $tanggal = $part[1];
         $modal = Transaksi::where('invoice', 'like', "%$tanggal-MDL-$suffix")->first();
 
         if ($this->type == 'Debit') {

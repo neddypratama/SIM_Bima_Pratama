@@ -69,7 +69,8 @@ new class extends Component {
         $this->tanggal = \Carbon\Carbon::parse($this->piutang->tanggal)->format('Y-m-d\TH:i');
 
         $inv = substr($transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
 
         // Cari transaksi pembayaran (Tunai / Transfer)
         $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$inv")->first();
@@ -150,7 +151,8 @@ new class extends Component {
         // Ambil kategori pembayaran
         $kategoriBayar = Kategori::find($this->bayar_id);
         $inv = substr($this->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $this->piutang->invoice);
+        $tanggal = $part[1];
 
         if ($kategoriBayar->name == 'Kas Tunai') {
             $this->bayar->update([

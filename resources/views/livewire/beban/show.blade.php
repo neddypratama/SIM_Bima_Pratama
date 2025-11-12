@@ -11,7 +11,9 @@ new class extends Component {
     {
         $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang.satuan']);
         $suffix = substr($this->transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
+
         $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$suffix")->first();
         if (isset($bayar)) {
             $this->bayar = $bayar;

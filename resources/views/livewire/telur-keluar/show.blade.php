@@ -13,7 +13,8 @@ new class extends Component {
     {
         // dd($transaksi->details());
         $inv = substr($transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
 
         $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
         

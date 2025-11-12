@@ -175,7 +175,8 @@ new class extends Component {
         }
 
         $inv = substr($this->transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $this->transaksi->invoice);
+        $tanggal = $part[1];
 
         $bonTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-BON-$inv")->first();
         $hppTransaksi = Transaksi::where('invoice', 'like', "%$tanggal-HPP-$inv")->first();

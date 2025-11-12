@@ -14,7 +14,8 @@ new class extends Component {
 
         // Ambil suffix terakhir dari invoice (contoh: 3NCP)
         $suffix = substr($this->transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
         
         $this->modal = Transaksi::where('invoice', 'like', "%-$tanggal-%-$suffix")->first();
         $this->modal = $this->modal->load(['client', 'details.kategori', 'details.barang']);

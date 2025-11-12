@@ -179,7 +179,8 @@ new class extends Component {
         }
 
         $suffix = substr($this->transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $this->transaksi->invoice);
+        $tanggal = $part[1];
         $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
         $client = Client::find($this->client_id);
 
@@ -189,7 +190,7 @@ new class extends Component {
         // Tentukan kategori hutang berdasarkan nama client
         if (stripos($clientName, 'SK') !== false) {
             $kategoriName = 'Hutang Sentrat Sk';
-        } elseif (stripos($clientName, 'Ponggok') !== false ) {
+        } elseif (stripos($clientName, 'Ponggok') !== false) {
             $kategoriName = 'Hutang Sentrat Ponggok';
         } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
             $kategoriName = 'Saldo Bp.Supriyadi';

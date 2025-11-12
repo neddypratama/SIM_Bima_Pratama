@@ -176,7 +176,9 @@ new class extends Component {
         }
 
         $suffix = substr($this->transaksi->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $this->transaksi->invoice);
+        $tanggal = $part[1];
+
         $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
         $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
         // dd($suffix, $hutang, $kateHutang);
