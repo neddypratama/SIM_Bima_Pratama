@@ -13,12 +13,15 @@ new class extends Component {
     {
         // dd($transaksi->details());
         $inv = substr($transaksi->invoice, -4);
+        $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
+
         $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
-        $this->bon = Transaksi::where('invoice', 'like', 'INV-%-BON-' . $inv)->first();
+
+        $this->bon = Transaksi::where('invoice', 'like', "INV-$tanggal-BON-" . $inv)->first();
         $this->bon = $this->bon->load(['client', 'details.kategori', 'details.barang']);
-        $this->aset = Transaksi::where('invoice', 'like', 'INV-%-TRY-' . $inv)->first();
+        $this->aset = Transaksi::where('invoice', 'like', "INV-$tanggal-TRY-" . $inv)->first();
         $this->aset = $this->aset->load(['client', 'details.kategori', 'details.barang']);
-        $this->hpp = Transaksi::where('invoice', 'like', 'INV-%-HPP-' . $inv)->first();
+        $this->hpp = Transaksi::where('invoice', 'like', "INV-$tanggal-HPP-" . $inv)->first();
         $this->hpp = $this->hpp->load(['client', 'details.kategori', 'details.barang']);
     }
 };

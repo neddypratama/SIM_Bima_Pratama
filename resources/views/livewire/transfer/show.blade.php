@@ -16,7 +16,7 @@ new class extends Component {
         $suffix = substr($this->transaksi->invoice, -4);
         $tanggal = \Carbon\Carbon::parse($transaksi->tanggal)->format('Ymd');
         
-        $this->modal = Transaksi::where('invoice', 'like', "%-$tanggal-MDL-$suffix")->first();
+        $this->modal = Transaksi::where('invoice', 'like', "%-$tanggal-%-$suffix")->first();
         $this->modal = $this->modal->load(['client', 'details.kategori', 'details.barang']);
         // dd($this->modal, $tanggal);
     }
