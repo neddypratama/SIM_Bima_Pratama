@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Transaksi;
+use App\Models\Truk;
 use App\Models\Client;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
@@ -66,10 +66,8 @@ new class extends Component {
 
     public function delete($id): void
     {
-        $transaksi = Transaksi::findOrFail($id);
-
-        $transaksi->details()->delete();
-        $transaksi->delete();
+        $truks = Truk::findOrFail($id);
+        $truks->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
@@ -81,9 +79,8 @@ new class extends Component {
 
     public function transaksi(): LengthAwarePaginator
     {
-        return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name,type'])
-            ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Truk%'))
+        return Truk::query()
+            ->with(['client:id,name'])
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
