@@ -73,7 +73,7 @@ new class extends Component {
             'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
             'HPP Obat' => ['HPP Obat-Obatan'],
             'HPP Eggtray' => ['HPP Tray'],
-            'Pngeluaran Truk' => ['Pngeluaran Truk'],
+            'Pengeluaran Truk' => ['Pengeluaran Truk'],
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa'],
