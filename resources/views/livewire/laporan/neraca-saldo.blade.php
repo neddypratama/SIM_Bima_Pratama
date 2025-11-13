@@ -175,7 +175,6 @@ new class extends Component {
         };
 
         $this->neracaPendapatan = $mapHierarki($this->mappingPendapatan, 'Pendapatan');
-        dd($this->neracaPendapatan);
         $this->neracaPengeluaran = $mapHierarki($this->mappingPengeluaran, 'Pengeluaran');
         $this->neracaAset = $mapHierarki($this->mappingAset, 'Aset');
         $this->neracaLiabilitas = $mapHierarki($this->mappingLiabilitas, 'Liabilitas');
