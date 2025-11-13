@@ -97,7 +97,7 @@ new class extends Component {
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('name', 'not like', '%Truk%')->where('type', 'Pendapatan');
+                $q->where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan');
             })
             ->when($this->kategori_id, function (Builder $q) {
                 $q->whereHas('details', function ($query) {

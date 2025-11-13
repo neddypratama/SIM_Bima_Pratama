@@ -32,6 +32,7 @@ new class extends Component {
         'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
         'Penjualan Obat' => ['Penjualan Obat-Obatan'],
         'Penjualan Eggtray' => ['Penjualan EggTray'],
+        'Pendapatan Truk' => ['Pendapatan Truk'],
         'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
         'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
         'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
@@ -43,6 +44,7 @@ new class extends Component {
         'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Barang Kadaluarsa', 'HPP'],
         'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak'],
         'Beban Sedekah' => ['ZIS'],
+        'Pengeluaran Truk' => ['Pengeluaran Truk'],
         'Beban Lain-Lain' => ['Beban Lain-Lain'],
     ];
 
@@ -173,6 +175,7 @@ new class extends Component {
         };
 
         $this->neracaPendapatan = $mapHierarki($this->mappingPendapatan, 'Pendapatan');
+        dd($this->neracaPendapatan);
         $this->neracaPengeluaran = $mapHierarki($this->mappingPengeluaran, 'Pengeluaran');
         $this->neracaAset = $mapHierarki($this->mappingAset, 'Aset');
         $this->neracaLiabilitas = $mapHierarki($this->mappingLiabilitas, 'Liabilitas');

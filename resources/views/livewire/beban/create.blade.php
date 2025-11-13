@@ -52,7 +52,7 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->where('name', 'not like', '%Truk%')->get(),
+            'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
             'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];

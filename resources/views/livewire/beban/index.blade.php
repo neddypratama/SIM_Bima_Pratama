@@ -138,7 +138,7 @@ new class extends Component {
         return [
             'transaksi' => $this->transaksi(),
             'client' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
-            'kategori' => Kategori::where('type', 'Pengeluaran')->where('name', 'not like', '%HPP%')->where('name', 'not like', '%Truk%')->get(),
+            'kategori' => Kategori::where('type', 'Pengeluaran')->where('name', 'not like', '%HPP%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
