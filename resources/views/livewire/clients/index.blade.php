@@ -39,8 +39,8 @@ new class extends Component {
     public string $editingAlamat = ''; // Menyimpan nilai input untuk nama Client
     public ?string $editingType = null;
     public ?string $editingKeterangan = null;
-    public int $editingBon = 0;
-    public int $editingTitipan = 0;
+    public $editingBon = '';
+    public $editingTitipan = '';
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
@@ -48,8 +48,8 @@ new class extends Component {
     public string $newClientAlamat = ''; // Untuk menyimpan input nama Client baru
     public ?string $newClientType = null;
     public ?string $newClientKeterangan = null;
-    public int $newClientBon = 0;
-    public int $newClientTitipan = 0;
+    public $newClientBon = '';
+    public $newClientTitipan = '';
 
     public function create(): void
     {
