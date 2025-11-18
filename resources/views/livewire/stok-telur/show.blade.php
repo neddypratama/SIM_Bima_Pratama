@@ -21,6 +21,7 @@ new class extends Component {
         $suffix = substr($stok->invoice, -4);
         $part = explode('-', $stok->invoice);
         $tanggal = $part[1];
+        dd($stok->invoice);
 
         // Cari transaksi Telur Kotor (INV-...-KTR-xxxx)
         $this->kotor = Transaksi::with(['client', 'details.kategori', 'details.barang'])
