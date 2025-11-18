@@ -21,30 +21,30 @@ new class extends Component {
         $suffix = substr($stok->invoice, -4);
         $part = explode('-', $stok->invoice);
         $tanggal = $part[1];
-        dd($stok->invoice);
-
+        
         // Cari transaksi Telur Kotor (INV-...-KTR-xxxx)
         $this->kotor = Transaksi::with(['client', 'details.kategori', 'details.barang'])
             ->where('invoice', 'like', "INV-$tanggal-KTR-" . $suffix)
             ->first();
-
-        $this->bentes = Transaksi::with(['client', 'details.kategori', 'details.barang'])
+            
+            $this->bentes = Transaksi::with(['client', 'details.kategori', 'details.barang'])
             ->where('invoice', 'like', "INV-$tanggal-BTS-" . $suffix)
             ->first();
-
-        $this->ceplok = Transaksi::with(['client', 'details.kategori', 'details.barang'])
+            
+            $this->ceplok = Transaksi::with(['client', 'details.kategori', 'details.barang'])
             ->where('invoice', 'like', "INV-$tanggal-CLK-" . $suffix)
             ->first();
-
+            
         // Cari transaksi Telur Pecah (INV-...-PCH-xxxx)
         $this->pecah = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', "INV-$tanggal-PRK-" . $suffix)
+        ->where('invoice', 'like', "INV-$tanggal-PRK-" . $suffix)
             ->first();
-
+            
         // Cari semua transaksi telur yang berhubungan dengan stok ini
         $this->telur = Transaksi::with(['client', 'details.kategori', 'details.barang'])
-            ->where('invoice', 'like', "INV-$tanggal-TLR%-" . $suffix)
-            ->get();
+        ->where('invoice', 'like', "INV-$tanggal-TLR%-" . $suffix)
+        ->get();
+        dd($this->kotor, $this->bentes, $this->ceplok, $this->pecah, $this->telur);
     }
 };
 ?>
