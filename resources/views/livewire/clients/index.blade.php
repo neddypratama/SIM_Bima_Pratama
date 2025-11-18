@@ -39,8 +39,8 @@ new class extends Component {
     public string $editingAlamat = ''; // Menyimpan nilai input untuk nama Client
     public ?string $editingType = null;
     public ?string $editingKeterangan = null;
-    public int $editingBon = 0;
-    public int $editingTitipan = 0;
+    public $editingBon = '';
+    public $editingTitipan = '';
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
@@ -48,8 +48,8 @@ new class extends Component {
     public string $newClientAlamat = ''; // Untuk menyimpan input nama Client baru
     public ?string $newClientType = null;
     public ?string $newClientKeterangan = null;
-    public int $newClientBon = 0;
-    public int $newClientTitipan = 0;
+    public $newClientBon = '';
+    public $newClientTitipan = '';
 
     public function create(): void
     {
@@ -72,8 +72,8 @@ new class extends Component {
             'newClientAlamat' => 'nullable',
             'newClientKeterangan' => 'nullable',
             'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier,Truk',
-            'newClientBon' => 'nullable|integer',
-            'newClientTitipan' => 'nullable|integer',
+            'newClientBon' => 'nullable|numeric',
+            'newClientTitipan' => 'nullable|numeric',
         ]);
 
         Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'keterangan' => $this->newClientKeterangan, 'type' => $this->newClientType, 'bon' => $this->newClientBon, 'titipan' => $this->newClientTitipan]);
@@ -108,8 +108,8 @@ new class extends Component {
                 'editingAlamat' => 'nullable',
                 'editingKeterangan' => 'nullable',
                 'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier,Truk',
-                'editingBon' => 'nullable|integer',
-                'editingTitipan' => 'nullable|integer',
+                'editingBon' => 'nullable|numeric',
+                'editingTitipan' => 'nullable|numeric',
             ]);
             $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'keterangan' => $this->editingKeterangan, 'type' => $this->editingType, 'bon' => $this->editingBon, 'titipan' => $this->editingTitipan, 'updated_at' => now()]);
             $this->editModal = false;
