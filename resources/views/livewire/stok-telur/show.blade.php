@@ -44,7 +44,6 @@ new class extends Component {
         $this->telur = Transaksi::with(['client', 'details.kategori', 'details.barang'])
         ->where('invoice', 'like', "INV-$tanggal-TLR%-" . $suffix)
         ->get();
-        dd($this->kotor, $this->bentes, $this->ceplok, $this->pecah, $this->telur);
     }
 };
 ?>
