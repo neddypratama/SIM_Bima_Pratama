@@ -127,7 +127,6 @@ new class extends Component {
             ]);
         } else {
             $modal->update([
-                'invoice' => $this->invoice,
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,

@@ -83,7 +83,6 @@ new class extends Component {
 
         // Update transaksi utama
         $tunai->update([
-            'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
@@ -105,8 +104,7 @@ new class extends Component {
         $suffix = substr($this->transaksi->invoice, -4);
         $part = explode('-', $this->transaksi->invoice);
         $tanggal = $part[1];
-        $modal = Transaksi::where('invoice', 'like', "%-MDL-$suffix")->first();
-        dd($modal);
+        $modal = Transaksi::where('invoice', 'like', "%$tanggal-MDL-$suffix")->first();
 
         if ($this->type == 'Debit') {
             $modal->update([

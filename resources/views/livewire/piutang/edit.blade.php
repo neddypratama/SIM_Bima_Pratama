@@ -194,7 +194,6 @@ new class extends Component {
 
         // Update transaksi utama
         $this->piutang->update([
-            'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
