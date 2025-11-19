@@ -10,7 +10,7 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         // Muat transaksi utama lengkap
-        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang.satuan']);
+        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
 
         // Ambil suffix terakhir dari invoice (contoh: 3NCP)
         $suffix = substr($this->transaksi->invoice, -4);

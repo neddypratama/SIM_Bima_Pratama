@@ -9,7 +9,7 @@ new class extends Component {
 
     public function mount(Transaksi $transaksi): void
     {
-        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang.satuan']);
+        $this->transaksi = $transaksi->load(['client', 'details.kategori', 'details.barang']);
         $suffix = substr($this->transaksi->invoice, -4);
         $part = explode('-', $transaksi->invoice);
         $tanggal = $part[1];
