@@ -19,6 +19,8 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
+    public string $invoice1 = '';
+    public string $invoice2 = '';
 
     #[Rule('required')]
     public ?int $barang_id = null;
@@ -33,6 +35,9 @@ new class extends Component {
 
     #[Rule('nullable|numeric|min:0')]
     public float $kurang = 0;
+
+    #[Rule('nullable|numeric|min:0')]
+    public float $pakai = 0;
 
     public function with(): array
     {
@@ -57,6 +62,8 @@ new class extends Component {
             $tanggal = Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-STK-' . $str;
+            $this->invoice1 = 'INV-' . $tanggal . '-PKI-' . $str;
+            $this->invoice2 = 'INV-' . $tanggal . '-TRY1-' . $str;
         }
     }
 
@@ -71,11 +78,11 @@ new class extends Component {
 
     public function updated($field): void
     {
-        if (in_array($field, ['tambah', 'kurang'])) {
+        if (in_array($field, ['tambah', 'kurang', 'pakai'])) {
             $barang = Barang::find($this->barang_id);
             if ($barang) {
                 $stok_awal = $barang->stok;
-                $stok_baru = $stok_awal + $this->tambah - $this->kurang;
+                $stok_baru = $stok_awal + $this->tambah - $this->kurang - $this->pakai;
                 $this->stok = max(0, $stok_baru);
             }
         }
@@ -100,6 +107,48 @@ new class extends Component {
             'tanggal' => $this->tanggal,
             'tambah' => $this->tambah,
             'kurang' => $this->kurang,
+            'rusak' => $this->pakai,
+        ]);
+
+        $katePakai = Kategori::where('name', 'like', '%Tray Terpakai%')->first();
+        $kateTray = Kategori::where('name', 'like', '%Stok Tray%')->first();
+
+        // TELUR PROK - Debit
+        $prok = Transaksi::create([
+            'invoice' => $this->invoice1,
+            'name' => 'Tray Terpakai ' . $barang->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'type' => 'Debit',
+            'total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
+        ]);
+
+        DetailTransaksi::create([
+            'transaksi_id' => $prok->id,
+            'kategori_id' => $katePakai->id ?? null,
+            'value' => $barang->hpp,
+            'barang_id' => $barang->id,
+            'kuantitas' => $this->pakai,
+            'sub_total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
+        ]);
+
+        // TELUR PROK - Kredit
+        $tray = Transaksi::create([
+            'invoice' => $this->invoice2,
+            'name' => 'Tray Terpakai ' . $barang->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'type' => 'Kredit',
+            'total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
+        ]);
+
+        DetailTransaksi::create([
+            'transaksi_id' => $tray->id,
+            'kategori_id' => $kateTray->id ?? null,
+            'value' => $barang->hpp,
+            'barang_id' => $barang->id,
+            'kuantitas' => $this->pakai,
+            'sub_total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
         ]);
 
         $this->success('Stok berhasil diperbarui!', redirectTo: '/stok-tray');
@@ -108,7 +157,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksi Stok Telur" separator progress-indicator />
+    <x-header title="Create Transaksi Stok Tray" separator progress-indicator />
 
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
@@ -141,9 +190,10 @@ new class extends Component {
                     <x-header title="Detail Items" subtitle="Tambah detail transaksi" size="text-2xl" />
                 </div>
                 <div class="col-span-6 grid gap-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Telur Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
-                        <x-input label="Telur Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-3 rounded-xl">
+                        <x-input label="Tray Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
+                        <x-input label="Tray Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
+                        <x-input label="Tray Terpakai" wire:model.lazy="pakai" type="number" step="0.01" min="0" />
                     </div>
                 </div>
             </div>

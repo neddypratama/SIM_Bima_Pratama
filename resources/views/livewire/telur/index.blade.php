@@ -15,10 +15,9 @@ new class extends Component {
     public string $endDate = '';
     public string $filterType = 'Debit'; // ✅ Filter untuk tipe transaksi
     public array $sortBy = ['column' => 'tanggal', 'direction' => 'desc'];
-    public int $perPage = 10;
+    public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
-    public array $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
-
+    public int $perPage = 25; // Default jumlah data per halaman
     public array $types = [['id' => 'Debit', 'name' => 'Pembelian'], ['id' => 'Kredit', 'name' => 'Penjualan']];
 
     public function clear(): void
