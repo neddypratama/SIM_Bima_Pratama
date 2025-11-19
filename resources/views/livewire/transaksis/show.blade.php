@@ -14,9 +14,11 @@ new class extends Component {
 
         // Ambil suffix terakhir dari invoice (contoh: 3NCP)
         $suffix = substr($this->transaksi->invoice, -4);
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
 
         // Ambil SEMUA transaksi lain yang punya suffix sama, tapi bukan transaksi utama
-        $this->links = Transaksi::where('invoice', 'like', "%$suffix")
+        $this->links = Transaksi::where('invoice', 'like', "INV-$tanggal-%-$suffix")
             ->where('id', '!=', $this->transaksi->id)
             ->with(['client', 'details.kategori', 'details.barang'])
             ->get();
