@@ -103,7 +103,8 @@ new class extends Component {
         // Ambil kategori pembayaran
         $kategoriBayar = Kategori::find($this->bayar_id);
         $inv = substr($this->invoice, -4);
-        $tanggal = \Carbon\Carbon::parse($this->tanggal)->format('Ymd');
+        $part = explode('-', $this->hutang->invoice);
+        $tanggal = $part[1];
 
         if ($this->type == 'Debit') {
             $tipe = 'Kredit';
