@@ -189,7 +189,7 @@ new class extends Component {
 
     <x-card>
         <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination
-            link="transaksis/{id}/show?invoice={invoice}" />
+                 />
     </x-card>
 
     <!-- FILTER DRAWER -->

@@ -14,7 +14,7 @@ new class extends Component {
     public string $search = '';
     public ?string $filterType = 'Pemasukan'; // Pemasukan / Pengeluaran
 
-    public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
+    public $pages = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public int $perPage = 25; // Default jumlah data per halaman
 
