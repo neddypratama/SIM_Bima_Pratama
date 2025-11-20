@@ -15,7 +15,7 @@ new class extends Component {
     public string $endDate = '';
     public int $perPage = 10;
 
-    public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
+    public $pages = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public function mount(): void
     {

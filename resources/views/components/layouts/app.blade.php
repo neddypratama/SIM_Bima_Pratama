@@ -111,7 +111,7 @@
 
                 {{-- ✅ Transactions untuk role sesuai route --}}
                 <x-menu-sub title="Telur & Tray" icon="fas.egg">
-                    @if (in_array(auth()->user()->role_id, [1, 3]))
+                    @if (in_array(auth()->user()->role_id, [1, 3, 6]))
                         <x-menu-item title="Laporan Telur" icon="fas.store" link="/laporan-telur" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 3]))
