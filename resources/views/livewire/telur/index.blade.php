@@ -44,7 +44,7 @@ new class extends Component {
             // 🔹 Logika otomatis tergantung filterType
             ->when($this->filterType === 'Debit', function ($q) {
                 // Jika Pembelian (stok masuk)
-                $q->where('kategori.name', 'like', '%Stok Telur%')->where('transaksi.type', 'Debit');
+                $q->where('kategori.name', 'like', '%Stok Telur%')->where('transaksi.type', 'Debit')->where('transaksi.invoice', 'like', '%-TLR-%');
             })
             ->when($this->filterType === 'Kredit', function ($q) {
                 // Jika Penjualan (stok keluar)
