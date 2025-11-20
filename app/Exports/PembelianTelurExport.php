@@ -25,7 +25,7 @@ class PembelianTelurExport implements FromCollection, WithHeadings, ShouldAutoSi
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name, keterangan', 'details.kategori:id,name,type'])
+        return Transaksi::with(['client:id,name,keterangan', 'details.kategori:id,name,type'])
             ->where('invoice', 'like', '%-TLR-%')
             ->where('type', 'Debit')
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Telur%'))

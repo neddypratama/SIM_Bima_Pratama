@@ -25,7 +25,7 @@ class PenjualanObatExport implements FromCollection, WithHeadings, ShouldAutoSiz
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name, keterangan', 'details.kategori:id,name,type'])
+        return Transaksi::with(['client:id,name,keterangan', 'details.kategori:id,name,type'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Obat%');
