@@ -103,7 +103,7 @@ new class extends Component {
         // Ambil kategori pembayaran
         $kategoriBayar = Kategori::find($this->bayar_id);
         $inv = substr($this->invoice, -4);
-        $part = explode('-', $this->hutang->invoice);
+        $part = explode('-', $this->beban->invoice);
         $tanggal = $part[1];
 
         if ($this->type == 'Debit') {
