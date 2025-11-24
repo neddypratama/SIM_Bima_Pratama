@@ -109,6 +109,7 @@ new class extends Component {
 
         $oldClient = Client::find($this->hutang->getOriginal('client_id'));
         $newClient = Client::find($this->client_id);
+        dd($oldClient, $newClient);
 
         if ($this->type == 'Kredit') {
             $tipe = 'Debit';

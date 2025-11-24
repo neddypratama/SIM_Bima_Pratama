@@ -77,7 +77,7 @@ new class extends Component {
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],
-            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan', 'Beban Pajak Pendapatan'],
+            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan',],
             'Beban Sedekah' => ['ZIS'],
             'Beban Lain-Lain' => ['Beban Lain-Lain'],
         ];

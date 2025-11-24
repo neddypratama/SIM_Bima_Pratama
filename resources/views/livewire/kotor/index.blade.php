@@ -17,7 +17,7 @@ new class extends Component {
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public int $perPage = 25; // Default jumlah data per halaman
-    public array $types = [['id' => 'Kotor', 'name' => 'Kotor'], ['id' => 'Bentes', 'name' => 'Bentes'], ['id' => 'Ceplok', 'name' => 'Ceplok'], ['id' => 'Prok', 'name' => 'Prok'], ['id' => 'Return', 'name' => 'Return'], ['id' => 'Kadaluarsa', 'name' => 'Kadaluarsa']];
+    public array $types = [['id' => 'Kotor', 'name' => 'Kotor'], ['id' => 'Bentes', 'name' => 'Bentes'], ['id' => 'Ceplok', 'name' => 'Ceplok'], ['id' => 'Prok', 'name' => 'Prok'], ['id' => 'Tray Terpakai', 'name' => 'Tray Terpakai'], ['id' => 'Return', 'name' => 'Return'], ['id' => 'Kadaluarsa', 'name' => 'Kadaluarsa']];
 
     /** 🔹 Bersihkan filter */
     public function clear(): void
@@ -45,6 +45,7 @@ new class extends Component {
             WHEN kategori.name LIKE '%Bentes%' THEN 'Bentes'
             WHEN kategori.name LIKE '%Prok%' THEN 'Prok'
             WHEN kategori.name LIKE '%Ceplok%' THEN 'Ceplok'
+            WHEN kategori.name LIKE '%Tray Terpakai%' THEN 'Tray Terpakai'
             WHEN kategori.name LIKE '%Return%' THEN 'Return'
             WHEN kategori.name LIKE '%Kadaluarsa%' THEN 'Kadaluarsa'
             ELSE 'Lainnya'
@@ -59,7 +60,7 @@ new class extends Component {
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
             ->where(function ($q) {
-                $q->where('kategori.name', 'like', '%Kotor%')->orWhere('kategori.name', 'like', '%Bentes%')->orWhere('kategori.name', 'like', '%Prok%')->orWhere('kategori.name', 'like', '%Ceplok%')->orWhere('kategori.name', 'like', '%Return%')->orWhere('kategori.name', 'like', '%Prok%')->orWhere('kategori.name', 'like', '%Kadaluarsa%');
+                $q->where('kategori.name', 'like', '%Kotor%')->orWhere('kategori.name', 'like', '%Bentes%')->orWhere('kategori.name', 'like', '%Prok%')->orWhere('kategori.name', 'like', '%Ceplok%')->orWhere('kategori.name', 'like', '%Tray Terpakai%')->orWhere('kategori.name', 'like', '%Return%')->orWhere('kategori.name', 'like', '%Prok%')->orWhere('kategori.name', 'like', '%Kadaluarsa%');
             })
             ->when($this->filterType, function ($q) {
                 $q->where('kategori.name', 'like', "%{$this->filterType}%");

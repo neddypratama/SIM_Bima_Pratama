@@ -29,7 +29,7 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-32'], ['key' => 'nama_barang', 'label' => 'Nama Barang', 'class' => 'w-56'], ['key' => 'total_jumlah', 'label' => 'Jumlah (Pcs)', 'class' => 'w-48'], ['key' => 'total_harga', 'label' => 'Total Harga (Rp)', 'class' => 'w-48']];
+        return [['key' => 'nama_barang', 'label' => 'Nama Barang', 'class' => 'w-56'], ['key' => 'total_jumlah', 'label' => 'Jumlah (Pcs)', 'class' => 'w-48'], ['key' => 'total_harga', 'label' => 'Total Harga (Rp)', 'class' => 'w-48']];
     }
 
     /** 🔹 Query utama */
