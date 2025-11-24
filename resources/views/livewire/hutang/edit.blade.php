@@ -109,11 +109,11 @@ new class extends Component {
 
         $oldClient = Client::find($this->hutang->getOriginal('client_id'));
         $newClient = Client::find($this->client_id);
-
+        
         if ($this->type == 'Kredit') {
             $tipe = 'Debit';
             // Jika client lama dan baru berbeda
-            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            if ($oldClient && $newClient && $oldClient->id != $newClient->id) {
                 // Kembalikan titipan client lama
                 $oldClient->decrement('titipan', $this->hutang->total);
 
@@ -130,9 +130,8 @@ new class extends Component {
                 }
             }
         } else {
-            $tipe = 'Kredit';
             // Jika client lama dan baru berbeda
-            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            if ($oldClient && $newClient && $oldClient->id != $newClient->id) {
                 // Kembalikan titipan client lama
                 $oldClient->increment('titipan', $this->hutang->total);
 
@@ -148,7 +147,6 @@ new class extends Component {
                     $newClient->increment('titipan', abs($selisih));
                 }
             }
-            dd($selisih);
         }
 
         // Ambil kategori pembayaran
