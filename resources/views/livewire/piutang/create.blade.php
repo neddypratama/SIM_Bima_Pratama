@@ -85,6 +85,7 @@ new class extends Component {
     {
         // ✅ Validasi seluruh input sekaligus
         $this->validate();
+        $tipe = '';
 
         $client = Client::find($this->client_id);
         if ($this->type == 'Debit') {

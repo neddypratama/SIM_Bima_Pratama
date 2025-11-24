@@ -107,6 +107,7 @@ new class extends Component {
 
         $oldClient = Client::find($this->piutang->getOriginal('client_id'));
         $newClient = Client::find($this->client_id);
+        $tipe = '';
 
         if ($this->type == 'Debit') {
             $tipe = 'Kredit';
