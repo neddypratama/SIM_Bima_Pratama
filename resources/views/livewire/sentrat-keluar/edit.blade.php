@@ -18,18 +18,32 @@ new class extends Component {
 
     public Transaksi $transaksi;
 
+    #[Rule('required')]
     public string $invoice = '';
     public string $invoice2 = '';
     public string $invoice3 = '';
 
+    #[Rule('required')]
     public string $name = '';
+
+    #[Rule('required|numeric|min:1')]
     public float $total = 0;
+
+    #[Rule('required')]
     public ?int $user_id = null;
+
+    #[Rule('required')]
     public ?int $client_id = null;
+
+    #[Rule('required')]
     public ?int $kategori_id = null;
+
+    #[Rule('required')]
     public ?string $tanggal = null;
 
+    #[Rule('required|array|min:1')]
     public array $details = [];
+    
     public $barangs;
     public $pokok;
     public array $filteredBarangs = [];
@@ -58,7 +72,6 @@ new class extends Component {
                 'max_qty' => Barang::find($detail->barang_id)->stok + $detail->kuantitas,
                 'hpp' => Barang::find($detail->barang_id)->hpp ?? 0,
             ];
-            $this->kategori_id = $detail->kategori_id;
         }
 
         $kategori = Kategori::where('name', 'Stok Pakan')->first();
@@ -80,6 +93,30 @@ new class extends Component {
 
     public function updatedDetails($value, $key): void
     {
+        // --- Jika kategori dipilih ---
+        if (str_ends_with($key, '.kategori_id')) {
+            $index =  explode('.', $key)[0];
+            $kategori = Kategori::find($value);
+
+            if ($kategori) {
+                // Ambil nama setelah kata "Penjualan"
+                $jenisNama = trim(preg_replace('/^Penjualan\s*/i', '', $kategori->name));
+
+                // Filter barang yang memiliki jenis dengan nama tersebut
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', function ($q) use ($jenisNama) {
+                    $q->where('name', 'like', "%{$jenisNama}%");
+                })
+                    ->get()
+                    ->map(
+                        fn($barang) => [
+                            'id' => $barang->id,
+                            'name' => $barang->name,
+                        ],
+                    )
+                    ->toArray();
+            }
+        }
+
         if (str_ends_with($key, '.barang_id')) {
             $index = explode('.', $key)[0];
             $barang = Barang::find($value);
@@ -123,11 +160,11 @@ new class extends Component {
     public function save(): void
     {
         $this->validate([
-            'name' => 'required',
             'details' => 'required|array|min:1',
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
             'details.*.kuantitas' => 'required|numeric|min:1',
+            'details.*.kategori_id' => 'required|exists:kategoris,id',
         ]);
 
         foreach ($this->details as $i => $item) {
@@ -282,7 +319,7 @@ new class extends Component {
         foreach ($this->details as $item) {
             DetailTransaksi::create([
                 'transaksi_id' => $this->transaksi->id,
-                'kategori_id' => $this->kategori_id,
+                'kategori_id' => $item['kategori_id'],
                 'barang_id' => $item['barang_id'],
                 'value' => $item['value'],
                 'kuantitas' => $item['kuantitas'],
@@ -369,6 +406,8 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
+                    <x-choices-offline label="Kategori" wire:model.live="details.{{ $index }}.kategori_id"
+                            :options="$kategoris" placeholder="Pilih Kategori" single clearable searchable />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
                                 :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" single clearable searchable />
