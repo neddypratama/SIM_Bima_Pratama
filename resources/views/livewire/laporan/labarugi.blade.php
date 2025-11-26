@@ -69,12 +69,15 @@ new class extends Component {
         ];
 
         $mappingPengeluaran = [
-            'HPP' => ['HPP'],
+            'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
+            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
+            'HPP Obat' => ['HPP Obat-Obatan'],
+            'HPP Eggtray' => ['HPP Tray'],
             'Pengeluaran Truk' => ['Pengeluaran Truk'],
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],
-            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan'],
+            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan',],
             'Beban Sedekah' => ['ZIS'],
             'Beban Lain-Lain' => ['Beban Lain-Lain'],
         ];
@@ -123,8 +126,7 @@ new class extends Component {
             ->groupBy('jb.name')
             ->orderBy('jb.name')
             ->get()
-            ->keyBy('hpp_name');
-        // supaya mudah diakses per nama HPP
+            ->keyBy('hpp_name'); // supaya mudah diakses per nama HPP
         // dd($hppResults);
 
         // Siapkan struktur pengeluaranFlat sesuai kelompok
