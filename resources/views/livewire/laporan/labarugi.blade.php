@@ -69,10 +69,7 @@ new class extends Component {
         ];
 
         $mappingPengeluaran = [
-            'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
-            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
-            'HPP Obat' => ['HPP Obat-Obatan'],
-            'HPP Eggtray' => ['HPP Tray'],
+            'HPP' => ['HPP'],
             'Pengeluaran Truk' => ['Pengeluaran Truk'],
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
