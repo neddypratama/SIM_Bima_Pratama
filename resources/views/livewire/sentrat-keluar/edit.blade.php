@@ -40,7 +40,7 @@ new class extends Component {
 
     #[Rule('required|array|min:1')]
     public array $details = [];
-    
+
     public $barangs;
     public $pokok;
     public array $filteredBarangs = [];
@@ -88,6 +88,57 @@ new class extends Component {
         ];
     }
 
+    public function updatedDetails($value, $key): void
+    {
+        // --- Jika kategori dipilih ---
+        if (str_ends_with($key, '.kategori_id')) {
+            $index = explode('.', $key)[0];
+            $kategori = Kategori::find($value);
+
+            if ($kategori) {
+                // Ambil nama setelah kata "Penjualan"
+                $jenisNama = trim(preg_replace('/^Penjualan\s*/i', '', $kategori->name));
+
+                // Filter barang yang memiliki jenis dengan nama tersebut
+                $this->filteredBarangs[$index] = Barang::whereHas('jenis', function ($q) use ($jenisNama) {
+                    $q->where('name', 'like', "%{$jenisNama}%");
+                })
+                    ->get()
+                    ->map(
+                        fn($barang) => [
+                            'id' => $barang->id,
+                            'name' => $barang->name,
+                        ],
+                    )
+                    ->toArray();
+            }
+        }
+
+        if (str_ends_with($key, '.barang_id')) {
+            $index = explode('.', $key)[0];
+            $barang = Barang::find($value);
+            if ($barang) {
+                $this->details[$index]['max_qty'] = $barang->stok;
+                $this->details[$index]['kuantitas'] = max(1, $this->details[$index]['kuantitas'] ?? 1);
+                $this->details[$index]['hpp'] = (float) $barang->hpp;
+            }
+        }
+
+        if (str_ends_with($key, '.kuantitas')) {
+            $index = explode('.', $key)[0];
+            $qty = $value ?: 1;
+            $maxQty = $this->details[$index]['max_qty'] ?? null;
+            if ($maxQty !== null && $qty > $maxQty) {
+                $qty = $maxQty; // ✅ batasi qty sesuai stok
+            }
+            $this->details[$index]['kuantitas'] = $qty;
+        }
+
+        if (str_ends_with($key, '.value') || str_ends_with($key, '.kuantitas') || str_ends_with($key, '.hpp')) {
+            $this->calculateTotal();
+        }
+    }
+
     private function calculateTotal(): void
     {
         $this->total = collect($this->details)->sum(fn($item) => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1));
@@ -117,6 +168,136 @@ new class extends Component {
             if ($item['max_qty'] !== null && $item['kuantitas'] > $item['max_qty']) {
                 $this->addError("details.$i.kuantitas", 'Qty tidak boleh melebihi stok barang.');
                 return;
+            }
+        }
+
+        $inv = substr($this->transaksi->invoice, -4);
+        $part = explode('-', $this->transaksi->invoice);
+        $tanggal = $part[1];
+
+        $bonTransaksi = Transaksi::where('invoice', 'like', "%-$tanggal-BON-$inv")->first();
+        $hppTransaksi = Transaksi::where('invoice', 'like', "%-$tanggal-HPP-$inv")->first();
+        $stokTransaksi = Transaksi::where('invoice', 'like', "%-$tanggal-STR-$inv")->first();
+
+        $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
+        $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();
+        $kategoriHpp = Kategori::where('name', 'HPP')->first();
+
+        // Hitung total dan detail transaksi
+        $totalTransaksi = 0;
+        $detailData = [];
+
+        foreach ($this->details as $item) {
+            $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
+                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Pakan'))->where('type', 'Debit');
+            });
+
+            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
+            $totalQty = $detailQuery->sum('kuantitas');
+            $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
+
+            $totalTransaksi += ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1);
+
+            $detailData[] = [
+                'barang_id' => $item['barang_id'],
+                'kuantitas' => $item['kuantitas'] ?? 1,
+                'value' => $item['hpp'] ?? $hargaSatuan,
+                'sub_total' => ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1),
+            ];
+        }
+
+        // === 1. Update / Create Transaksi HPP ===
+        if ($kategoriHpp) {
+            $hppTransaksi->update([
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Debit',
+                'total' => $totalTransaksi,
+            ]);
+
+            // Replace detail
+            $hppTransaksi->details()->delete();
+            foreach ($detailData as $d) {
+                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hppTransaksi->id, 'kategori_id' => $kategoriHpp->id]));
+            }
+        }
+
+        // === 2. Update / Create Transaksi Stok Sentrat (Kredit) ===
+        if ($kategoriSentrat) {
+            $stokTransaksi->update([
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Kredit',
+                'total' => $totalTransaksi,
+            ]);
+
+            // === Reset stok dulu berdasarkan transaksi lama ===
+            if ($stokTransaksi) {
+                foreach ($stokTransaksi->details as $oldDetail) {
+                    $barang = Barang::find($oldDetail->barang_id);
+                    if ($barang) {
+                        // kembalikan stok sesuai kuantitas lama
+                        $barang->increment('stok', $oldDetail->kuantitas);
+                    }
+                }
+            }
+
+            // === Hapus detail lama & replace dengan yang baru ===
+            $stokTransaksi->details()->delete();
+
+            foreach ($detailData as $d) {
+                $stokTransaksi->details()->create(array_merge($d, ['transaksi_id' => $stokTransaksi->id, 'kategori_id' => $kategoriSentrat->id]));
+
+                // kurangi stok sesuai kuantitas baru
+                $barang = Barang::find($d['barang_id']);
+                if ($barang) {
+                    $barang->decrement('stok', $d['kuantitas']);
+                }
+            }
+        }
+
+        $bonTransaksi->update([
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'client_id' => $this->client_id,
+            'tanggal' => $this->tanggal,
+            'total' => $this->total,
+            'type' => 'Debit',
+        ]);
+        $bonTransaksi->details()->delete();
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $bonTransaksi->id,
+                'kategori_id' => $kategoriBon->id,
+                'barang_id' => $item['barang_id'],
+                'value' => $item['value'],
+                'kuantitas' => $item['kuantitas'],
+                'sub_total' => $item['value'] * $item['kuantitas'],
+            ]);
+        }
+
+        $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
+        $newClient = Client::find($this->client_id);
+
+        // Jika client lama dan baru berbeda
+        if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+            // Kembalikan titipan client lama
+            $oldClient->decrement('bon', $this->transaksi->total);
+
+            // Tambahkan bon ke client baru
+            $newClient->increment('bon', $this->total);
+        } elseif ($newClient) {
+            // Jika client sama, hanya update selisih total
+            $selisih = $this->total - $this->transaksi->total;
+
+            if ($selisih > 0) {
+                $newClient->increment('bon', $selisih);
+            } elseif ($selisih < 0) {
+                $newClient->decrement('bon', abs($selisih));
             }
         }
 
@@ -222,7 +403,7 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     @foreach ($details as $index => $item)
-                    <x-choices-offline label="Kategori" wire:model.live="details.{{ $index }}.kategori_id"
+                        <x-choices-offline label="Kategori" wire:model.live="details.{{ $index }}.kategori_id"
                             :options="$kategoris" placeholder="Pilih Kategori" single clearable searchable />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                             <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
