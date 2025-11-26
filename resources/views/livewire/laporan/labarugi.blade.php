@@ -104,7 +104,7 @@ new class extends Component {
             ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
             ->toArray();
 
-        // --- KHUSUS HPP: perhitungan berdasarkan jenis barang ---
+        // --- KHUSUS HPP: perhitungan berdasarkan jenis barang ----
 
         // Mapping kelompok HPP utama
         $hppKelompok = [
