@@ -10,7 +10,6 @@ use App\Models\User;
 use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 new class extends Component {
