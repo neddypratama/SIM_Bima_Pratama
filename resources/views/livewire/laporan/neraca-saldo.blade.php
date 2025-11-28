@@ -238,8 +238,8 @@ new class extends Component {
                         </tr>
 
                         @foreach ($groupData as $group)
-                            <tr class="cursor-pointer" wire:click="$toggle('expanded.{{ $group['group'] }}')">
-                            <tr class="cursor-pointer" wire:click="$toggle('expanded.{{ $group['group'] }}')">
+                            <tr class="cursor-pointer ml-2" wire:click="$toggle('expanded.{{ $group['group'] }}')">
+                            <tr class="cursor-pointer ml-2" wire:click="$toggle('expanded.{{ $group['group'] }}')">
                                 <td>
                                     <i class="fas fa-chevron-right mr-2"
                                         :class="{ 'fa-chevron-down': $expanded['{{ $group['group'] }}'] ?? false }"></i>
