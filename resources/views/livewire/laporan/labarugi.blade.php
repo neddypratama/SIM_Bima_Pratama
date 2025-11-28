@@ -63,8 +63,9 @@ new class extends Component {
             'Penjualan Obat' => ['Penjualan Obat-Obatan'],
             'Penjualan Eggtray' => ['Penjualan EggTray'],
             'Pendapatan Truk' => ['Pendapatan Truk'],
+            'Pendapatan Pengadaan' => ['Pendapatan Pengadaan Jasa'],
             'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
-            'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
+            'Pendapatan Non Penjualan' => ['Pemasukan Telur Reject', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang',],
             'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
         ];
 
@@ -74,6 +75,7 @@ new class extends Component {
             'HPP Obat' => ['HPP Obat-Obatan'],
             'HPP Eggtray' => ['HPP Tray'],
             'Pengeluaran Truk' => ['Pengeluaran Truk'],
+            'Pengeluaran Pengadaan' => ['Pengeluaran Pengadaan Jasa'],
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],

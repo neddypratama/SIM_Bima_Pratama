@@ -33,6 +33,7 @@ new class extends Component {
         'Penjualan Obat' => ['Penjualan Obat-Obatan'],
         'Penjualan Eggtray' => ['Penjualan EggTray'],
         'Pendapatan Truk' => ['Pendapatan Truk'],
+        'Pendapatan Pengadaan' => ['Pendapatan Pengadaan Jasa'],
         'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
         'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
         'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
@@ -45,6 +46,7 @@ new class extends Component {
         'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan', 'Beban Pajak Pendapatan'],
         'Beban Sedekah' => ['ZIS'],
         'Pengeluaran Truk' => ['Pengeluaran Truk'],
+        'Pengeluaran Pengadaan' => ['Pengeluaran Pengadaan Jasa'],
         'Beban Lain-Lain' => ['Beban Lain-Lain'],
     ];
 
