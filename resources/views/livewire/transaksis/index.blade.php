@@ -40,12 +40,6 @@ new class extends Component {
     public ?string $startDate = null;
     public ?string $endDate = null;
 
-    public function mount()
-    {
-        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
-    }
-
     public function clear(): void
     {
         $this->reset(['search', 'user_id', 'kategori_id', 'client_id']);
