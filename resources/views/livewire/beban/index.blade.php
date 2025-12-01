@@ -99,7 +99,7 @@ new class extends Component {
         return Transaksi::query()
             ->with(['client:id,name', 'details.kategori:id,name,type'])
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->where('name', 'not like', '%Truk%');
+                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
             })
             ->when($this->kategori_id, function (Builder $q) {
                 $q->whereHas('details', function ($query) {

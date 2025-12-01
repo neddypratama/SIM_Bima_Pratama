@@ -35,7 +35,7 @@ new class extends Component {
         'Pendapatan Truk' => ['Pendapatan Truk'],
         'Pendapatan Pengadaan' => ['Pendapatan Pengadaan Jasa'],
         'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
-        'Pendapatan Non Penjualan' => ['Pemasukan Dapur', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
+        'Pendapatan Non Penjualan' => ['Pemasukan Telur Reject', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
         'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
     ];
 
