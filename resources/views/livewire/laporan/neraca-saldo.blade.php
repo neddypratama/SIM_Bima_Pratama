@@ -42,7 +42,7 @@ new class extends Component {
     public array $mappingPengeluaran = [
         'Beban Transport' => ['Beban Transport', 'Beban BBM'],
         'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
-        'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa', 'HPP'],
+        'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Telur Kotor', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa', 'HPP'],
         'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan', 'Beban Pajak Pendapatan'],
         'Beban Sedekah' => ['ZIS'],
         'Pengeluaran Truk' => ['Pengeluaran Truk'],
@@ -56,7 +56,7 @@ new class extends Component {
         'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
         'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
         'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
-        'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
+        'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray'],
         'Kas' => ['Kas Tunai'],
         'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
         'Bank BNI' => ['Bank BNI Binti Wasilah', 'Bank BNI Bima Pratama'],

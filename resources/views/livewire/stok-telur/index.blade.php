@@ -69,7 +69,7 @@ new class extends Component {
         $inv = substr($stok->invoice, -4);
 
         $kotor = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Kotor'))
+            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Telur Kotor'))
             ->first();
         $kotor->details()->delete();
         $kotor->delete();

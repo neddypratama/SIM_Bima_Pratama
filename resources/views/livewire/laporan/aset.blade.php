@@ -66,7 +66,7 @@ new class extends Component {
             'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
             'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
             'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
-            'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray', 'Stok Kotor', 'Stok Return'],
+            'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray'],
             'Kas' => ['Kas Tunai'],
             'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
             'Bank BNI' => ['Bank BNI Binti Wasilah', 'Bank BNI Bima Pratama'],
@@ -91,6 +91,19 @@ new class extends Component {
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
             ->toArray();
+
+        $stokPakanCurah = Transaksi::with('details.kategori', 'details.barang.jenis')
+            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Aset')->where('name', 'Stok Pakan'))
+            ->whereHas('details.barang.jenis', fn($q) => $q->where('name', 'Pakan Curah'))
+            ->whereBetween('tanggal', [$start, $end])
+            ->get()
+            ->flatMap(fn($trx) => $trx->details)
+            ->filter(fn($d) => $d->kategori && ($d->barang->jenis->name ?? '') === 'Pakan Curah')
+            ->groupBy(fn($d) => $d->kategori->name)
+            ->map(fn($group) => $group->where(fn($i) => strtolower($i->transaksi->type ?? '') === 'debit')->sum('sub_total') - $group->where(fn($i) => strtolower($i->transaksi->type ?? '') === 'kredit')->sum('sub_total'))
+            ->toArray();
+
+        $asetFlat['Stok Pakan'] -= $stokPakanCurah['Stok Pakan'];
 
         // --- Liabilitas per kategori ---
         $liabilitasFlat = Transaksi::with('details.kategori')

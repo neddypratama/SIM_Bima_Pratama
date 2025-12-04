@@ -102,11 +102,6 @@
                         <x-menu-item title="Stok Pakan" icon="fas.wheat-awn" link="/stok-pakan" />
                         <x-menu-item title="Stok Obat" icon="fas.capsules" link="/stok-obat" />
                     </x-menu-sub>
-
-                    <x-menu-sub title="Manage Truk" icon="fas.truck">
-                        <x-menu-item title="Laporan Truk" icon="fas.truck-front" link="/truk" />
-                        <x-menu-item title="Transaksi Truk" icon="fas.truck-fast" link="/transport" />
-                    </x-menu-sub>
                 @endif
 
                 {{-- ✅ Transactions untuk role sesuai route --}}
@@ -176,6 +171,7 @@
                         <x-menu-item title="Laporan Aset" icon="fas.chart-simple" link="/laporan-aset" />
                         <x-menu-item title="Laporan Neraca Saldo" icon="fas.scale-balanced"
                             link="/laporan-neraca-saldo" />
+                        <x-menu-item title="Laporan Pakan Curah" icon="fas.seedling" link="/laporan-curah" />
                     </x-menu-sub>
                 @endif
 

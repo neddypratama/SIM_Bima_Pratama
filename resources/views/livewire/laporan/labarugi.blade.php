@@ -24,8 +24,8 @@ new class extends Component {
 
     public function mount()
     {
-        $this->startDate = null;
-        $this->endDate = null;
+        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
+        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
         $this->generateReport();
     }
 
@@ -59,7 +59,7 @@ new class extends Component {
         // Mapping kelompok
         $mappingPendapatan = [
             'Penjualan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
-            'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
+            'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing'],
             'Penjualan Obat' => ['Penjualan Obat-Obatan'],
             'Penjualan Eggtray' => ['Penjualan EggTray'],
             'Pendapatan Truk' => ['Pendapatan Truk'],
@@ -71,14 +71,14 @@ new class extends Component {
 
         $mappingPengeluaran = [
             'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
-            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
+            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing'],
             'HPP Obat' => ['HPP Obat-Obatan'],
             'HPP Eggtray' => ['HPP Tray'],
             'Pengeluaran Truk' => ['Pengeluaran Truk'],
             'Pengeluaran Pengadaan' => ['Pengeluaran Pengadaan Jasa'],
             'Beban Transport' => ['Beban Transport', 'Beban BBM'],
             'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
-            'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],
+            'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Kotor', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],
             'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan',],
             'Beban Sedekah' => ['ZIS'],
             'Beban Lain-Lain' => ['Beban Lain-Lain'],
@@ -111,7 +111,7 @@ new class extends Component {
         // Mapping kelompok HPP utama
         $hppKelompok = [
             'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
-            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing', 'HPP Pakan Curah'],
+            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing'],
             'HPP Obat' => ['HPP Obat-Obatan'],
             'HPP Eggtray' => ['HPP Tray'],
         ];

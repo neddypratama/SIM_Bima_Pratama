@@ -134,7 +134,7 @@ new class extends Component {
             'rusak' => $this->prok,
         ]);
 
-        $kateKotor = Kategori::where('name', 'like', '%Stok Kotor%')->first();
+        $kateKotor = Kategori::where('name', 'like', '%Telur Kotor%')->first();
         $kateProk = Kategori::where('name', 'like', '%Telur Prok%')->first();
         $kateBentes = Kategori::where('name', 'like', '%Telur Bentes%')->first();
         $kateCeplok = Kategori::where('name', 'like', '%Telur Ceplok%')->first();

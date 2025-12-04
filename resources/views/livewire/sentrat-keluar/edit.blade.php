@@ -178,6 +178,7 @@ new class extends Component {
         $hppTransaksi = Transaksi::where('invoice', 'like', "%-$tanggal-HPP-$inv")->first();
         $stokTransaksi = Transaksi::where('invoice', 'like', "%-$tanggal-STR-$inv")->first();
 
+        $kategoriPri = Kategori::where('name', 'Penjualan Pakan Curah')->first();
         $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
         $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();
         $kategoriHpp = Kategori::where('name', 'HPP')->first();
@@ -301,27 +302,62 @@ new class extends Component {
         }
 
         // === 3. Update Transaksi Pendapatan (Kredit Utama) ===
-        $this->transaksi->update([
+        // 1️⃣ Ambil transaksi yang mau diedit
+        $transaksi = Transaksi::findOrFail($this->transaksi->id);
+
+        // 2️⃣ Update header transaksi
+        $transaksi->update([
+            'invoice' => $this->invoice,
             'name' => $this->name,
             'user_id' => $this->user_id,
-            'client_id' => $this->client_id,
             'tanggal' => $this->tanggal,
+            'client_id' => $this->client_id,
+            'type' => 'Kredit', // kalau mau bisa dari input juga
             'total' => $this->total,
-            'type' => 'Kredit',
         ]);
 
-        // Replace detail pendapatan
-        $this->transaksi->details()->delete();
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $this->transaksi->id,
-                'kategori_id' => $item['kategori_id'],
-                'barang_id' => $item['barang_id'],
-                'value' => $item['value'],
-                'kuantitas' => $item['kuantitas'],
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
-            ]);
+        // 3️⃣ Rollback titipan lama (jika sebelumnya pernah masuk ke Supriyadi)
+        $oldDetails = DetailTransaksi::where('transaksi_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Penjualan Pakan Curah'))->get();
+
+        if ($oldDetails->count() > 0) {
+            $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
+            if ($supriyadi) {
+                $rollbackTotal = $oldDetails->sum('sub_total');
+                $supriyadi->decrement('titipan', $rollbackTotal);
+            }
         }
+
+        // 4️⃣ Hapus detail lama
+        DetailTransaksi::where('transaksi_id', $transaksi->id)->delete();
+
+        // 5️⃣ Insert detail baru
+        $totalTitipanBaru = 0;
+        foreach ($this->details as $item) {
+            $subTotal = ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1);
+
+            DetailTransaksi::create([
+                'transaksi_id' => $transaksi->id,
+                'kategori_id' => $item['kategori_id'],
+                'value' => $item['value'],
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => $subTotal,
+            ]);
+
+            // mapping titipan jika kategori sesuai
+            if ($item['kategori_id'] == $kategoriPri->id) {
+                $totalTitipanBaru += $subTotal;
+            }
+        }
+
+        // 6️⃣ Tambah titipan baru
+        if ($totalTitipanBaru > 0) {
+            $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
+            if ($supriyadi) {
+                $supriyadi->increment('titipan', $totalTitipanBaru);
+            }
+        }
+
         $this->success('Transaksi berhasil diupdate!', redirectTo: '/sentrat-keluar');
     }
 

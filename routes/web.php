@@ -90,12 +90,6 @@ Route::middleware('auth')->group(function () {
         Volt::route('/stok-tray/create', 'stok-tray.create');
         Volt::route('/stok-tray/{stok}/edit', 'stok-tray.edit');
         Volt::route('/stok-tray/{stok}/show', 'stok-tray.show');
-
-        // Transport
-        Volt::route('/transport', 'transport.index');
-        Volt::route('/transport/create', 'transport.create');
-        Volt::route('/transport/{truk}/edit', 'transport.edit');
-        Volt::route('/transport/{truk}/show', 'transport.show');
     });
 
     /*
@@ -104,7 +98,6 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('role:1,2,7')->group(function () {
-        Volt::route('/truk', 'truk.index');
         Volt::route('/kotor', 'kotor.index');
     });
 
@@ -260,5 +253,6 @@ Route::middleware('auth')->group(function () {
         Volt::route('/laporan-labarugi', 'laporan.labarugi');
         Volt::route('/laporan-neraca-saldo', 'laporan.neraca-saldo');
         Volt::route('/laporan-aset', 'laporan.aset');
+        Volt::route('/laporan-curah', 'laporan.curah');
     });
 });
