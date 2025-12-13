@@ -245,7 +245,7 @@ new class extends Component {
             ]);
             if ($item['kategori_id'] == $kategoriPri->id) {
                 $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
-                $supriyadi->increment('titipan', ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1));
+                $supriyadi->increment('titipan', ($item['value'] - $item['hpp'] ?? 0) * ($item['kuantitas'] ?? 1));
             }
         }
 

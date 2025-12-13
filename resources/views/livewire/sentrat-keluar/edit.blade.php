@@ -333,7 +333,7 @@ new class extends Component {
         // 5️⃣ Insert detail baru
         $totalTitipanBaru = 0;
         foreach ($this->details as $item) {
-            $subTotal = ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1);
+            $subTotal = ($item['value'] - $item['hpp'] ?? 0) * ($item['kuantitas'] ?? 1);
 
             DetailTransaksi::create([
                 'transaksi_id' => $transaksi->id,

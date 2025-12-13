@@ -178,11 +178,7 @@ new class extends Component {
     </x-header>
 
     <!-- Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <x-card>
-            <h3 class="text-lg font-semibold text-blue-700"><i class="fas fa-arrow-up"></i> Stok Pakan Curah</h3>
-            <p class="text-2xl font-bold text-blue-600 mt-2">Rp {{ number_format($stokCurah, 0, ',', '.') }}</p>
-        </x-card>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <x-card>
             <h3 class="text-lg font-semibold text-green-700"><i class="fas fa-arrow-up"></i> Total Pendapatan</h3>
             <p class="text-2xl font-bold text-green-600 mt-2">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
