@@ -76,10 +76,10 @@ new class extends Component {
             'HPP Eggtray' => ['HPP Tray'],
             'Pengeluaran Truk' => ['Pengeluaran Truk'],
             'Pengeluaran Pengadaan' => ['Pengeluaran Pengadaan Jasa'],
-            'Beban Transport' => ['Beban Transport', 'Beban BBM'],
-            'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban Servis', 'Beban TAL'],
+            'Beban Transport' => ['Beban Transport', 'Beban BBM', 'Beban Servis',],
+            'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban TAL'],
             'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Kotor', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],
-            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan',],
+            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan', 'Beban Pajak Pendapatan'],
             'Beban Sedekah' => ['ZIS'],
             'Beban Lain-Lain' => ['Beban Lain-Lain'],
         ];
@@ -150,9 +150,6 @@ new class extends Component {
             ];
         }
 
-        // Beban Pajak
-        $this->bebanPajak = $pengeluaranFlat['Beban Pajak Pendapatan'] ?? 0;
-
         // --- Kelompokkan pendapatan ---
         $this->pendapatanData = [];
         foreach ($mappingPendapatan as $kelompok => $subs) {
@@ -209,7 +206,6 @@ new class extends Component {
         $totalPendapatan = array_sum(array_map(fn($d) => $d['total'], $this->pendapatanData));
         $totalPengeluaran = array_sum(array_map(fn($d) => $d['total'], $this->pengeluaranData));
         $labaSebelumPajak = $totalPendapatan - $totalPengeluaran;
-        $labaSetelahPajak = $labaSebelumPajak - $this->bebanPajak;
 
         return [
             'pendapatanData' => $this->pendapatanData,
@@ -217,8 +213,6 @@ new class extends Component {
             'totalPendapatan' => $totalPendapatan,
             'totalPengeluaran' => $totalPengeluaran,
             'labaSebelumPajak' => $labaSebelumPajak,
-            'bebanPajak' => $this->bebanPajak,
-            'labaSetelahPajak' => $labaSetelahPajak,
         ];
     }
 };
@@ -234,7 +228,7 @@ new class extends Component {
         </x-slot:actions>
     </x-header>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <x-card>
             <h3 class="text-lg font-semibold text-green-800">
                 <i class="fas fa-coins text-green-600"></i>Total Pendapatan
@@ -251,21 +245,11 @@ new class extends Component {
 
         <x-card>
             <h3 class="text-lg font-semibold">
-                <i class="fas fa-chart-line text-blue-600"></i>Laba Sebelum Pajak
+                <i class="fas fa-chart-line text-blue-600"></i>Total Laba/Rugi
             </h3>
             <p class="text-2xl font-bold {{ $labaSebelumPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
                 Rp {{ number_format($labaSebelumPajak, 0, ',', '.') }}
             </p>
-        </x-card>
-
-        <x-card>
-            <h3 class="text-lg font-semibold">
-                <i class="fas fa-calculator text-purple-600"></i>Laba Setelah Pajak
-            </h3>
-            <p class="text-2xl font-bold {{ $labaSetelahPajak >= 0 ? 'text-green-700' : 'text-red-700' }} mt-2">
-                Rp {{ number_format($labaSetelahPajak, 0, ',', '.') }}
-            </p>
-            <p class="text-sm text-gray-500 mt-1">(Beban Pajak: Rp {{ number_format($bebanPajak, 0, ',', '.') }})</p>
         </x-card>
     </div>
 

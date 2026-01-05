@@ -341,7 +341,7 @@ new class extends Component {
                 'value' => $item['value'],
                 'barang_id' => $item['barang_id'] ?? null,
                 'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => $subTotal,
+                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
             ]);
 
             // mapping titipan jika kategori sesuai
