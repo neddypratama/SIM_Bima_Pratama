@@ -29,6 +29,7 @@ new class extends Component {
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $client_id = 0;
+    public int $barang_id = 0;
 
     public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah']];
     public ?string $tipePeternak = null; // <- value yang dipilih
@@ -142,6 +143,12 @@ new class extends Component {
                     $query->where('keterangan', $this->tipePeternak);
                 });
             })
+            // 📦 FILTER BARANG (BENAR)
+            ->when($this->barang_id, function (Builder $q) {
+                $q->whereHas('details', function ($q2) {
+                    $q2->where('barang_id', $this->barang_id);
+                });
+            })
             ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
@@ -152,7 +159,7 @@ new class extends Component {
 
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 3) {
+        if ($this->filter >= 0 && $this->filter < 5) {
             $this->filter = 0;
             if (!empty($this->search)) {
                 $this->filter++;
@@ -163,6 +170,9 @@ new class extends Component {
             if ($this->tipePeternak != 0) {
                 $this->filter++;
             }
+            if ($this->barang_id != 0) {
+                $this->filter++;
+            }
             if ($this->startDate != null) {
                 $this->filter++;
             }
@@ -170,6 +180,11 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
+            'barang' => Barang::with('jenis')
+                ->whereHas('jenis', function ($q) {
+                    $q->where('name', 'like', '%Tray%');
+                })
+                ->get(),
             'client' => Client::where('type', 'like', '%Peternak%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
@@ -248,6 +263,9 @@ new class extends Component {
                 single />
             <x-select placeholder="Pilih Peternak" wire:model.live="tipePeternak" :options="$tipePeternakOptions" icon="o-tag"
                 placeholder-value="0" />
+
+            <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barang" icon="o-flag"
+                single searchable />
 
             <!-- ✅ Tambahkan Filter Tanggal -->
             <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />

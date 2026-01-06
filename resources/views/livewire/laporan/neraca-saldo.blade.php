@@ -57,7 +57,7 @@ new class extends Component {
         'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
         'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
         'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray'],
-        'Kas' => ['Kas Tunai'],
+        'Kas' => ['Kas Tunai', 'Kas Deby'],
         'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
         'Bank BNI' => ['Bank BNI Binti Wasilah', 'Bank BNI Bima Pratama'],
         'Bank BRI' => ['Bank BRI Binti Wasilah', 'Bank BRI Masduki'],

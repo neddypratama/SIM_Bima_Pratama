@@ -29,6 +29,7 @@ new class extends Component {
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $client_id = 0;
+    public int $barang_id = 0;
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -135,6 +136,12 @@ new class extends Component {
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Tray%'))
             ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            // 📦 FILTER BARANG (BENAR)
+            ->when($this->barang_id, function (Builder $q) {
+                $q->whereHas('details', function ($q2) {
+                    $q2->where('barang_id', $this->barang_id);
+                });
+            })
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
@@ -143,12 +150,15 @@ new class extends Component {
 
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 3) {
+        if ($this->filter >= 0 && $this->filter < 4) {
             $this->filter = 0;
             if (!empty($this->search)) {
                 $this->filter++;
             }
             if ($this->client_id != 0) {
+                $this->filter++;
+            }
+            if ($this->barang_id != 0) {
                 $this->filter++;
             }
             if ($this->startDate != null) {
@@ -158,6 +168,11 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
+            'barang' => Barang::with('jenis')
+                ->whereHas('jenis', function ($q) {
+                    $q->where('name', 'like', '%Tray%');
+                })
+                ->get(),
             'client' => Client::where('type', 'like', '%Supplier%')->where('name', 'like', 'Tray%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
@@ -232,7 +247,8 @@ new class extends Component {
                 icon="o-magnifying-glass" />
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client"
                 option-label="name" option-value="id" icon="o-user" placeholder-value="0" searchable single />
-
+            <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barang" icon="o-flag"
+                single searchable />
             <!-- ✅ Tambahkan Filter Tanggal -->
             <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
             <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />

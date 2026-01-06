@@ -27,6 +27,7 @@ new class extends Component {
 
     public int $client_id = 0;
     public int $kategori_id = 0;
+    public int $barang_id = 0;
 
     public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah']];
     public ?string $tipePeternak = null; // <- value yang dipilih
@@ -134,6 +135,12 @@ new class extends Component {
                     $query->where('keterangan', $this->tipePeternak);
                 });
             })
+            // 📦 FILTER BARANG (BENAR)
+            ->when($this->barang_id, function (Builder $q) {
+                $q->whereHas('details', function ($q2) {
+                    $q2->where('barang_id', $this->barang_id);
+                });
+            })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
@@ -143,7 +150,7 @@ new class extends Component {
 
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 3) {
+        if ($this->filter >= 0 && $this->filter < 4) {
             $this->filter = 0;
             if (!empty($this->search)) {
                 $this->filter++;
@@ -154,6 +161,9 @@ new class extends Component {
             if ($this->tipePeternak != 0) {
                 $this->filter++;
             }
+            if ($this->barang_id != 0) {
+                $this->filter++;
+            }
             if ($this->startDate != null) {
                 $this->filter++;
             }
@@ -161,6 +171,11 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
+            'barang' => Barang::with('jenis')
+                ->whereHas('jenis', function ($q) {
+                    $q->where('name', 'like', '%Obat%');
+                })
+                ->get(),
             'client' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
             'kategori' => Kategori::where('name', 'like', 'Penjualan Obat%')->get(),
             'headers' => $this->headers(),
@@ -235,6 +250,9 @@ new class extends Component {
                 icon="o-magnifying-glass" />
 
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
+                single searchable />
+
+            <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barang" icon="o-flag"
                 single searchable />
 
             <x-select placeholder="Pilih Peternak" wire:model.live="tipePeternak" :options="$tipePeternakOptions" icon="o-tag"
