@@ -16,6 +16,7 @@ class Stok extends Model
         'kotor',
         'bentes',
         'ceplok',
+        'jumbo',
         'rusak'
     ];
 
