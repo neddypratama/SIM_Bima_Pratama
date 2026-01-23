@@ -4,11 +4,9 @@ namespace App\Livewire;
 
 use App\Models\Transaksi;
 use App\Models\Kategori;
+use App\Models\Client;
 use Livewire\Volt\Component;
-use App\Exports\AsetExport;
-use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 new class extends Component {
     public $startDate;
@@ -16,12 +14,10 @@ new class extends Component {
 
     public $asetData = [];
     public $liabilitasData = [];
-    public $expanded = []; // toggle detail
+    public $expanded = [];
 
     public function mount()
     {
-        $this->startDate = null;
-        $this->endDate = null;
         $this->generateReport();
     }
 
@@ -32,34 +28,25 @@ new class extends Component {
         }
     }
 
-    public function export(): BinaryFileResponse
-    {
-        return Excel::download(new AsetExport($this->startDate, $this->endDate), 'aset.xlsx');
-    }
-
     public function generateReport()
     {
-        // Ambil tanggal paling awal dan paling akhir di tabel transaksi
-        $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
-        $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
+        /* =====================================================
+         | RANGE TANGGAL
+         ===================================================== */
+        $first = Transaksi::orderBy('tanggal')->first();
+        $last = Transaksi::orderByDesc('tanggal')->first();
 
-        // Jika tidak ada data sama sekali
-        if (!$firstTransaction || !$lastTransaction) {
-            $this->asetData = [];
-            $this->liabilitasData = [];
+        if (!$first || !$last) {
             return;
         }
 
-        // Gunakan tanggal transaksi pertama & terakhir jika tanggal tidak diisi
-        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
+        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($first->tanggal)->startOfDay();
 
-        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
+        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($last->tanggal)->endOfDay();
 
-        // Semua kategori
-        $kategoriAset = Kategori::where('type', 'Aset')->pluck('name')->toArray();
-        $kategoriLiabilitas = Kategori::where('type', 'Liabilitas')->pluck('name')->toArray();
-
-        // Mapping kelompok
+        /* =====================================================
+         | MAPPING
+         ===================================================== */
         $mappingAset = [
             'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
             'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
@@ -76,77 +63,150 @@ new class extends Component {
         $mappingLiabilitas = [
             'Hutang Pihak Lain' => ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang', 'Hutang Bank'],
             'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
-            'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Piutang Tray Random'],
+            'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Hutang Tray Random'],
             'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
             'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random'],
         ];
 
-        // --- Aset per kategori ---
+        /* =====================================================
+         | ASET & LIABILITAS DARI TRANSAKSI
+         ===================================================== */
         $asetFlat = Transaksi::with('details.kategori')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Aset'))
             ->whereBetween('tanggal', [$start, $end])
             ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Aset')
+            ->flatMap->details->filter(fn($d) => $d->kategori?->type === 'Aset')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
+            ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total'))
             ->toArray();
 
-        $stokPakanCurah = Transaksi::with('details.kategori', 'details.barang.jenis')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Aset')->where('name', 'Stok Pakan'))
-            ->whereHas('details.barang.jenis', fn($q) => $q->where('name', 'Pakan Curah'))
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($d) => $d->kategori && ($d->barang->jenis->name ?? '') === 'Pakan Curah')
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->where(fn($i) => strtolower($i->transaksi->type ?? '') === 'debit')->sum('sub_total') - $group->where(fn($i) => strtolower($i->transaksi->type ?? '') === 'kredit')->sum('sub_total'))
-            ->toArray();
-
-        $asetFlat['Stok Pakan'] -= $stokPakanCurah['Stok Pakan'];
-
-        // --- Liabilitas per kategori ---
         $liabilitasFlat = Transaksi::with('details.kategori')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Liabilitas'))
             ->whereBetween('tanggal', [$start, $end])
             ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Liabilitas')
+            ->flatMap->details->filter(fn($d) => $d->kategori?->type === 'Liabilitas')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total'))
+            ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total'))
             ->toArray();
 
-        // --- Kelompokkan Aset ---
-        $this->asetData = [];
-        foreach ($mappingAset as $kelompok => $subs) {
-            $detail = [];
-            $total = 0;
-            foreach ($subs as $sub) {
-                $nilai = $asetFlat[$sub] ?? 0;
-                $detail[$sub] = $nilai;
-                $total += $nilai;
+        /* =====================================================
+         | PIUTANG & HUTANG DARI CLIENT (TOTAL BON)
+         ===================================================== */
+        $clients = Client::select('name', 'type', 'bon', 'titipan')->get();
+
+        $piutang = [
+            'Piutang Peternak' => 0,
+            'Piutang Karyawan' => 0,
+            'Piutang Pedagang' => 0,
+            'Piutang Tray Diamond /DM' => 0,
+            'Piutang Tray Super Buah /SB' => 0,
+            'Piutang Tray Random' => 0,
+            'Piutang Obat SK' => 0,
+            'Piutang Obat Ponggok' => 0,
+            'Piutang Obat Random' => 0,
+            'Piutang Sentrat SK' => 0,
+            'Piutang Sentrat Ponggok' => 0,
+            'Piutang Sentrat Random' => 0,
+        ];
+
+        $hutang = [
+            'Hutang Peternak' => 0,
+            'Hutang Karyawan' => 0,
+            'Hutang Pedagang' => 0,
+            'Hutang Tray Diamond /DM' => 0,
+            'Hutang Tray Super Buah /SB' => 0,
+            'Hutang Tray Random' => 0,
+            'Hutang Obat SK' => 0,
+            'Hutang Obat Ponggok' => 0,
+            'Hutang Obat Random' => 0,
+            'Hutang Sentrat SK' => 0,
+            'Hutang Sentrat Ponggok' => 0,
+            'Hutang Sentrat Random' => 0,
+        ];
+
+        foreach ($clients as $c) {
+            $saldo = $c->bon - $c->titipan;
+            if ($saldo === 0) {
+                continue;
             }
-            $this->asetData[$kelompok] = ['total' => $total, 'detail' => $detail];
+
+            if ($saldo > 0) {
+                if ($c->type === 'Peternak') {
+                    $piutang['Piutang Peternak'] += $saldo;
+                } elseif ($c->type === 'Pedagang') {
+                    $piutang['Piutang Pedagang'] += $saldo;
+                } elseif ($c->type === 'Karyawan') {
+                    $piutang['Piutang Karyawan'] += $saldo;
+                } elseif ($c->type === 'Supplier') {
+                    foreach ($piutang as $akun => $_) {
+                        if (str_contains($akun, $c->name)) {
+                            $piutang[$akun] += $saldo;
+                        }
+                    }
+                }
+            }
+
+            if ($saldo < 0) {
+                $nilai = abs($saldo);
+                if ($c->type === 'Peternak') {
+                    $hutang['Hutang Peternak'] += $nilai;
+                } elseif ($c->type === 'Pedagang') {
+                    $hutang['Hutang Pedagang'] += $nilai;
+                } elseif ($c->type === 'Karyawan') {
+                    $hutang['Hutang Karyawan'] += $nilai;
+                } elseif ($c->type === 'Supplier') {
+                    foreach ($hutang as $akun => $_) {
+                        if (str_contains($akun, $c->name)) {
+                            $hutang[$akun] += $nilai;
+                        }
+                    }
+                }
+            }
         }
 
-        // --- Kelompokkan Liabilitas ---
-        $this->liabilitasData = [];
-        foreach ($mappingLiabilitas as $kelompok => $subs) {
-            $detail = [];
+        /* =====================================================
+         | INJECT KE LAPORAN
+         ===================================================== */
+        foreach ($piutang as $akun => $nilai) {
+            $asetFlat[$akun] = $nilai;
+        }
+
+        foreach ($hutang as $akun => $nilai) {
+            $liabilitasFlat[$akun] =  $nilai;
+        }
+
+        // dd($piutang, $hutang, $asetFlat, $liabilitasFlat);
+
+        /* =====================================================
+         | FINAL GROUPING
+         ===================================================== */
+        $this->asetData = [];
+        foreach ($mappingAset as $group => $subs) {
             $total = 0;
             foreach ($subs as $sub) {
-                $nilai = $liabilitasFlat[$sub] ?? 0;
-                $detail[$sub] = $nilai;
-                $total += $nilai;
+                $total += $asetFlat[$sub] ?? 0;
             }
-            $this->liabilitasData[$kelompok] = ['total' => $total, 'detail' => $detail];
+            $this->asetData[$group] = [
+                'total' => $total,
+                'detail' => array_map(fn($s) => $asetFlat[$s] ?? 0, array_combine($subs, $subs)),
+            ];
+        }
+
+        $this->liabilitasData = [];
+        foreach ($mappingLiabilitas as $group => $subs) {
+            $total = 0;
+            foreach ($subs as $sub) {
+                $total += $liabilitasFlat[$sub] ?? 0;
+            }
+            $this->liabilitasData[$group] = [
+                'total' => $total,
+                'detail' => array_map(fn($s) => $liabilitasFlat[$s] ?? 0, array_combine($subs, $subs)),
+            ];
         }
     }
 
     public function with()
     {
-        $totalAset = array_sum(array_map(fn($d) => $d['total'], $this->asetData));
-        $totalLiabilitas = array_sum(array_map(fn($d) => $d['total'], $this->liabilitasData));
+        $totalAset = array_sum(array_column($this->asetData, 'total'));
+        $totalLiabilitas = array_sum(array_column($this->liabilitasData, 'total'));
 
         return [
             'asetData' => $this->asetData,
@@ -157,6 +217,7 @@ new class extends Component {
         ];
     }
 };
+
 ?>
 
 <div class="p-6 space-y-6">

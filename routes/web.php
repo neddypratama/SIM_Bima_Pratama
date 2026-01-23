@@ -99,6 +99,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::middleware('role:1,2,7')->group(function () {
         Volt::route('/kotor', 'kotor.index');
+
+        Volt::route('/deby', 'deby.index');
+        Volt::route('/deby/create', 'deby.create');
+        Volt::route('/deby/{transaksi}/edit', 'deby.edit');
+        Volt::route('/deby/{transaksi}/show', 'deby.show');
     });
 
     /*

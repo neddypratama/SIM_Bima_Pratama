@@ -141,6 +141,9 @@
                     @if (in_array(auth()->user()->role_id, [1, 5, 6]))
                         <x-menu-item title="Laporan Kas" icon="fas.cash-register" link="/kas" />
                     @endif
+                    @if (in_array(auth()->user()->role_id, [1, 2]))
+                       <x-menu-item title="Transaksi Kas Deby" icon="fas.piggy-bank" link="/deby" />
+                    @endif
                     @if (in_array(auth()->user()->role_id, [1, 5]))
                         <x-menu-item title="Transaksi Kas Tunai" icon="fas.money-bill-wave" link="/tunai" />
                     @endif

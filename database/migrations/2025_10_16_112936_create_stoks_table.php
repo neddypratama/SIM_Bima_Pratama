@@ -22,6 +22,7 @@ return new class extends Migration
             $table->decimal('kotor')->default(0);
             $table->decimal('bentes')->default(0)->nullable();
             $table->decimal('ceplok')->default(0)->nullable();
+            $table->decimal('jumbo')->default(0)->nullable();
             $table->decimal('rusak')->default(0);
             $table->timestamps();
         });

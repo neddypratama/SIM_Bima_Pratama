@@ -182,7 +182,7 @@ new class extends Component {
             'transaksi' => $this->transaksi(),
             'barang' => Barang::with('jenis')
                 ->whereHas('jenis', function ($q) {
-                    $q->where('name', 'like', '%Tray%');
+                    $q->where('name', 'like', '%Telur%');
                 })
                 ->get(),
             'client' => Client::where('type', 'like', '%Peternak%')->get(),

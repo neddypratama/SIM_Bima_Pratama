@@ -27,6 +27,8 @@ new class extends Component {
     public string $invoice6 = '';
     public string $invoice7 = '';
     public string $invoice8 = '';
+    public string $invoice9 = '';
+    public string $invoice10 = '';
 
     #[Rule('required')]
     public ?int $barang_id = null;
@@ -53,6 +55,9 @@ new class extends Component {
 
     #[Rule('nullable|numeric|min:0')]
     public float $prok = 0;
+
+    #[Rule('nullable|numeric|min:0')]
+    public float $jumbo = 0;
 
     public function with(): array
     {
@@ -81,10 +86,12 @@ new class extends Component {
             $this->invoice2 = 'INV-' . $tanggal . '-BTS-' . $str;
             $this->invoice3 = 'INV-' . $tanggal . '-CLK-' . $str;
             $this->invoice4 = 'INV-' . $tanggal . '-PRK-' . $str;
-            $this->invoice5 = 'INV-' . $tanggal . '-TLR1-' . $str;
-            $this->invoice6 = 'INV-' . $tanggal . '-TLR2-' . $str;
-            $this->invoice7 = 'INV-' . $tanggal . '-TLR3-' . $str;
-            $this->invoice8 = 'INV-' . $tanggal . '-TLR4-' . $str;
+            $this->invoice5 = 'INV-' . $tanggal . '-JMB-' . $str;
+            $this->invoice6 = 'INV-' . $tanggal . '-TLR1-' . $str;
+            $this->invoice7 = 'INV-' . $tanggal . '-TLR2-' . $str;
+            $this->invoice8 = 'INV-' . $tanggal . '-TLR3-' . $str;
+            $this->invoice9 = 'INV-' . $tanggal . '-TLR4-' . $str;
+            $this->invoice110 = 'INV-' . $tanggal . '-TLR5-' . $str;
         }
     }
 
@@ -99,11 +106,11 @@ new class extends Component {
 
     public function updated($field): void
     {
-        if (in_array($field, ['tambah', 'kurang', 'kotor', 'bentes', 'ceplok', 'prok', 'rusak'])) {
+        if (in_array($field, ['tambah', 'kurang', 'kotor', 'bentes', 'ceplok', 'prok', 'rusak', 'jumbo'])) {
             $barang = Barang::find($this->barang_id);
             if ($barang) {
                 $stok_awal = $barang->stok;
-                $stok_baru = $stok_awal + $this->tambah - ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok);
+                $stok_baru = $stok_awal + $this->tambah - ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok + $this->jumbo);
                 $this->stok = max(0, $stok_baru);
             }
         }
@@ -132,6 +139,7 @@ new class extends Component {
             'bentes' => $this->bentes,
             'ceplok' => $this->ceplok,
             'rusak' => $this->prok,
+            'jumbo' => $this->jumbo,
         ]);
 
         $kateKotor = Kategori::where('name', 'like', '%Telur Kotor%')->first();
@@ -139,6 +147,7 @@ new class extends Component {
         $kateBentes = Kategori::where('name', 'like', '%Telur Bentes%')->first();
         $kateCeplok = Kategori::where('name', 'like', '%Telur Ceplok%')->first();
         $kateTelur = Kategori::where('name', 'like', '%Stok Telur%')->first();
+        $kateJumbo = Kategori::where('name', 'like', '%Telur Jumbo%')->first();
 
         if ($this->kotor > 0) {
             // TELUR KOTOR - Debit
@@ -162,7 +171,7 @@ new class extends Component {
 
             // TELUR KOTOR - Kredit
             $telur1 = Transaksi::create([
-                'invoice' => $this->invoice5,
+                'invoice' => $this->invoice6,
                 'name' => 'Telur Kotor ' . $barang->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
@@ -200,7 +209,7 @@ new class extends Component {
 
             // TELUR KOTOR - Kredit
             $telur1 = Transaksi::create([
-                'invoice' => $this->invoice5,
+                'invoice' => $this->invoice6,
                 'name' => 'Telur Kotor ' . $barang->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
@@ -239,7 +248,7 @@ new class extends Component {
 
         // TELUR BENTES - Kredit
         $telur2 = Transaksi::create([
-            'invoice' => $this->invoice6,
+            'invoice' => $this->invoice7,
             'name' => 'Telur Bentes ' . $barang->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
@@ -277,7 +286,7 @@ new class extends Component {
 
         // TELUR CEPLOK - Kredit
         $telur3 = Transaksi::create([
-            'invoice' => $this->invoice7,
+            'invoice' => $this->invoice8,
             'name' => 'Telur Ceplok ' . $barang->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
@@ -315,7 +324,7 @@ new class extends Component {
 
         // TELUR PROK - Kredit
         $telur4 = Transaksi::create([
-            'invoice' => $this->invoice8,
+            'invoice' => $this->invoice9,
             'name' => 'Telur Prok ' . $barang->name,
             'user_id' => $this->user_id,
             'tanggal' => $this->tanggal,
@@ -330,6 +339,44 @@ new class extends Component {
             'barang_id' => $barang->id,
             'kuantitas' => $this->prok,
             'sub_total' => ($barang->hpp ?? 0) * ($this->prok ?? 0),
+        ]);
+
+        // TELUR JUMBO - Debit
+        $jumbo = Transaksi::create([
+            'invoice' => $this->invoice5,
+            'name' => 'Telur Jumbo ' . $barang->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'type' => 'Debit',
+            'total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
+        ]);
+
+        DetailTransaksi::create([
+            'transaksi_id' => $jumbo->id,
+            'kategori_id' => $katejumbo->id ?? null,
+            'value' => $barang->hpp,
+            'barang_id' => $barang->id,
+            'kuantitas' => $this->jumbo,
+            'sub_total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
+        ]);
+
+        // TELUR JUMBO - Kredit
+        $telur5 = Transaksi::create([
+            'invoice' => $this->invoice10,
+            'name' => 'Telur Jumbo ' . $barang->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'type' => 'Kredit',
+            'total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
+        ]);
+
+        DetailTransaksi::create([
+            'transaksi_id' => $telur5->id,
+            'kategori_id' => $kateTelur->id ?? null,
+            'value' => $barang->hpp,
+            'barang_id' => $barang->id,
+            'kuantitas' => $this->jumbo,
+            'sub_total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
         ]);
 
         $this->success('Stok berhasil diperbarui!', redirectTo: '/stok-telur');
@@ -378,6 +425,7 @@ new class extends Component {
                         <x-input label="Telur Bentes" wire:model.lazy="bentes" type="number" step="0.01" min="0" />
                         <x-input label="Telur Ceplok" wire:model.lazy="ceplok" type="number" step="0.01" min="0" />
                         <x-input label="Telur Prok" wire:model.lazy="prok" type="number" step="0.01" min="0" />
+                        <x-input label="Telur Jumbo" wire:model.lazy="jumbo" type="number" step="0.01" min="0" />
                     </div>
                 </div>
             </div>
