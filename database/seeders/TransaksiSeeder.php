@@ -466,68 +466,88 @@ class TransaksiSeeder extends Seeder
         foreach ($data as $item) {
             $userId = 1; 
             $tanggal = now()->format('Y-m-d\TH:i:s');
-            $client = Client::find($item['id'])->where('type', 'not like', '%Truk%')->first();
+            
+            // Ambil client berdasarkan ID
+            $client = Client::find($item['id']);
 
-            // --- FUNGSI HELPER UNTUK MENCARI KATEGORI BERDASARKAN NAMA ---
+            // Validasi: Lewati jika client tidak ditemukan atau tipenya mengandung 'Truk'
+            if (!$client || Str::contains($client->type, 'Truk')) {
+                continue; 
+            }
+
             $getKategoriId = function($name) {
                 return Kategori::where('name', 'like', "%$name%")->first()?->id;
             };
 
-            // Tentukan kategori default berdasarkan type
-            $kategoriFinalId = null;
+            // --- PROSES PIUTANG (BON) ---
+            if ($item['bon'] > 0) {
+                $kategoriFinalId = null;
 
-            // 1. Logika Pencocokan Berdasarkan Nama Client (Prioritas Utama)
-            if (Str::contains($client->name, 'Bp.Supriyadi')) {
-                $kategoriFinalId = $getKategoriId('Supplier Bp.Supriyadi');
-            } elseif (Str::contains($client->name, 'Tray Diamond')) {
-                $kategoriFinalId = $getKategoriId('Piutang Tray Diamond');
-            } elseif (Str::contains($client->name, 'Tray Super Buah')) {
-                $kategoriFinalId = $getKategoriId('Piutang Tray Super Buah');
-            } elseif (Str::contains($client->name, 'Tray Random')) {
-                $kategoriFinalId = $getKategoriId('Piutang Tray Random');
-            } elseif (Str::contains($client->name, 'Obat SK')) {
-                $kategoriFinalId = $getKategoriId('Piutang Obat SK');
-            } elseif (Str::contains($client->name, 'Obat Ponggok')) {
-                $kategoriFinalId = $getKategoriId('Piutang Obat Ponggok');
-            } elseif (Str::contains($client->name, 'Obat Random')) {
-                $kategoriFinalId = $getKategoriId('Piutang Obat Random');
-            } elseif (Str::contains($client->name, 'Sentrat SK')) {
-                $kategoriFinalId = $getKategoriId('Piutang Sentrat SK');
-            } elseif (Str::contains($client->name, 'Sentrat Ponggok')) {
-                $kategoriFinalId = $getKategoriId('Piutang Sentrat Ponggok');
-            } elseif (Str::contains($client->name, 'Sentrat Random')) {
-                $kategoriFinalId = $getKategoriId('Piutang Sentrat Random');
-            } 
-            // 2. Jika tidak cocok nama, cek berdasarkan Type Client
-            else {
                 if ($client->type == 'Peternak') {
                     $kategoriFinalId = $getKategoriId('Piutang Peternak');
                 } elseif ($client->type == 'Karyawan') {
                     $kategoriFinalId = $getKategoriId('Piutang Karyawan');
                 } elseif ($client->type == 'Pedagang') {
                     $kategoriFinalId = $getKategoriId('Piutang Pedagang');
+                } elseif ($client->type == 'Supplier') {
+                    // Gunakan match agar lebih bersih dan cepat
+                    $kategoriFinalId = match (true) {
+                        Str::contains($client->name, 'Bp.Supriyadi') => $getKategoriId('Supplier Bp.Supriyadi'),
+                        Str::contains($client->name, 'Tray Diamond') => $getKategoriId('Piutang Tray Diamond'),
+                        Str::contains($client->name, 'Tray Super Buah') => $getKategoriId('Piutang Tray Super Buah'),
+                        Str::contains($client->name, 'Tray Random') => $getKategoriId('Piutang Tray Random'),
+                        Str::contains($client->name, 'Obat SK') => $getKategoriId('Piutang Obat SK'),
+                        Str::contains($client->name, 'Obat Ponggok') => $getKategoriId('Piutang Obat Ponggok'),
+                        Str::contains($client->name, 'Obat Random') => $getKategoriId('Piutang Obat Random'),
+                        Str::contains($client->name, 'Sentrat SK') => $getKategoriId('Piutang Sentrat SK'),
+                        Str::contains($client->name, 'Sentrat Ponggok') => $getKategoriId('Piutang Sentrat Ponggok'),
+                        Str::contains($client->name, 'Sentrat Random') => $getKategoriId('Piutang Sentrat Random'),
+                        default => $getKategoriId('Piutang Peternak'), // Fallback jika tidak ada yang cocok
+                    };
                 }
-            }
-
-            // --- PROSES TRANSAKSI PIUTANG (BON) ---
-            if ($item['bon'] > 0) {
+                
                 $this->createTransaksi($client, 'Piutang', $item['bon'], $kategoriFinalId, $userId, $tanggal);
             }
 
-            // --- PROSES TRANSAKSI HUTANG (TITIPAN) ---
+            // --- PROSES HUTANG (TITIPAN) ---
             if ($item['titipan'] > 0) {
-                // Untuk titipan, biasanya kategorinya tetap 'Supplier' atau kategori khusus titipan
+                $kategoriFinalId = null;
+
+                if ($client->type == 'Peternak') {
+                    $kategoriFinalId = $getKategoriId('Hutang Peternak');
+                } elseif ($client->type == 'Karyawan') {
+                    $kategoriFinalId = $getKategoriId('Hutang Karyawan');
+                } elseif ($client->type == 'Pedagang') {
+                    $kategoriFinalId = $getKategoriId('Hutang Pedagang');
+                } elseif ($client->type == 'Supplier') {
+                    $kategoriFinalId = match (true) {
+                        Str::contains($client->name, 'Bp.Supriyadi') => $getKategoriId('Saldo Bp.Supriyadi'),
+                        Str::contains($client->name, 'Tray Diamond') => $getKategoriId('Hutang Tray Diamond'),
+                        Str::contains($client->name, 'Tray Super Buah') => $getKategoriId('Hutang Tray Super Buah'),
+                        Str::contains($client->name, 'Tray Random') => $getKategoriId('Hutang Tray Random'),
+                        Str::contains($client->name, 'Obat SK') => $getKategoriId('Hutang Obat SK'),
+                        Str::contains($client->name, 'Obat Ponggok') => $getKategoriId('Hutang Obat Ponggok'),
+                        Str::contains($client->name, 'Obat Random') => $getKategoriId('Hutang Obat Random'),
+                        Str::contains($client->name, 'Sentrat SK') => $getKategoriId('Hutang Sentrat SK'),
+                        Str::contains($client->name, 'Sentrat Ponggok') => $getKategoriId('Hutang Sentrat Ponggok'),
+                        Str::contains($client->name, 'Sentrat Random') => $getKategoriId('Hutang Sentrat Random'),
+                        default => $getKategoriId('Hutang Peternak'),
+                    };
+                }
+                
                 $this->createTransaksi($client, 'Hutang', $item['titipan'], $kategoriFinalId, $userId, $tanggal);
             }
         }
+
     }
+
 
     // Refactor ke fungsi agar kode lebih bersih
     private function createTransaksi($client, $type, $amount, $kategoriId, $userId, $tanggal)
     {
         $date = \Carbon\Carbon::parse($tanggal)->format('Ymd');
         $prefix = ($type == 'Piutang') ? "INV-$date-BON-" : "INV-$date-UTG-";
-        $inv = 'INV-AWL-';
+        $inv = "INV-$date-AWL-";
         $str = Str::upper(Str::random(4));
         $beda1 = ($type == 'Piutang') ? 'Debit' : 'Kredit';
         $beda2 = ($type == 'Piutang') ? 'Kredit' : 'Debit';

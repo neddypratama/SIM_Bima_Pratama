@@ -37,7 +37,10 @@ class DetailKategoriSeeder extends Seeder
 
             // --- ASET ---
             ['name' => 'Piutang Pihak Lain', 'type' => 'Aset', 'deskripsi' => 'Piutang Peternak, Karyawan, Pedagang'],
-            ['name' => 'Piutang Supplier', 'type' => 'Aset', 'deskripsi' => 'Supplier Bp.Supriyadi, Piutang Tray (DM, SB, Random), Piutang Obat & Sentrat'],
+            ['name' => 'Piutang Supplier', 'type' => 'Aset', 'deskripsi' => 'Piutang Supplier Bp.Supriyadi'],
+            ['name' => 'Piutang Tray', 'type' => 'Aset', 'deskripsi' => 'Piutang Tray Diamond, Super Buah, Random'],
+            ['name' => 'Piutang Obat', 'type' => 'Aset', 'deskripsi' => 'Piutang Obat SK, Ponggok, Random, P Atok'],
+            ['name' => 'Piutang Pakan', 'type' => 'Aset', 'deskripsi' => 'Piutang Sentrat SK, Ponggok, Random, Polet SK'],
             ['name' => 'Stok', 'type' => 'Aset', 'deskripsi' => 'Stok Telur, Pakan, Obat, Tray, Return'],
             ['name' => 'Kas', 'type' => 'Aset', 'deskripsi' => 'Kas Tunai, Kas Deby'],
             ['name' => 'Bank BCA', 'type' => 'Aset', 'deskripsi' => 'Bank BCA Binti Wasilah, Masduki'],
