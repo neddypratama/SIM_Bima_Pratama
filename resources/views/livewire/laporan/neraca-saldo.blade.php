@@ -9,6 +9,7 @@ use App\Exports\NeracaSaldoExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component {
     public $startDate;
@@ -27,58 +28,54 @@ new class extends Component {
     public array $expanded = []; // <- untuk menyimpan state expand/collapse
 
     // Mapping kategori ke kelompok
-    public array $mappingPendapatan = [
-        'Penjualan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
-        'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing', 'Penjualan Pakan Curah'],
-        'Penjualan Obat' => ['Penjualan Obat-Obatan'],
-        'Penjualan Eggtray' => ['Penjualan EggTray'],
-        'Pendapatan Truk' => ['Pendapatan Truk'],
-        'Pendapatan Pengadaan' => ['Pendapatan Pengadaan Jasa'],
-        'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
-        'Pendapatan Non Penjualan' => ['Pemasukan Telur Reject', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang'],
-        'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
-    ];
+    public array $mappingPendapatan = [];
 
-    public array $mappingPengeluaran = [
-        'Beban Transport' => ['Beban Transport', 'Beban BBM', 'Beban Servis'],
-        'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban TAL'],
-        'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Prok', 'Beban Telur Kotor', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa', 'HPP'],
-        'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan', 'Beban Pajak Pendapatan'],
-        'Beban Sedekah' => ['ZIS'],
-        'Pengeluaran Truk' => ['Pengeluaran Truk'],
-        'Pengeluaran Pengadaan' => ['Pengeluaran Pengadaan Jasa'],
-        'Beban Lain-Lain' => ['Beban Lain-Lain'],
-    ];
+    public array $mappingPengeluaran = [];
 
-    public array $mappingAset = [
-        'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
-        'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
-        'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
-        'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
-        'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
-        'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray'],
-        'Kas' => ['Kas Tunai', 'Kas Deby'],
-        'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
-        'Bank BNI' => ['Bank BNI Binti Wasilah', 'Bank BNI Bima Pratama'],
-        'Bank BRI' => ['Bank BRI Binti Wasilah', 'Bank BRI Masduki'],
-    ];
+    public array $mappingAset = [];
 
-    public array $mappingLiabilitas = [
-        'Hutang Pihak Lain' => ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang', 'Hutang Bank'],
-        'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
-        'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Hutang Tray Random'],
-        'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
-        'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random'],
-    ];
+    public array $mappingLiabilitas = [];
 
-    public array $mappingEkuitas = [
-        'Modal' => ['Modal Awal'],
-    ];
+    public array $mappingEkuitas = [];
 
     public function mount()
     {
         $this->startDate = null;
         $this->endDate = null;
+
+        // Ambil data laporan
+        $laporans = DB::table('detail_kategoris as dk')
+            ->leftJoin('kategoris as k', 'k.detail_kategori_id', '=', 'dk.id')
+            ->select('dk.name as laporan', 'dk.type', 'k.name as kategori')
+            ->whereNotNull('k.name') // Pastikan kategori tidak kosong
+            ->orderBy('dk.id')
+            ->get();
+
+        // Reset mapping untuk memastikan data bersih
+        $this->mappingPendapatan = [];
+        $this->mappingPengeluaran = [];
+        $this->mappingAset = [];
+        $this->mappingLiabilitas = [];
+        $this->mappingEkuitas = [];
+
+        foreach ($laporans as $item) {
+            // Tentukan array target berdasarkan 'type' dari detail_kategori
+            $target = match ($item->type) {
+                'Pendapatan' => 'mappingPendapatan',
+                'Pengeluaran' => 'mappingPengeluaran',
+                'Aset' => 'mappingAset',
+                'Liabilitas' => 'mappingLiabilitas',
+                'Ekuitas' => 'mappingEkuitas',
+                default => null,
+            };
+
+            if ($target) {
+                // Masukkan kategori ke dalam grup laporannya
+                // Hasilnya: $this->mappingAset['Piutang Tray'][] = 'Piutang Tray Random'
+                $this->{$target}[$item->laporan][] = $item->kategori;
+            }
+        }
+
         $this->generateNeraca();
     }
 

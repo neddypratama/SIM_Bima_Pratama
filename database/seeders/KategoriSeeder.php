@@ -107,7 +107,8 @@ class KategoriSeeder extends Seeder
             ['name' => 'Hutang Sentrat Random', 'detail_kategori_id' => 30, 'deskripsi' => 'Hutang pakan umum'],
 
             // --- EKUITAS (detail_kategori_id: 31) ---
-            ['name' => 'Modal Awal', 'detail_kategori_id' => 31, 'deskripsi' => 'Saldo modal awal bisnis'],
+            ['name' => 'Modal', 'detail_kategori_id' => 31, 'deskripsi' => 'Saldo modal awal bisnis'],
+            ['name' => 'Modal Awal', 'detail_kategori_id' => 31, 'deskripsi' => 'Data awal'],
         ];
 
         foreach ($data as $item) {

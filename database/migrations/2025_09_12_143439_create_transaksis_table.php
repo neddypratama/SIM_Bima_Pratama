@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('type', ['Kredit', 'Debit']);
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('client_id')->nullable()->constrained('clients');
-            $table->integer('total')->default(0);
+            $table->decimal('total', 15, 2);
             $table->timestamps();
         });
     }
