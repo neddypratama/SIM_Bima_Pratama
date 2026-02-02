@@ -183,12 +183,6 @@ new class extends Component {
                     'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
                 ]);
             }
-
-            $client = Client::find($this->client_id);
-
-            if ($client) {
-                $client->increment('titipan', $this->total);
-            }
         });
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur-masuk');

@@ -98,14 +98,10 @@ new class extends Component {
         DB::transaction(function () {
             $tipe = '';
 
-            $client = Client::find($this->client_id);
             if ($this->type == 'Debit') {
                 $tipe = 'Kredit';
-                // dd($this->client_id, $kategori->name, $this->type, $this->total);
-                $client->increment('bon', $this->total);
             } else {
                 $tipe = 'Debit';
-                $client->decrement('bon', $this->total);
             }
 
             $piutang = Transaksi::create([

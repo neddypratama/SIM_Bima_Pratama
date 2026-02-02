@@ -115,52 +115,17 @@ new class extends Component {
         $this->validate();
 
         DB::transaction(function () {
-            $oldClient = Client::find($this->piutang->getOriginal('client_id'));
-            $newClient = Client::find($this->client_id);
             $tipe = '';
 
             if ($this->type == 'Debit') {
                 $tipe = 'Kredit';
-                // Jika client lama dan baru berbeda
-                if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                    // Kembalikan titipan client lama
-                    $oldClient->decrement('bon', $this->piutang->total);
-
-                    // Tambahkan bon ke client baru
-                    $newClient->increment('bon', $this->total);
-                } elseif ($newClient) {
-                    // Jika client sama, hanya update selisih total
-                    $selisih = $this->total - $this->piutang->total;
-
-                    if ($selisih > 0) {
-                        $newClient->increment('bon', $selisih);
-                    } elseif ($selisih < 0) {
-                        $newClient->decrement('bon', abs($selisih));
-                    }
-                }
             } else {
                 $tipe = 'Debit';
-                // Jika client lama dan baru berbeda
-                if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                    // Kembalikan titipan client lama
-                    $oldClient->increment('bon', $this->piutang->total);
-
-                    // Tambahkan bon ke client baru
-                    $newClient->decrement('bon', $this->total);
-                } elseif ($newClient) {
-                    // Jika client sama, hanya update selisih total
-                    $selisih = $this->total - $this->piutang->total;
-
-                    if ($selisih > 0) {
-                        $newClient->decrement('bon', $selisih);
-                    } elseif ($selisih < 0) {
-                        $newClient->increment('bon', abs($selisih));
-                    }
-                }
             }
 
             // Ambil kategori pembayaran
             $kategoriBayar = Kategori::find($this->bayar_id);
+            
             $inv = substr($this->invoice, -4);
             $part = explode('-', $this->piutang->invoice);
             $tanggal = $part[1];

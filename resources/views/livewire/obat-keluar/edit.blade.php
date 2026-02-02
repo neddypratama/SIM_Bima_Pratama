@@ -309,27 +309,6 @@ new class extends Component {
                 ]);
             }
 
-            $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
-            $newClient = Client::find($this->client_id);
-
-            // Jika client lama dan baru berbeda
-            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                // Kembalikan titipan client lama
-                $oldClient->decrement('bon', $this->transaksi->total);
-
-                // Tambahkan bon ke client baru
-                $newClient->increment('bon', $this->total);
-            } elseif ($newClient) {
-                // Jika client sama, hanya update selisih total
-                $selisih = $this->total - $this->transaksi->total;
-
-                if ($selisih > 0) {
-                    $newClient->increment('bon', $selisih);
-                } elseif ($selisih < 0) {
-                    $newClient->decrement('bon', abs($selisih));
-                }
-            }
-
             /** ===============================
              * 1. ROLLBACK STOK LAMA
              * =============================== */
@@ -353,7 +332,6 @@ new class extends Component {
              * 3. SIMPAN DETAIL + FIFO OUT BARU
              * =============================== */
             foreach ($this->details as $item) {
-                $hpp = $this->hitungHppFifoEdit($item['barang_id'], $item['kuantitas']);
 
                 DetailTransaksi::create([
                     'transaksi_id' => $this->transaksi->id,

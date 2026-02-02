@@ -39,8 +39,6 @@ new class extends Component {
     public string $editingAlamat = ''; // Menyimpan nilai input untuk nama Client
     public ?string $editingType = null;
     public ?string $editingKeterangan = null;
-    public $editingBon = '';
-    public $editingTitipan = '';
 
     public bool $createModal = false; // Untuk menampilkan modal create
 
@@ -48,8 +46,6 @@ new class extends Component {
     public string $newClientAlamat = ''; // Untuk menyimpan input nama Client baru
     public ?string $newClientType = null;
     public ?string $newClientKeterangan = null;
-    public $newClientBon = '';
-    public $newClientTitipan = '';
 
     public function create(): void
     {
@@ -57,8 +53,6 @@ new class extends Component {
         $this->newClientAlamat = '';
         $this->newClientType = null;
         $this->newClientKeterangan = null;
-        $this->newClientBon = 0;
-        $this->newClientTitipan = 0;
         if (Auth::user()->role_id == 1 || Auth::user()->role_id == 2) {
             # code...
             $this->createModal = true;
@@ -72,11 +66,9 @@ new class extends Component {
             'newClientAlamat' => 'nullable',
             'newClientKeterangan' => 'nullable',
             'newClientType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier,Truk',
-            'newClientBon' => 'nullable|numeric',
-            'newClientTitipan' => 'nullable|numeric',
         ]);
 
-        Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'keterangan' => $this->newClientKeterangan, 'type' => $this->newClientType, 'bon' => $this->newClientBon, 'titipan' => $this->newClientTitipan]);
+        Client::create(['name' => $this->newClientName, 'alamat' => $this->newClientAlamat, 'keterangan' => $this->newClientKeterangan, 'type' => $this->newClientType]);
 
         $this->createModal = false;
         $this->success('Client created successfully.', position: 'toast-top');
@@ -91,8 +83,6 @@ new class extends Component {
             $this->editingAlamat = $this->editingClient->alamat;
             $this->editingType = $this->editingClient->type;
             $this->editingKeterangan = $this->editingClient->keterangan;
-            $this->editingBon = $this->editingClient->bon;
-            $this->editingTitipan = $this->editingClient->titipan;
             if (Auth::user()->role_id == 1 || Auth::user()->role_id == 2) {
                 # code...
                 $this->editModal = true; // Tampilkan modal
@@ -108,10 +98,8 @@ new class extends Component {
                 'editingAlamat' => 'nullable',
                 'editingKeterangan' => 'nullable',
                 'editingType' => 'required|in:Karyawan,Peternak,Pedagang,Supplier,Truk',
-                'editingBon' => 'nullable|numeric',
-                'editingTitipan' => 'nullable|numeric',
             ]);
-            $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'keterangan' => $this->editingKeterangan, 'type' => $this->editingType, 'bon' => $this->editingBon, 'titipan' => $this->editingTitipan, 'updated_at' => now()]);
+            $this->editingClient->update(['name' => $this->editingName, 'alamat' => $this->editingAlamat, 'keterangan' => $this->editingKeterangan, 'type' => $this->editingType, 'updated_at' => now()]);
             $this->editModal = false;
             $this->success('Client updated successfully.', position: 'toast-top');
         }
@@ -149,10 +137,35 @@ new class extends Component {
     public function clients(): LengthAwarePaginator
     {
         return Client::query()
-            ->with('transaksi.details.kategori') // agar eager load, lebih hemat query
-            ->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))
-            ->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))
-            ->when($this->tipePeternak, fn(Builder $q) => $q->where('keterangan', $this->tipePeternak))
+
+            /* ================= BON (PIUTANG | DEBIT) ================= */
+            ->withSum(
+                [
+                    'transaksi as bon' => function ($q) {
+                        $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
+                            $q->where('name', 'like', 'Piutang%');
+                        });
+                    },
+                ],
+                'total',
+            )
+
+            /* ================= TITIPAN (HUTANG | KREDIT) ================= */
+            ->withSum(
+                [
+                    'transaksi as titipan' => function ($q) {
+                        $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
+                            $q->where('name', 'like', 'Hutang%');
+                        });
+                    },
+                ],
+                'total',
+            )
+
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->tipeClient, fn($q) => $q->where('type', $this->tipeClient))
+            ->when($this->tipePeternak, fn($q) => $q->where('keterangan', $this->tipePeternak))
+
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -172,6 +185,7 @@ new class extends Component {
                 $this->filter += 1;
             }
         }
+        
         return [
             'clients' => $this->clients(),
             'headers' => $this->headers(),
@@ -233,7 +247,7 @@ new class extends Component {
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
                 <span class="font-bold text-green-600">
-                   Rp {{ number_format($client->titipan, 0, ',', '.') }}
+                    Rp {{ number_format($client->titipan, 0, ',', '.') }}
                 </span>
             @endscope
 
@@ -268,8 +282,6 @@ new class extends Component {
             <x-textarea label="Client Keterangan" wire:model="newClientKeterangan" placeholder="Here ..." />
             <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model="newClientType" :options="$tipeClientOptions"
                 icon="o-flag" />
-            <x-input label="Client Bon" wire:model="newClientBon" />
-            <x-input label="Client Titipan" wire:model="newClientTitipan" />
         </div>
 
         <x-slot:actions>
@@ -285,8 +297,6 @@ new class extends Component {
             <x-textarea label="Client Keterangan" wire:model="editingKeterangan" placeholder="Here ..." />
             <x-select label="Tipe Client" placeholder="Select Tipe Client" wire:model="editingType" :options="$tipeClientOptions"
                 icon="o-flag" />
-            <x-input label="Client Bon" wire:model="editingBon" />
-            <x-input label="Client Titipan" wire:model="editingTitipan" />
         </div>
 
         <x-slot:actions>

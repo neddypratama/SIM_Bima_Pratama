@@ -200,10 +200,6 @@ new class extends Component {
                     'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
                 ]);
             }
-
-            if ($client) {
-                $client->increment('titipan', $this->total);
-            }
         });
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/tray-masuk');

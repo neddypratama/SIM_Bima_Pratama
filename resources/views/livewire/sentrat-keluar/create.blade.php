@@ -269,12 +269,6 @@ new class extends Component {
                 ]);
             }
 
-            $client = Client::find($this->client_id);
-
-            if ($client) {
-                $client->increment('bon', $this->total);
-            }
-
             $transaksi = Transaksi::create([
                 'invoice' => $this->invoice,
                 'name' => $this->name,

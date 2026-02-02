@@ -237,27 +237,6 @@ new class extends Component {
                     'sub_total' => $item['value'] * $item['kuantitas'],
                 ]);
             }
-
-            $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
-            $newClient = Client::find($this->client_id);
-
-            // Jika client lama dan baru berbeda
-            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                // Kembalikan titipan client lama
-                $oldClient->decrement('titipan', $this->transaksi->total);
-
-                // Tambahkan titipan ke client baru
-                $newClient->increment('titipan', $this->total);
-            } elseif ($newClient) {
-                // Jika client sama, hanya update selisih total
-                $selisih = $this->total - $this->transaksi->total;
-
-                if ($selisih > 0) {
-                    $newClient->increment('titipan', $selisih);
-                } elseif ($selisih < 0) {
-                    $newClient->decrement('titipan', abs($selisih));
-                }
-            }
         });
 
         $this->success('Transaksi berhasil diupdate!', redirectTo: '/tray-masuk');

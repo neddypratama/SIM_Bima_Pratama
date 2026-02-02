@@ -68,7 +68,38 @@ new class extends Component {
 
     public function clients(): LengthAwarePaginator
     {
-        return Client::query()->with('transaksi.details.kategori')->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->tipeClient, fn(Builder $q) => $q->where('type', $this->tipeClient))->when($this->tipePeternak, fn(Builder $q) => $q->where('keterangan', $this->tipePeternak))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
+        return Client::query()
+
+            /* ================= BON (PIUTANG | DEBIT) ================= */
+            ->withSum(
+                [
+                    'transaksi as bon' => function ($q) {
+                        $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
+                            $q->where('name', 'like', 'Piutang%');
+                        });
+                    },
+                ],
+                'total',
+            )
+
+            /* ================= TITIPAN (HUTANG | KREDIT) ================= */
+            ->withSum(
+                [
+                    'transaksi as titipan' => function ($q) {
+                        $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
+                            $q->where('name', 'like', 'Hutang%');
+                        });
+                    },
+                ],
+                'total',
+            )
+
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->tipeClient, fn($q) => $q->where('type', $this->tipeClient))
+            ->when($this->tipePeternak, fn($q) => $q->where('keterangan', $this->tipePeternak))
+
+            ->orderBy(...array_values($this->sortBy))
+            ->paginate($this->perPage);
     }
 
     public function with(): array
@@ -82,7 +113,7 @@ new class extends Component {
             if (!$this->tipeClient == null) {
                 $this->filter += 1;
             }
-             if ($this->tipePeternak != 0) {
+            if ($this->tipePeternak != 0) {
                 $this->filter++;
             }
         }
@@ -135,7 +166,7 @@ new class extends Component {
 
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
-                <span class="font-bold text-green-600">
+                <span class="font-bold text-red-600">
                     Rp {{ number_format($client->titipan, 0, ',', '.') }}
                 </span>
             @endscope
@@ -144,7 +175,7 @@ new class extends Component {
             @scope('cell_sisa', $client)
                 @php
                     $sisa = $client->bon - $client->titipan;
-                    $warna = $sisa > 0 ? 'text-red-600' : ($sisa < 0 ? 'text-blue-600' : 'text-gray-600');
+                    $warna = $sisa > 0 ? 'text-green-600' : ($sisa < 0 ? 'text-yellow-600' : 'text-gray-600');
                 @endphp
                 <span class="font-bold {{ $warna }}">
                     Rp {{ number_format($sisa, 0, ',', '.') }}

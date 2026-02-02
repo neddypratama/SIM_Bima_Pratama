@@ -121,42 +121,8 @@ new class extends Component {
 
             if ($this->type == 'Kredit') {
                 $tipe = 'Debit';
-                // Jika client lama dan baru berbeda
-                if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                    // Kembalikan titipan client lama
-                    $oldClient->decrement('titipan', $this->hutang->total);
-
-                    // Tambahkan titipan ke client baru
-                    $newClient->increment('titipan', $this->total);
-                } elseif ($newClient) {
-                    // Jika client sama, hanya update selisih total
-                    $selisih = $this->total - $this->hutang->total;
-
-                    if ($selisih > 0) {
-                        $newClient->increment('titipan', $selisih);
-                    } elseif ($selisih < 0) {
-                        $newClient->decrement('titipan', abs($selisih));
-                    }
-                }
             } else {
                 $tipe = 'Kredit';
-                // Jika client lama dan baru berbeda
-                if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                    // Kembalikan titipan client lama
-                    $oldClient->increment('titipan', $this->hutang->total);
-
-                    // Tambahkan titipan ke client baru
-                    $newClient->decrement('titipan', $this->total);
-                } elseif ($newClient) {
-                    // Jika client sama, hanya update selisih total
-                    $selisih = $this->total - $this->hutang->total;
-
-                    if ($selisih > 0) {
-                        $newClient->decrement('titipan', $selisih);
-                    } elseif ($selisih < 0) {
-                        $newClient->increment('titipan', abs($selisih));
-                    }
-                }
             }
 
             // Ambil kategori pembayaran
