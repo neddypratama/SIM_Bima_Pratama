@@ -7,6 +7,7 @@ use App\Models\Kategori;
 use App\Models\User;
 use Mary\Traits\Toast;
 use Livewire\Attributes\Rule;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     use Toast;
@@ -43,7 +44,13 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'kategoris' => Kategori::where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%')->get(),
+            'kategoris' => Kategori::whereHas('detailKategori', function (Builder $q) {
+                $q->where(function ($q) {
+                    $q->where('type', 'like', '%Pengeluaran%');
+                });
+            })
+                ->where('name', 'not like', '%HPP%')
+                ->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Pengeluaran'], ['id' => 'Kredit', 'name' => 'Kembalian']],
             'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
@@ -61,7 +68,7 @@ new class extends Component {
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
         $this->type = $this->beban->type;
-        $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
+        $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i:s');
 
         $inv = substr($transaksi->invoice, -4);
         $part = explode('-', $transaksi->invoice);
@@ -100,70 +107,72 @@ new class extends Component {
     {
         $this->validate();
 
-        // Ambil kategori pembayaran
-        $kategoriBayar = Kategori::find($this->bayar_id);
-        $inv = substr($this->invoice, -4);
-        $part = explode('-', $this->beban->invoice);
-        $tanggal = $part[1];
+        DB::transaction(function () {
+            // Ambil kategori pembayaran
+            $kategoriBayar = Kategori::find($this->bayar_id);
+            $inv = substr($this->invoice, -4);
+            $part = explode('-', $this->beban->invoice);
+            $tanggal = $part[1];
 
-        if ($this->type == 'Debit') {
-            $tipe = 'Kredit';
-        } else {
-            $tipe = 'Debit';
-        }
+            if ($this->type == 'Debit') {
+                $tipe = 'Kredit';
+            } else {
+                $tipe = 'Debit';
+            }
 
-        if ($kategoriBayar->name == 'Kas Tunai') {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+            if ($kategoriBayar->name == 'Kas Tunai') {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => $tipe,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => $tipe,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            }
+
+            // Update transaksi utama
+            $this->beban->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
-                'type' => $tipe,
                 'total' => $this->total,
             ]);
-            $this->bayar->details()->delete();
+
+            $this->beban->details()->delete();
             DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
+                'transaksi_id' => $this->beban->id,
+                'kategori_id' => $this->kategori_id,
                 'kuantitas' => null,
+                'value' => null,
                 'sub_total' => $this->total,
             ]);
-        } else {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => $tipe,
-                'total' => $this->total,
-            ]);
-            $this->bayar->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
-
-        // Update transaksi utama
-        $this->beban->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-        ]);
-
-        $this->beban->details()->delete();
-        DetailTransaksi::create([
-            'transaksi_id' => $this->beban->id,
-            'kategori_id' => $this->kategori_id,
-            'kuantitas' => null,
-            'value' => null,
-            'sub_total' => $this->total,
-        ]);
+        });
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/beban');
     }
@@ -184,7 +193,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Beban Transportasi" />

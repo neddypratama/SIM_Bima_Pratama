@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Kategori;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -14,83 +12,25 @@ class JenisBarangSeeder extends Seeder
      */
     public function run(): void
     {
-        // Misal kategori_id untuk stok telur
-        $stokTelur = Kategori::where('name', 'like', 'Stok Telur')->first()->id;
-        $stokTray = Kategori::where('name', 'like', 'Stok Tray')->first()->id;
-        $stokObat = Kategori::where('name', 'like', 'Stok Obat-Obatan')->first()->id;
-        $stokSentrat = Kategori::where('name', 'like', 'Stok Pakan')->first()->id;
+        // Opsional: Kosongkan tabel sebelum mengisi untuk menghindari duplikasi
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('jenis_barangs')->truncate();
+
+        $data = [
+            ["id"=>"1","name"=>"Telur Bebek","deskripsi"=>"Jenis untuk barang Telur Bebek.","kategori_id"=>"59","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"2","name"=>"Telur Horn","deskripsi"=>"Jenis untuk barang Telur Horn.","kategori_id"=>"59","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"3","name"=>"Telur Puyuh","deskripsi"=>"Jenis untuk barang Telur Puyuh.","kategori_id"=>"59","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"4","name"=>"Telur Arab","deskripsi"=>"Jenis untuk barang Telur Arab.","kategori_id"=>"59","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"5","name"=>"Telur Asin","deskripsi"=>"Jenis untuk barang Telur Asin.","kategori_id"=>"59","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"6","name"=>"Tray","deskripsi"=>"Jenis untuk barang tray telur.","kategori_id"=>"62","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"7","name"=>"Obat-Obatan","deskripsi"=>"Jenis untuk barang berupa obat-obatan atau vitamin.","kategori_id"=>"61","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"8","name"=>"Pakan Sentrat/Pabrikan","deskripsi"=>"Jenis untuk barang pakan atau sentrat ternak.","kategori_id"=>"60","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"9","name"=>"Pakan Curah","deskripsi"=>"Jenis untuk barang pakan curah.","kategori_id"=>"60","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"],
+            ["id"=>"10","name"=>"Pakan Kucing","deskripsi"=>"Jenis untuk barang pakan Kucing.","kategori_id"=>"60","created_at"=>"2025-11-01 11:45:24","updated_at"=>"2025-11-01 11:45:24"]
+        ];
+
+        DB::table('jenis_barangs')->insert($data);
         
-        DB::table('jenis_barangs')->insert([
-            [
-                'name' => 'Telur Bebek',
-                'deskripsi' => 'Kategori untuk barang Telur Bebek.',
-                'kategori_id' => $stokTelur,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Telur Horn',
-                'deskripsi' => 'Kategori untuk barang Telur Horn.',
-                'kategori_id' => $stokTelur,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Telur Puyuh',
-                'deskripsi' => 'Kategori untuk barang Telur Puyuh.',
-                'kategori_id' => $stokTelur,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Telur Arab',
-                'deskripsi' => 'Kategori untuk barang Telur Arab.',
-                'kategori_id' => $stokTelur,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Telur Asin',
-                'deskripsi' => 'Kategori untuk barang Telur Asin.',
-                'kategori_id' => $stokTelur,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Tray',
-                'deskripsi' => 'Kategori untuk barang tray telur.',
-                'kategori_id' => $stokTray,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Obat-Obatan',
-                'deskripsi' => 'Kategori untuk barang berupa obat-obatan atau vitamin.',
-                'kategori_id' => $stokObat,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Pakan Sentrat/Pabrikan',
-                'deskripsi' => 'Kategori untuk barang pakan atau sentrat ternak.',
-                'kategori_id' => $stokSentrat,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Pakan Curah',
-                'deskripsi' => 'Kategori untuk barang pakan curah.',
-                'kategori_id' => $stokSentrat,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Pakan Kucing',
-                'deskripsi' => 'Kategori untuk barang pakan Kucing.',
-                'kategori_id' => $stokSentrat,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 }

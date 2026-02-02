@@ -27,7 +27,7 @@ new class extends Component {
     public int $kategori_id = 0;
     public int $client_id = 0;
 
-    public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah'],  ['id' => 'Pocok', 'name' => 'Pocok']];
+    public $tipePeternakOptions = [['id' => 'Elf', 'name' => 'Elf'], ['id' => 'Kuning', 'name' => 'Kuning'], ['id' => 'Merah', 'name' => 'Merah'], ['id' => 'Rumah', 'name' => 'Rumah'], ['id' => 'Pocok', 'name' => 'Pocok']];
     public ?string $tipePeternak = null; // <- value yang dipilih
 
     public int $filter = 0;
@@ -81,13 +81,13 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'client.keterangan', 'label' => 'Tipe Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']],['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'client.keterangan', 'label' => 'Tipe Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
     }
 
     public function transaksis(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name,keterangan', 'details.kategori:id,name,type'])
+            ->with(['client:id,name,keterangan', 'details.kategori:id,name'])
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
@@ -183,7 +183,7 @@ new class extends Component {
 
     <x-card>
         <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination
-                 />
+            link="transaksis/{id}/show?invoice={invoice}" />
     </x-card>
 
     <!-- FILTER DRAWER -->

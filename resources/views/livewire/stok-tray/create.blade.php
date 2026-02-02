@@ -4,6 +4,7 @@ use Livewire\Volt\Component;
 use App\Models\Barang;
 use App\Models\Kategori;
 use App\Models\Stok;
+use App\Models\StokBatch;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
 use App\Models\User;
@@ -52,7 +53,7 @@ new class extends Component {
     public function mount(): void
     {
         $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->tanggal = now()->format('Y-m-d\TH:i:s');
         $this->updatedTanggal($this->tanggal);
     }
 
@@ -70,22 +71,68 @@ new class extends Component {
     public function updatedBarangId($id): void
     {
         if ($id) {
-            $barang = Barang::find($id);
-            $this->stok = $barang?->stok ?? 0;
-            $this->awal = $barang?->stok ?? 0;
+            $barang = StokBatch::where('barang_id', $id)->sum('qty_sisa');
+            $this->stok = $barang ?? 0;
+            $this->awal = $barang ?? 0;
         }
     }
 
     public function updated($field): void
     {
         if (in_array($field, ['tambah', 'kurang', 'pakai'])) {
-            $barang = Barang::find($this->barang_id);
+            $barang = StokBatch::where('barang_id', $this->barang_id)->sum('qty_sisa');
             if ($barang) {
-                $stok_awal = $barang->stok;
-                $stok_baru = $stok_awal + $this->tambah - $this->kurang - $this->pakai;
+                $stok_awal = $barang ?? 0;
+                $stok_baru = $stok_awal + $this->tambah - ($this->kurang + $this->pakai);
                 $this->stok = max(0, $stok_baru);
             }
         }
+    }
+
+    private function tambahStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    {
+        $totalHpp = 0;
+
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderByDesc('tanggal')->lockForUpdate()->get();
+
+        foreach ($batches as $batch) {
+            if ($qtyKeluar <= 0) {
+                break;
+            }
+
+            $ambil = min($batch->qty_sisa, $qtyKeluar);
+
+            $batch->increment('qty_sisa', $ambil);
+
+            $totalHpp += $ambil * $batch->harga;
+
+            $qtyKeluar -= $ambil;
+        }
+
+        return $totalHpp;
+    }
+
+    private function kurangiStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    {
+        $totalHpp = 0;
+
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->lockForUpdate()->get();
+
+        foreach ($batches as $batch) {
+            if ($qtyKeluar <= 0) {
+                break;
+            }
+
+            $ambil = min($batch->qty_sisa, $qtyKeluar);
+
+            $batch->decrement('qty_sisa', $ambil);
+
+            $totalHpp += $ambil * $batch->harga;
+
+            $qtyKeluar -= $ambil;
+        }
+
+        return $totalHpp;
     }
 
     public function save(): void
@@ -98,58 +145,68 @@ new class extends Component {
             return;
         }
 
-        $barang->update(['stok' => $this->stok]);
+        DB::transaction(function () {
+            /* =========================
+                LOG STOK
+            ========================== */
 
-        Stok::create([
-            'invoice' => $this->invoice,
-            'user_id' => $this->user_id,
-            'barang_id' => $this->barang_id,
-            'tanggal' => $this->tanggal,
-            'tambah' => $this->tambah,
-            'kurang' => $this->kurang,
-            'rusak' => $this->pakai,
-        ]);
+            Stok::create([
+                'invoice' => $this->invoice,
+                'user_id' => $this->user_id,
+                'barang_id' => $this->barang_id,
+                'tanggal' => $this->tanggal,
+                'tambah' => $this->tambah,
+                'kurang' => $this->kurang,
+                'rusak' => $this->pakai,
+            ]);
 
-        $katePakai = Kategori::where('name', 'like', '%Tray Terpakai%')->first();
-        $kateTray = Kategori::where('name', 'like', '%Stok Tray%')->first();
+            $totalMasuk = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
+            $totalKeluar = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
 
-        // TELUR PROK - Debit
-        $prok = Transaksi::create([
-            'invoice' => $this->invoice1,
-            'name' => 'Tray Terpakai ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Debit',
-            'total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
-        ]);
+            $katePakai = Kategori::where('name', 'like', '%Tray Terpakai%')->first();
+            $kateTray = Kategori::where('name', 'like', '%Stok Tray%')->first();
 
-        DetailTransaksi::create([
-            'transaksi_id' => $prok->id,
-            'kategori_id' => $katePakai->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->pakai,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
-        ]);
+            // TELUR PROK - Debit
+            if ($this->pakai > 0) {
+                $hppPakai = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->pakai);
+                $prok = Transaksi::create([
+                    'invoice' => $this->invoice1,
+                    'name' => 'Tray Terpakai ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppPakai,
+                ]);
 
-        // TELUR PROK - Kredit
-        $tray = Transaksi::create([
-            'invoice' => $this->invoice2,
-            'name' => 'Tray Terpakai ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Kredit',
-            'total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $prok->id,
+                    'kategori_id' => $katePakai->id ?? null,
+                    'value' => $hppPakai / $this->pakai,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->pakai,
+                    'sub_total' => $hppPakai,
+                ]);
 
-        DetailTransaksi::create([
-            'transaksi_id' => $tray->id,
-            'kategori_id' => $kateTray->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->pakai,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->pakai ?? 0),
-        ]);
+                // TELUR PROK - Kredit
+                $tray = Transaksi::create([
+                    'invoice' => $this->invoice2,
+                    'name' => 'Tray Terpakai ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppPakai,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $tray->id,
+                    'kategori_id' => $kateTray->id ?? null,
+                    'value' => $hppPakai / $this->pakai,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->pakai,
+                    'sub_total' => $hppPakai,
+                ]);
+            }
+        });
 
         $this->success('Stok berhasil diperbarui!', redirectTo: '/stok-tray');
     }
@@ -169,7 +226,7 @@ new class extends Component {
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div class="col-span-2">
@@ -191,9 +248,12 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Tray Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
-                        <x-input label="Tray Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
-                        <x-input label="Tray Terpakai" wire:model.lazy="pakai" type="number" step="0.01" min="0" />
+                        <x-input label="Tray Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Tray Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Tray Terpakai" wire:model.lazy="pakai" type="number" step="0.01"
+                            min="0" />
                     </div>
                 </div>
             </div>

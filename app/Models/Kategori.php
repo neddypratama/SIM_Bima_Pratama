@@ -11,7 +11,7 @@ class Kategori extends Model
     protected $fillable = [
         'name',
         'deskripsi',
-        'type',
+        'detail_kategori_id',
     ];
     public function details()
     {
@@ -20,5 +20,10 @@ class Kategori extends Model
 
     public function jenis() {
         return $this->hasMany(JenisBarang::class);
+    }
+
+    public function detailKategori()
+    {
+        return $this->belongsTo(DetailKategori::class);
     }
 }

@@ -20,12 +20,6 @@ new class extends Component {
     #[Rule('required|exists:jenis_barangs,id')]
     public ?float $jenis_id = null;
 
-    #[Rule('required|numeric|decimal:0,2|min:0')]
-    public float $stok = 0.0;
-
-    #[Rule('nullable|numeric|decimal:0,2|min:0')]
-    public float $hpp = 0.0;
-
     public function with(): array
     {
         return [
@@ -62,19 +56,6 @@ new class extends Component {
                 <x-input label="Name" wire:model="name" placeholder="Contoh: Telur Ayam" />
                 <x-select label="Jenis Barang" wire:model="jenis_id" :options="$jenisbarang"
                     placeholder="Pilih jenis barang" />
-            </div>
-        </div>
-
-        {{--  Details section --}}
-        <hr class="my-5" />
-
-        <div class="lg:grid grid-cols-5">
-            <div class="col-span-2">
-                <x-header title="Details" subtitle="More about the Barang" size="text-2xl" />
-            </div>
-            <div class="col-span-3 grid gap-3">
-                <x-input label="Stok" wire:model="stok" type="number" step="0.01" />
-                <x-input label="HPP" wire:model="hpp" prefix="Rp " money="IDR" />
             </div>
         </div>
 

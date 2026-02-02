@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('truks', function (Blueprint $table) {
+        Schema::create('stok_batches', function (Blueprint $table) {
             $table->id();
-            $table->string('invoice')->unique();
-            $table->datetime('tanggal');
-            $table->string('name');
-            $table->enum('type', ['Kredit', 'Debit']);
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('client_id')->nullable()->constrained('clients');
-            $table->integer('total')->default(0);
+            $table->foreignId('barang_id')->constrained('barangs');
+            $table->foreignId('detail_transaksi_id')->nullable()->constrained('detail_transaksis');
+            $table->decimal('qty_masuk', 10, 2);
+            $table->decimal('qty_sisa', 10, 2);
+            $table->decimal('harga', 15, 2);
+            $table->timestamp('tanggal');
             $table->timestamps();
         });
     }
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('truks');
+        Schema::dropIfExists('stok_batches');
     }
 };

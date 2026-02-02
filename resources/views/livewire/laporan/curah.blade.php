@@ -57,17 +57,29 @@ new class extends Component {
 
         $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($last->tanggal)->endOfDay();
 
-        $stokPakanCurah = Transaksi::with('details.kategori', 'details.barang.jenis')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Aset')->where('name', 'Stok Pakan'))
+        $stokPakanCurah = Transaksi::with(['details.kategori.detailKategori', 'details.barang.jenis'])
+            ->whereHas('details.kategori.detailKategori', function ($q) {
+                // Mencari type di tabel detail_kategoris
+                $q->where('type', 'Aset');
+            })
+            ->whereHas('details.kategori', function ($q) {
+                // Mencari name di tabel kategoris
+                $q->where('name', 'Stok Pakan');
+            })
             ->whereHas('details.barang.jenis', fn($q) => $q->where('name', 'Pakan Curah'))
             ->whereBetween('tanggal', [Carbon::parse('2025-10-31')->startOfDay(), $end])
             ->get()
             ->flatMap(fn($trx) => $trx->details)
+            // Filter manual untuk memastikan relasi tersedia
             ->filter(fn($d) => $d->kategori && ($d->barang->jenis->name ?? '') === 'Pakan Curah')
             ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->where(fn($i) => strtolower($i->transaksi->type ?? '') === 'debit')->sum('sub_total') - $group->where(fn($i) => strtolower($i->transaksi->type ?? '') === 'kredit')->sum('sub_total'))
+            ->map(function ($group) {
+                $debit = $group->filter(fn($i) => strtolower($i->transaksi->type ?? '') === 'debit')->sum('sub_total');
+                $kredit = $group->filter(fn($i) => strtolower($i->transaksi->type ?? '') === 'kredit')->sum('sub_total');
+                return $debit - $kredit;
+            })
             ->toArray();
-        
+
         $this->stokCurah = $stokPakanCurah['Stok Pakan'];
 
         // ✅ Ambil semua nama barang curah dari master dan jadikan acuan urutan
@@ -75,7 +87,14 @@ new class extends Component {
 
         // ✅ Pendapatan sudah bersih (Kredit - Debit) per barang
         $pendapatanFlat = Transaksi::with('details.kategori', 'details.barang')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan')->where('name', 'Penjualan Pakan Curah'))
+            ->whereHas('details.kategori.detailKategori', function ($q) {
+                // Mencari type di tabel detail_kategoris
+                $q->where('type', 'Pendapatan');
+            })
+            ->whereHas('details.kategori', function ($q) {
+                // Mencari name di tabel kategoris
+                $q->where('name', 'Penjualan Pakan Curah');
+            })
             ->whereBetween('tanggal', [$start, $end])
             ->get()
             ->flatMap(fn($trx) => $trx->details)
@@ -178,7 +197,11 @@ new class extends Component {
     </x-header>
 
     <!-- Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <x-card>
+            <h3 class="text-lg font-semibold text-blue-700"><i class="fas fa-arrow-up"></i> Total Stok</h3>
+            <p class="text-2xl font-bold text-blue-600 mt-2">Rp {{ number_format($stokCurah, 0, ',', '.') }}</p>
+        </x-card>
         <x-card>
             <h3 class="text-lg font-semibold text-green-700"><i class="fas fa-arrow-up"></i> Total Pendapatan</h3>
             <p class="text-2xl font-bold text-green-600 mt-2">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>

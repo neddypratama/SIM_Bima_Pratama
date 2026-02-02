@@ -7,6 +7,8 @@ use App\Models\Kategori;
 use App\Models\Client;
 use Livewire\Volt\Component;
 use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component {
     public $startDate;
@@ -44,162 +46,46 @@ new class extends Component {
 
         $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($last->tanggal)->endOfDay();
 
-        /* =====================================================
-         | MAPPING
-         ===================================================== */
-        $mappingAset = [
-            'Piutang Pihak Lain' => ['Piutang Peternak', 'Piutang Karyawan', 'Piutang Pedagang'],
-            'Piutang Supplier' => ['Supplier Bp.Supriyadi'],
-            'Piutang Tray' => ['Piutang Tray Diamond /DM', 'Piutang Tray Super Buah /SB', 'Piutang Tray Random'],
-            'Piutang Obat' => ['Piutang Obat SK', 'Piutang Obat Ponggok', 'Piutang Obat Random'],
-            'Piutang Sentrat' => ['Piutang Sentrat SK', 'Piutang Sentrat Ponggok', 'Piutang Sentrat Random'],
-            'Stok' => ['Stok Telur', 'Stok Pakan', 'Stok Obat-Obatan', 'Stok Tray'],
-            'Kas' => ['Kas Tunai', 'Kas Deby'],
-            'Bank BCA' => ['Bank BCA Binti Wasilah', 'Bank BCA Masduki'],
-            'Bank BNI' => ['Bank BNI Binti Wasilah', 'Bank BNI Bima Pratama'],
-            'Bank BRI' => ['Bank BRI Binti Wasilah', 'Bank BRI Masduki'],
-        ];
-
-        $mappingLiabilitas = [
-            'Hutang Pihak Lain' => ['Hutang Peternak', 'Hutang Karyawan', 'Hutang Pedagang', 'Hutang Bank'],
-            'Hutang Supplier' => ['Saldo Bp.Supriyadi'],
-            'Hutang Tray' => ['Hutang Tray Diamond /DM', 'Hutang Tray Super Buah /SB', 'Hutang Tray Random'],
-            'Hutang Obat' => ['Hutang Obat SK', 'Hutang Obat Ponggok', 'Hutang Obat Random'],
-            'Hutang Sentrat' => ['Hutang Sentrat SK', 'Hutang Sentrat Ponggok', 'Hutang Sentrat Random'],
-        ];
-
-        /* =====================================================
-         | ASET & LIABILITAS DARI TRANSAKSI
-         ===================================================== */
-        $asetFlat = Transaksi::with('details.kategori')
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap->details->filter(fn($d) => $d->kategori?->type === 'Aset')
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total'))
-            ->toArray();
-
-        $liabilitasFlat = Transaksi::with('details.kategori')
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap->details->filter(fn($d) => $d->kategori?->type === 'Liabilitas')
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total'))
-            ->toArray();
-
-        /* =====================================================
-         | PIUTANG & HUTANG DARI CLIENT (TOTAL BON)
-         ===================================================== */
-        $clients = Client::select('name', 'type', 'bon', 'titipan')->get();
-
-        $piutang = [
-            'Piutang Peternak' => 0,
-            'Piutang Karyawan' => 0,
-            'Piutang Pedagang' => 0,
-            'Piutang Tray Diamond /DM' => 0,
-            'Piutang Tray Super Buah /SB' => 0,
-            'Piutang Tray Random' => 0,
-            'Piutang Obat SK' => 0,
-            'Piutang Obat Ponggok' => 0,
-            'Piutang Obat Random' => 0,
-            'Piutang Sentrat SK' => 0,
-            'Piutang Sentrat Ponggok' => 0,
-            'Piutang Sentrat Random' => 0,
-        ];
-
-        $hutang = [
-            'Hutang Peternak' => 0,
-            'Hutang Karyawan' => 0,
-            'Hutang Pedagang' => 0,
-            'Hutang Tray Diamond /DM' => 0,
-            'Hutang Tray Super Buah /SB' => 0,
-            'Hutang Tray Random' => 0,
-            'Hutang Obat SK' => 0,
-            'Hutang Obat Ponggok' => 0,
-            'Hutang Obat Random' => 0,
-            'Hutang Sentrat SK' => 0,
-            'Hutang Sentrat Ponggok' => 0,
-            'Hutang Sentrat Random' => 0,
-        ];
-
-        foreach ($clients as $c) {
-            $saldo = $c->bon - $c->titipan;
-            if ($saldo === 0) {
-                continue;
-            }
-
-            if ($saldo > 0) {
-                if ($c->type === 'Peternak') {
-                    $piutang['Piutang Peternak'] += $saldo;
-                } elseif ($c->type === 'Pedagang') {
-                    $piutang['Piutang Pedagang'] += $saldo;
-                } elseif ($c->type === 'Karyawan') {
-                    $piutang['Piutang Karyawan'] += $saldo;
-                } elseif ($c->type === 'Supplier') {
-                    foreach ($piutang as $akun => $_) {
-                        if (str_contains($akun, $c->name)) {
-                            $piutang[$akun] += $saldo;
-                        }
-                    }
-                }
-            }
-
-            if ($saldo < 0) {
-                $nilai = abs($saldo);
-                if ($c->type === 'Peternak') {
-                    $hutang['Hutang Peternak'] += $nilai;
-                } elseif ($c->type === 'Pedagang') {
-                    $hutang['Hutang Pedagang'] += $nilai;
-                } elseif ($c->type === 'Karyawan') {
-                    $hutang['Hutang Karyawan'] += $nilai;
-                } elseif ($c->type === 'Supplier') {
-                    foreach ($hutang as $akun => $_) {
-                        if (str_contains($akun, $c->name)) {
-                            $hutang[$akun] += $nilai;
-                        }
-                    }
-                }
-            }
-        }
-
-        /* =====================================================
-         | INJECT KE LAPORAN
-         ===================================================== */
-        foreach ($piutang as $akun => $nilai) {
-            $asetFlat[$akun] = $nilai;
-        }
-
-        foreach ($hutang as $akun => $nilai) {
-            $liabilitasFlat[$akun] =  $nilai;
-        }
-
-        // dd($piutang, $hutang, $asetFlat, $liabilitasFlat);
-
-        /* =====================================================
-         | FINAL GROUPING
-         ===================================================== */
         $this->asetData = [];
-        foreach ($mappingAset as $group => $subs) {
-            $total = 0;
-            foreach ($subs as $sub) {
-                $total += $asetFlat[$sub] ?? 0;
+        $this->liabilitasData = [];
+
+        /* =====================================================
+            1. LAPORAN PENDAPATAN & PENGELUARAN (NON HPP)
+        ===================================================== */
+
+        $laporans = DB::table('detail_kategoris as dk')->leftJoin('kategoris as k', 'k.detail_kategori_id', '=', 'dk.id')->select('dk.name as laporan', 'dk.type', 'k.name as kategori')->orderBy('dk.id')->get();
+
+        foreach ($laporans as $row) {
+            if ($row->type === 'Aset') {
+                $this->asetData[$row->laporan]['detail'][$row->kategori] = 0;
+                $this->asetData[$row->laporan]['total'] ??= 0;
             }
-            $this->asetData[$group] = [
-                'total' => $total,
-                'detail' => array_map(fn($s) => $asetFlat[$s] ?? 0, array_combine($subs, $subs)),
-            ];
+
+            if ($row->type === 'Liabilitas') {
+                $this->liabilitasData[$row->laporan]['detail'][$row->kategori] = 0;
+                $this->liabilitasData[$row->laporan]['total'] ??= 0;
+            }
         }
 
-        $this->liabilitasData = [];
-        foreach ($mappingLiabilitas as $group => $subs) {
-            $total = 0;
-            foreach ($subs as $sub) {
-                $total += $liabilitasFlat[$sub] ?? 0;
+        $rows = DB::table('detail_transaksis as dt')
+            ->join('kategoris as k', 'k.id', '=', 'dt.kategori_id')
+            ->join('detail_kategoris as dk', 'dk.id', '=', 'k.detail_kategori_id')
+            ->join('transaksis as t', 't.id', '=', 'dt.transaksi_id')
+            ->whereBetween('t.tanggal', [$start, $end])
+            ->select('dk.name as laporan', 'dk.type', 'k.name as kategori', DB::raw('SUM(dt.sub_total) as total'))
+            ->groupBy('dk.name', 'dk.type', 'k.name')
+            ->get();
+
+        foreach ($rows as $row) {
+            if ($row->type === 'Aset') {
+                $this->asetData[$row->laporan]['detail'][$row->kategori] += $row->total;
+                $this->asetData[$row->laporan]['total'] += $row->total;
             }
-            $this->liabilitasData[$group] = [
-                'total' => $total,
-                'detail' => array_map(fn($s) => $liabilitasFlat[$s] ?? 0, array_combine($subs, $subs)),
-            ];
+
+            if ($row->type === 'Liabilitas') {
+                $this->liabilitasData[$row->laporan]['detail'][$row->kategori] += $row->total;
+                $this->liabilitasData[$row->laporan]['total'] += $row->total;
+            }
         }
     }
 

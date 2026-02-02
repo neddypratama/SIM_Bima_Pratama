@@ -40,7 +40,7 @@ new class extends Component {
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public int $perPage = 25; // Default jumlah data per halaman
-    
+
     public function clear(): void
     {
         $this->reset(['search', 'kategori_id', 'filter', 'startDate', 'endDate']);
@@ -95,10 +95,13 @@ new class extends Component {
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->with(['client:id,name', 'details.kategori:id,name'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'not like', 'Penjualan Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan');
+                $q->where('name', 'not like', 'Penjualan Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%');
+            })
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'Pendapatan');
             })
             ->when($this->kategori_id, function (Builder $q) {
                 $q->whereHas('details', function ($query) {
@@ -133,7 +136,16 @@ new class extends Component {
 
         return [
             'transaksi' => $this->transaksi(),
-            'kategori' => Kategori::where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan')->get(),
+            'kategori' => Kategori::where('name', 'not like', 'Penjualan Telur%')
+                ->where('name', 'not like', '%Pakan%')
+                ->where('name', 'not like', '%Obat-Obatan%')
+                ->where('name', 'not like', '%EggTray%')
+                ->whereHas('detailKategori', function (Builder $q) {
+                    $q->where(function ($q) {
+                        $q->where('type', 'like', '%Pendapatan%');
+                    });
+                })
+                ->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,

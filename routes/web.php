@@ -63,9 +63,16 @@ Route::middleware('auth')->group(function () {
         Volt::route('/satuans', 'satuans.index');
         Volt::route('/clients', 'clients.index');
         Volt::route('/kategoris', 'kategoris.index');
+        Volt::route('/detail-kategoris', 'detail-kategoris.index');
 
         Volt::route('/transaksis', 'transaksis.index');
         Volt::route('/transaksis/{transaksi}/show', 'transaksis.show');
+
+        // Stok
+        Volt::route('/penambahan-stok', 'penambahan-stok.index');
+        Volt::route('/penambahan-stok/create', 'penambahan-stok.create');
+        Volt::route('/penambahan-stok/{batch}/edit', 'penambahan-stok.edit');
+        Volt::route('/penambahan-stok/{batch}/show', 'penambahan-stok.show');
 
         // Stok Telur
         Volt::route('/stok-telur', 'stok-telur.index');

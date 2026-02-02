@@ -7,6 +7,7 @@ use App\Models\Kategori;
 use App\Models\User;
 use Mary\Traits\Toast;
 use Livewire\Attributes\Rule;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     use Toast;
@@ -40,7 +41,16 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'kategoris' => Kategori::where('name', 'not like', 'Penjualan Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan')->get(),
+            'kategoris' => Kategori::where('name', 'not like', 'Penjualan Telur%')
+                ->where('name', 'not like', '%Pakan%')
+                ->where('name', 'not like', '%Obat-Obatan%')
+                ->where('name', 'not like', '%EggTray%')
+                ->whereHas('detailKategori', function (Builder $q) {
+                    $q->where(function ($q) {
+                        $q->where('type', 'like', '%Pendapatan%');
+                    });
+                })
+                ->get(),
             'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
@@ -55,7 +65,7 @@ new class extends Component {
         $this->name = $this->beban->name;
         $this->total = $this->beban->total;
         $this->user_id = $this->beban->user_id;
-        $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i');
+        $this->tanggal = \Carbon\Carbon::parse($this->beban->tanggal)->format('Y-m-d\TH:i:s');
 
         $inv = substr($transaksi->invoice, -4);
         $part = explode('-', $transaksi->invoice);
@@ -94,60 +104,62 @@ new class extends Component {
     {
         $this->validate();
 
-        // Ambil kategori pembayaran
-        $kategoriBayar = Kategori::find($this->bayar_id);
-        $inv = substr($this->invoice, -4);
-        $part = explode('-', $this->beban->invoice);
-        $tanggal = $part[1];
+        DB::transaction(function () {
+            // Ambil kategori pembayaran
+            $kategoriBayar = Kategori::find($this->bayar_id);
+            $inv = substr($this->invoice, -4);
+            $part = explode('-', $this->beban->invoice);
+            $tanggal = $part[1];
 
-        if ($kategoriBayar->name == 'Kas Tunai') {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+            if ($kategoriBayar->name == 'Kas Tunai') {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            }
+
+            // === UPDATE Transaksi BEBAN utama ===
+            $this->beban->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'total' => $this->total,
             ]);
-            $this->bayar->details()->delete();
+
+            $this->beban->details()->delete();
             DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
+                'transaksi_id' => $this->beban->id,
+                'kategori_id' => $this->kategori_id,
                 'sub_total' => $this->total,
             ]);
-        } else {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'total' => $this->total,
-            ]);
-            $this->bayar->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
-
-        // === UPDATE Transaksi BEBAN utama ===
-        $this->beban->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-        ]);
-
-        $this->beban->details()->delete();
-        DetailTransaksi::create([
-            'transaksi_id' => $this->beban->id,
-            'kategori_id' => $this->kategori_id,
-            'sub_total' => $this->total,
-        ]);
+        });
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/lainnya');
     }
@@ -168,7 +180,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian Transaksi" wire:model="name"

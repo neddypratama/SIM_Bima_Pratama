@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Barang;
+use App\Models\StokBatch;
 use App\Models\JenisBarang;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
@@ -60,7 +61,25 @@ new class extends Component {
 
     public function barangs(): LengthAwarePaginator
     {
-        return Barang::query()->withAggregate('jenis', 'name')->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
+        return Barang::query()
+            ->withAggregate('jenis', 'name')
+
+            // 🔹 STOK = SUM(qty_sisa)
+            ->selectSub(StokBatch::query()->selectRaw('COALESCE(SUM(qty_sisa), 0)')->whereColumn('stok_batches.barang_id', 'barangs.id'), 'stok')
+
+            // 🔹 HPP = harga batch TERBARU
+            ->selectSub(StokBatch::query()->select('harga')->whereColumn('stok_batches.barang_id', 'barangs.id')->orderByDesc('tanggal')->limit(1), 'hpp')
+
+            // 🔍 SEARCH
+            ->when($this->search, fn(Builder $q) => $q->where('barangs.name', 'like', "%{$this->search}%"))
+
+            // 🔍 FILTER JENIS
+            ->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))
+
+            // 🔃 SORT (AMAN)
+            ->orderBy($this->sortBy['column'], $this->sortBy['direction'])
+
+            ->paginate($this->perPage);
     }
 
     public function with(): array
@@ -126,6 +145,9 @@ new class extends Component {
     <x-card>
         <x-table :headers="$headers" :rows="$barangs" :sort-by="$sortBy" with-pagination
             link="barangs/{id}/edit?name={name}&jenis={jenis.name}">
+            @scope('cell_stok', $barang)
+                {{ $barang->stok }} {{ $barang->satuan }}
+            @endscope
             @scope('actions', $barang)
                 <x-button icon="o-trash" wire:click="delete({{ $barang['id'] }})"
                     wire:confirm="Yakin ingin menghapus {{ $barang['name'] }}?" spinner

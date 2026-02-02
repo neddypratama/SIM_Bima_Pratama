@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Barang;
+use App\Models\StokBatch;
 use App\Models\Kategori;
 use App\Models\Stok;
 use App\Models\Transaksi;
@@ -72,7 +73,7 @@ new class extends Component {
     public function mount(): void
     {
         $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->tanggal = now()->format('Y-m-d\TH:i:s');
         $this->updatedTanggal($this->tanggal);
     }
 
@@ -91,293 +92,359 @@ new class extends Component {
             $this->invoice7 = 'INV-' . $tanggal . '-TLR2-' . $str;
             $this->invoice8 = 'INV-' . $tanggal . '-TLR3-' . $str;
             $this->invoice9 = 'INV-' . $tanggal . '-TLR4-' . $str;
-            $this->invoice110 = 'INV-' . $tanggal . '-TLR5-' . $str;
+            $this->invoice10 = 'INV-' . $tanggal . '-TLR5-' . $str;
         }
     }
 
     public function updatedBarangId($id): void
     {
         if ($id) {
-            $barang = Barang::find($id);
-            $this->stok = $barang?->stok ?? 0;
-            $this->awal = $barang?->stok ?? 0;
+            $barang = StokBatch::where('barang_id', $id)->sum('qty_sisa');
+            $this->stok = $barang ?? 0;
+            $this->awal = $barang ?? 0;
         }
     }
 
     public function updated($field): void
     {
         if (in_array($field, ['tambah', 'kurang', 'kotor', 'bentes', 'ceplok', 'prok', 'rusak', 'jumbo'])) {
-            $barang = Barang::find($this->barang_id);
+            $barang = StokBatch::where('barang_id', $this->barang_id)->sum('qty_sisa');
             if ($barang) {
-                $stok_awal = $barang->stok;
+                $stok_awal = $barang ?? 0;
                 $stok_baru = $stok_awal + $this->tambah - ($this->kurang + $this->kotor + $this->bentes + $this->ceplok + $this->prok + $this->jumbo);
                 $this->stok = max(0, $stok_baru);
             }
         }
     }
 
+    private function tambahStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    {
+        $totalHpp = 0;
+
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderByDesc('tanggal')->lockForUpdate()->get();
+
+        foreach ($batches as $batch) {
+            if ($qtyKeluar <= 0) {
+                break;
+            }
+
+            $ambil = min($batch->qty_sisa, $qtyKeluar);
+
+            $batch->increment('qty_sisa', $ambil);
+
+            $totalHpp += $ambil * $batch->harga;
+
+            $qtyKeluar -= $ambil;
+        }
+
+        return $totalHpp;
+    }
+
+    private function kurangiStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    {
+        $totalHpp = 0;
+
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->lockForUpdate()->get();
+
+        foreach ($batches as $batch) {
+            if ($qtyKeluar <= 0) {
+                break;
+            }
+
+            $ambil = min($batch->qty_sisa, $qtyKeluar);
+
+            $batch->decrement('qty_sisa', $ambil);
+
+            $totalHpp += $ambil * $batch->harga;
+
+            $qtyKeluar -= $ambil;
+        }
+
+        return $totalHpp;
+    }
+
     public function save(): void
     {
         $this->validate();
-
-        $barang = Barang::find($this->barang_id);
-        if (!$barang) {
-            $this->error('Barang tidak ditemukan.');
+        if ($this->stok <= 0) {
+            $this->error('Stok tidak mencukupi untuk pengurangan atau transaksi gagal');
             return;
         }
 
-        $barang->update(['stok' => $this->stok]);
+        DB::transaction(function () {
+            /* =========================
+                LOG STOK
+            ========================== */
 
-        Stok::create([
-            'invoice' => $this->invoice,
-            'user_id' => $this->user_id,
-            'barang_id' => $this->barang_id,
-            'tanggal' => $this->tanggal,
-            'tambah' => $this->tambah,
-            'kurang' => $this->kurang,
-            'kotor' => $this->kotor,
-            'bentes' => $this->bentes,
-            'ceplok' => $this->ceplok,
-            'rusak' => $this->prok,
-            'jumbo' => $this->jumbo,
-        ]);
-
-        $kateKotor = Kategori::where('name', 'like', '%Telur Kotor%')->first();
-        $kateProk = Kategori::where('name', 'like', '%Telur Prok%')->first();
-        $kateBentes = Kategori::where('name', 'like', '%Telur Bentes%')->first();
-        $kateCeplok = Kategori::where('name', 'like', '%Telur Ceplok%')->first();
-        $kateTelur = Kategori::where('name', 'like', '%Stok Telur%')->first();
-        $kateJumbo = Kategori::where('name', 'like', '%Telur Jumbo%')->first();
-
-        if ($this->kotor > 0) {
-            // TELUR KOTOR - Debit
-            $kotor = Transaksi::create([
-                'invoice' => $this->invoice1,
-                'name' => 'Telur Kotor ' . $barang->name,
+            Stok::create([
+                'invoice' => $this->invoice,
                 'user_id' => $this->user_id,
+                'barang_id' => $this->barang_id,
                 'tanggal' => $this->tanggal,
-                'type' => 'Debit',
-                'total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0),
+                'tambah' => $this->tambah,
+                'kurang' => $this->kurang,
+                'kotor' => $this->kotor,
+                'bentes' => $this->bentes,
+                'ceplok' => $this->ceplok,
+                'rusak' => $this->prok,
+                'jumbo' => $this->jumbo,
             ]);
 
-            DetailTransaksi::create([
-                'transaksi_id' => $kotor->id,
-                'kategori_id' => $kateKotor->id ?? null,
-                'value' => $barang->hpp,
-                'barang_id' => $barang->id,
-                'kuantitas' => $this->kotor,
-                'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0),
-            ]);
+            $totalMasuk = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
+            $totalKeluar = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
 
-            // TELUR KOTOR - Kredit
-            $telur1 = Transaksi::create([
-                'invoice' => $this->invoice6,
-                'name' => 'Telur Kotor ' . $barang->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => 'Kredit',
-                'total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0),
-            ]);
+            $kateKotor = Kategori::where('name', 'like', '%Telur Kotor%')->first();
+            $kateProk = Kategori::where('name', 'like', '%Telur Prok%')->first();
+            $kateBentes = Kategori::where('name', 'like', '%Telur Bentes%')->first();
+            $kateCeplok = Kategori::where('name', 'like', '%Telur Ceplok%')->first();
+            $kateTelur = Kategori::where('name', 'like', '%Stok Telur%')->first();
+            $kateJumbo = Kategori::where('name', 'like', '%Telur Jumbo%')->first();
 
-            DetailTransaksi::create([
-                'transaksi_id' => $telur1->id,
-                'kategori_id' => $kateTelur->id ?? null,
-                'value' => $barang->hpp,
-                'barang_id' => $barang->id,
-                'kuantitas' => $this->kotor,
-                'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0),
-            ]);
-        } else {
-            // TELUR KOTOR - Debit
-            $kotor = Transaksi::create([
-                'invoice' => $this->invoice1,
-                'name' => 'Telur Kotor ' . $barang->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => 'Kredit',
-                'total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0) * -1,
-            ]);
+            if ($this->kotor > 0) {
+                $hppKotor = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kotor);
+                // TELUR KOTOR - Debit
+                $kotor = Transaksi::create([
+                    'invoice' => $this->invoice1,
+                    'name' => 'Telur Kotor ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppKotor,
+                ]);
 
-            DetailTransaksi::create([
-                'transaksi_id' => $kotor->id,
-                'kategori_id' => $kateKotor->id ?? null,
-                'value' => $barang->hpp,
-                'barang_id' => $barang->id,
-                'kuantitas' => $this->kotor * -1,
-                'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0) * -1,
-            ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $kotor->id,
+                    'kategori_id' => $kateKotor->id ?? null,
+                    'value' => $hppKotor / $this->kotor,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->kotor,
+                    'sub_total' => $hppKotor,
+                ]);
 
-            // TELUR KOTOR - Kredit
-            $telur1 = Transaksi::create([
-                'invoice' => $this->invoice6,
-                'name' => 'Telur Kotor ' . $barang->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => 'Debit',
-                'total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0) * -1,
-            ]);
+                // TELUR KOTOR - Kredit
+                $telur1 = Transaksi::create([
+                    'invoice' => $this->invoice6,
+                    'name' => 'Telur Kotor ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppKotor,
+                ]);
 
-            DetailTransaksi::create([
-                'transaksi_id' => $telur1->id,
-                'kategori_id' => $kateTelur->id ?? null,
-                'value' => $barang->hpp,
-                'barang_id' => $barang->id,
-                'kuantitas' => $this->kotor * -1,
-                'sub_total' => ($barang->hpp ?? 0) * ($this->kotor ?? 0) * -1,
-            ]);
-        }
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur1->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppKotor / $this->kotor,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->kotor,
+                    'sub_total' => $hppKotor,
+                ]);
+            } elseif ($this->kotor < 0) {
+                $hppKotor = $this->tambahStokFifoDanHitungHpp($this->barang_id, abs($this->kotor));
+                // TELUR KOTOR - Debit
+                $kotor = Transaksi::create([
+                    'invoice' => $this->invoice1,
+                    'name' => 'Telur Kotor ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppKotor,
+                ]);
 
-        // TELUR BENTES - Debit
-        $bentes = Transaksi::create([
-            'invoice' => $this->invoice2,
-            'name' => 'Telur Bentes ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Debit',
-            'total' => ($barang->hpp ?? 0) * ($this->bentes ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $kotor->id,
+                    'kategori_id' => $kateKotor->id ?? null,
+                    'value' => $hppKotor / abs($this->kotor),
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => abs($this->kotor),
+                    'sub_total' => $hppKotor,
+                ]);
 
-        DetailTransaksi::create([
-            'transaksi_id' => $bentes->id,
-            'kategori_id' => $kateBentes->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->bentes,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->bentes ?? 0),
-        ]);
+                // TELUR KOTOR - Kredit
+                $telur1 = Transaksi::create([
+                    'invoice' => $this->invoice6,
+                    'name' => 'Telur Kotor ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppKotor,
+                ]);
 
-        // TELUR BENTES - Kredit
-        $telur2 = Transaksi::create([
-            'invoice' => $this->invoice7,
-            'name' => 'Telur Bentes ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Kredit',
-            'total' => ($barang->hpp ?? 0) * ($this->bentes ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur1->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppKotor / abs($this->kotor),
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => abs($this->kotor),
+                    'sub_total' => $hppKotor,
+                ]);
+            }
 
-        DetailTransaksi::create([
-            'transaksi_id' => $telur2->id,
-            'kategori_id' => $kateTelur->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->bentes,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->bentes ?? 0),
-        ]);
+            // TELUR BENTES - Debit
+            if ($this->bentes > 0) {
+                $hppBentes = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->bentes);
+                $bentes = Transaksi::create([
+                    'invoice' => $this->invoice2,
+                    'name' => 'Telur Bentes ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppBentes,
+                ]);
 
-        // TELUR CEPLOK - Debit
-        $ceplok = Transaksi::create([
-            'invoice' => $this->invoice3,
-            'name' => 'Telur Ceplok ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Debit',
-            'total' => ($barang->hpp ?? 0) * ($this->ceplok ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $bentes->id,
+                    'kategori_id' => $kateBentes->id ?? null,
+                    'value' => $hppBentes / $this->bentes,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->bentes,
+                    'sub_total' => $hppBentes,
+                ]);
 
-        DetailTransaksi::create([
-            'transaksi_id' => $ceplok->id,
-            'kategori_id' => $kateCeplok->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->ceplok,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->ceplok ?? 0),
-        ]);
+                // TELUR KOTOR - Kredit
+                $telur1 = Transaksi::create([
+                    'invoice' => $this->invoice7,
+                    'name' => 'Telur Kotor ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppBentes,
+                ]);
 
-        // TELUR CEPLOK - Kredit
-        $telur3 = Transaksi::create([
-            'invoice' => $this->invoice8,
-            'name' => 'Telur Ceplok ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Kredit',
-            'total' => ($barang->hpp ?? 0) * ($this->ceplok ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur1->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppBentes / $this->bentes,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->bentes,
+                    'sub_total' => $hppBentes,
+                ]);
+            }
 
-        DetailTransaksi::create([
-            'transaksi_id' => $telur3->id,
-            'kategori_id' => $kateTelur->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->ceplok,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->ceplok ?? 0),
-        ]);
+            // TELUR CEPLOK - Debit
+            if ($this->ceplok > 0) {
+                $hppCeplok = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->ceplok);
+                $kotor = Transaksi::create([
+                    'invoice' => $this->invoice3,
+                    'name' => 'Telur Ceplok ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppCeplok,
+                ]);
 
-        // TELUR PROK - Debit
-        $prok = Transaksi::create([
-            'invoice' => $this->invoice4,
-            'name' => 'Telur Prok ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Debit',
-            'total' => ($barang->hpp ?? 0) * ($this->prok ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $kotor->id,
+                    'kategori_id' => $kateCeplok->id ?? null,
+                    'value' => $hppCeplok / $this->ceplok,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->ceplok,
+                    'sub_total' => $hppCeplok,
+                ]);
 
-        DetailTransaksi::create([
-            'transaksi_id' => $prok->id,
-            'kategori_id' => $kateProk->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->prok,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->prok ?? 0),
-        ]);
+                // TELUR KOTOR - Kredit
+                $telur1 = Transaksi::create([
+                    'invoice' => $this->invoice8,
+                    'name' => 'Telur Ceplok ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppCeplok,
+                ]);
 
-        // TELUR PROK - Kredit
-        $telur4 = Transaksi::create([
-            'invoice' => $this->invoice9,
-            'name' => 'Telur Prok ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Kredit',
-            'total' => ($barang->hpp ?? 0) * ($this->prok ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur1->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppCeplok / $this->ceplok,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->ceplok,
+                    'sub_total' => $hppCeplok,
+                ]);
+            }
 
-        DetailTransaksi::create([
-            'transaksi_id' => $telur4->id,
-            'kategori_id' => $kateTelur->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->prok,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->prok ?? 0),
-        ]);
+            // TELUR PROK - Debit
+            if ($this->prok > 0) {
+                $hppProk = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->prok);
+                $kotor = Transaksi::create([
+                    'invoice' => $this->invoice4,
+                    'name' => 'Telur Prok ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppProk,
+                ]);
 
-        // TELUR JUMBO - Debit
-        $jumbo = Transaksi::create([
-            'invoice' => $this->invoice5,
-            'name' => 'Telur Jumbo ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Debit',
-            'total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $kotor->id,
+                    'kategori_id' => $kateProk->id ?? null,
+                    'value' => $hppProk / $this->prok,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->prok,
+                    'sub_total' => $hppProk,
+                ]);
 
-        DetailTransaksi::create([
-            'transaksi_id' => $jumbo->id,
-            'kategori_id' => $katejumbo->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->jumbo,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
-        ]);
+                // TELUR KOTOR - Kredit
+                $telur1 = Transaksi::create([
+                    'invoice' => $this->invoice9,
+                    'name' => 'Telur Prok ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppProk,
+                ]);
 
-        // TELUR JUMBO - Kredit
-        $telur5 = Transaksi::create([
-            'invoice' => $this->invoice10,
-            'name' => 'Telur Jumbo ' . $barang->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => 'Kredit',
-            'total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
-        ]);
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur1->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppProk / $this->prok,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->prok,
+                    'sub_total' => $hppProk,
+                ]);
+            }
 
-        DetailTransaksi::create([
-            'transaksi_id' => $telur5->id,
-            'kategori_id' => $kateTelur->id ?? null,
-            'value' => $barang->hpp,
-            'barang_id' => $barang->id,
-            'kuantitas' => $this->jumbo,
-            'sub_total' => ($barang->hpp ?? 0) * ($this->jumbo ?? 0),
-        ]);
+            // TELUR JUMBO - Debit
+            if ($this->jumbo > 0) {
+                $hppJumbo = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->jumbo);
+                // TELUR KOTOR - Debit
+                $kotor = Transaksi::create([
+                    'invoice' => $this->invoice5,
+                    'name' => 'Telur Jumbo ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppJumbo,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $kotor->id,
+                    'kategori_id' => $kateJumbo->id ?? null,
+                    'value' => $hppJumbo / $this->jumbo,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->jumbo,
+                    'sub_total' => $hppJumbo,
+                ]);
+
+                // TELUR KOTOR - Kredit
+                $telur1 = Transaksi::create([
+                    'invoice' => $this->invoice10,
+                    'name' => 'Telur Jumbo ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppJumbo,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur1->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppJumbo / $this->jumbo,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->jumbo,
+                    'sub_total' => $hppJumbo,
+                ]);
+            }
+        });
 
         $this->success('Stok berhasil diperbarui!', redirectTo: '/stok-telur');
     }
@@ -397,7 +464,8 @@ new class extends Component {
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div class="col-span-2">
@@ -419,13 +487,19 @@ new class extends Component {
                 </div>
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Telur Bertambah" wire:model.lazy="tambah" type="number" step="0.01" min="0" />
-                        <x-input label="Telur Berkurang" wire:model.lazy="kurang" type="number" step="0.01" min="0" />
+                        <x-input label="Telur Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Telur Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            min="0" />
                         <x-input label="Telur Kotor" wire:model.lazy="kotor" type="number" step="0.01" />
-                        <x-input label="Telur Bentes" wire:model.lazy="bentes" type="number" step="0.01" min="0" />
-                        <x-input label="Telur Ceplok" wire:model.lazy="ceplok" type="number" step="0.01" min="0" />
-                        <x-input label="Telur Prok" wire:model.lazy="prok" type="number" step="0.01" min="0" />
-                        <x-input label="Telur Jumbo" wire:model.lazy="jumbo" type="number" step="0.01" min="0" />
+                        <x-input label="Telur Bentes" wire:model.lazy="bentes" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Telur Ceplok" wire:model.lazy="ceplok" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Telur Prok" wire:model.lazy="prok" type="number" step="0.01"
+                            min="0" />
+                        <x-input label="Telur Jumbo" wire:model.lazy="jumbo" type="number" step="0.01"
+                            min="0" />
                     </div>
                 </div>
             </div>

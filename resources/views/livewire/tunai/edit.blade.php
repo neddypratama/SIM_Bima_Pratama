@@ -81,68 +81,70 @@ new class extends Component {
     {
         $this->validate();
 
-        $tunai = $this->transaksi;
+        DB::transaction(function () {
+            $tunai = $this->transaksi;
 
-        // Update transaksi utama
-        $tunai->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => $this->type,
-            'total' => $this->total,
-        ]);
-
-        $tunai->details()->delete();
-        DetailTransaksi::create([
-            'transaksi_id' => $tunai->id,
-            'kategori_id' => $this->kategori_id,
-            'kuantitas' => null,
-            'value' => null,
-            'sub_total' => $this->total,
-        ]);
-
-        $kateModal = Kategori::where('name', 'like', '%Modal Awal')->first();
-        $suffix = substr($this->transaksi->invoice, -4);
-        $part = explode('-', $this->transaksi->invoice);
-        $tanggal = $part[1];
-        $modal = Transaksi::where('invoice', 'like', "%$tanggal-MDL-$suffix")->first();
-
-        if ($this->type == 'Debit') {
-            $modal->update([
+            // Update transaksi utama
+            $tunai->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => 'Kredit',
+                'type' => $this->type,
                 'total' => $this->total,
             ]);
-            $modal->details()->delete();
+
+            $tunai->details()->delete();
             DetailTransaksi::create([
-                'transaksi_id' => $modal->id,
-                'kategori_id' => $kateModal->id,
+                'transaksi_id' => $tunai->id,
+                'kategori_id' => $this->kategori_id,
                 'kuantitas' => null,
                 'value' => null,
                 'sub_total' => $this->total,
             ]);
-        } else {
-            $modal->update([
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => 'Debit',
-                'total' => $this->total,
-            ]);
-            $modal->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $modal->id,
-                'kategori_id' => $kateModal->id,
-                'kuantitas' => null,
-                'value' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
+
+            $kateModal = Kategori::where('name', 'like', '%Modal Awal')->first();
+            $suffix = substr($this->transaksi->invoice, -4);
+            $part = explode('-', $this->transaksi->invoice);
+            $tanggal = $part[1];
+            $modal = Transaksi::where('invoice', 'like', "%$tanggal-MDL-$suffix")->first();
+
+            if ($this->type == 'Debit') {
+                $modal->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => 'Kredit',
+                    'total' => $this->total,
+                ]);
+                $modal->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $modal->id,
+                    'kategori_id' => $kateModal->id,
+                    'kuantitas' => null,
+                    'value' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else {
+                $modal->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => 'Debit',
+                    'total' => $this->total,
+                ]);
+                $modal->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $modal->id,
+                    'kategori_id' => $kateModal->id,
+                    'kuantitas' => null,
+                    'value' => null,
+                    'sub_total' => $this->total,
+                ]);
+            }
+        });
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/tunai');
     }
@@ -164,7 +166,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step=1/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian Transaksi" wire:model="name"

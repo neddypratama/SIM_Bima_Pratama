@@ -17,7 +17,7 @@ new class extends Component {
         $part = explode('-', $transaksi->invoice);
         $tanggal = $part[1];
         
-        $this->modal = Transaksi::where('invoice', 'like', "%-$tanggal-%-$suffix")->first();
+        $this->modal = Transaksi::where('invoice', 'like', "%-$tanggal-MDL-$suffix")->first();
         $this->modal = $this->modal->load(['client', 'details.kategori', 'details.barang']);
         // dd($this->modal, $tanggal);
     }

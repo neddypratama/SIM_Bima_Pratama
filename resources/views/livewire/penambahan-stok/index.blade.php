@@ -1,18 +1,14 @@
 <?php
 
-use App\Models\Transaksi;
 use App\Models\StokBatch;
-use App\Models\DetailTransaksi;
 use App\Models\Barang;
-use App\Models\Client;
-use App\Models\User;
-use App\Models\Kategori;
+use App\Models\Transaksi;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Exports\PenjualanTelurExport;
+use App\Exports\StokPakanExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
@@ -30,7 +26,6 @@ new class extends Component {
     public bool $drawer = false;
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
-    public int $client_id = 0;
     public int $barang_id = 0;
 
     public bool $exportModal = false; // ✅ Modal export
@@ -43,7 +38,7 @@ new class extends Component {
     public int $perPage = 25; // Default jumlah data per halaman
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'filter', 'startDate', 'endDate']);
+        $this->reset(['search', 'barang_id', 'filter', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -65,88 +60,55 @@ new class extends Component {
         $this->exportModal = false;
         $this->success('Export dimulai...', position: 'toast-top');
 
-        return Excel::download(new PenjualanTelurExport($this->startDate, $this->endDate), 'penjualan-telur.xlsx');
+        return Excel::download(new StokPakanExport($this->startDate, $this->endDate), 'stok.xlsx');
     }
 
     public function delete($id): void
     {
-        $transaksi = Transaksi::findOrFail($id);
+        $stok = StokBatch::with('barang')->findOrFail($id);
 
-        $inv = substr($transaksi->invoice, -4);
-        $part = explode('-', $transaksi->invoice);
-        $tanggal = $part[1];
-
-        $stok = Transaksi::where('invoice', 'like', "%-$tanggal-TLR-$inv")->first();
-        $stok->details()->delete();
         $stok->delete();
 
-        $hpp = Transaksi::where('invoice', 'like', "%-$tanggal-HPP-$inv")->first();
-        $hpp->details()->delete();
-        $hpp->delete();
-
-        $client = Client::find($transaksi->client_id);
-        $client->decrement('bon', (int) $transaksi->total);
-
-        $bon = Transaksi::where('invoice', 'like', "%-$tanggal-BON-$inv")->first();
-        $bon->details()->delete();
-        $bon->delete();
-
-        foreach ($transaksi->details as $detail) {
-            // rollback stok batch
-            $batch = StokBatch::where('detail_transaksi_id', $detail->id)->first();
-
-            if ($batch) {
-                // kembalikan sisa ke nol (karena batch akan dihapus)
-                $batch->increment('qty_sisa', $$detail->kuantitas);
-            }
-        }
-
-        // 🔥 Hapus detail dan transaksi utama
-        $transaksi->details()->delete();
-        $transaksi->delete();
-
-        $this->warning("Transaksi {$transaksi->invoice}, relasi transaksi, dan semua detailnya berhasil dihapus & stok dikembalikan", position: 'toast-top');
+        $this->warning("Stok $id berhasil dihapus", position: 'toast-top');
     }
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-24'], ['key' => 'user.name', 'label' => 'Pembuat', 'class' => 'w-24'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-36'], ['key' => 'harga', 'label' => ' HPP', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'qty_masuk', 'label' => ' Stok', 'class' => 'w-8'], ['key' => 'qty_sisa', 'label' => ' Sisa', 'class' => 'w-8']];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
-        return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name'])
-            ->where('type', 'Kredit')
-            ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('name', 'like', 'Penjualan Telur%');
+        return StokBatch::query()
+            ->with(['barang:id,name', 'user:id,name'])
+            ->when($this->search, function (Builder $query) {
+                $query
+                    ->whereHas('barang', function ($q) {
+                        $q->where('name', 'like', "%{$this->search}%");
+                    })
+                    ->orWhere('invoice', 'like', "%{$this->search}%");
             })
-            ->when($this->search, function (Builder $q) {
-                $q->where(function ($query) {
-                    $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
-                });
-            })
-            // 📦 FILTER BARANG (BENAR)
-            ->when($this->barang_id, function (Builder $q) {
-                $q->whereHas('details', function ($q2) {
-                    $q2->where('barang_id', $this->barang_id);
-                });
-            })
-            ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->barang_id, fn(Builder $q) => $q->where('barang_id', $this->barang_id))
+            ->when(
+                !empty($this->sortBy),
+                function (Builder $q) {
+                    $sortBy = $this->sortBy;
+                    $column = $sortBy['column'] ?? 'created_at';
+                    $direction = $sortBy['direction'] ?? 'desc';
+                    $q->orderBy($column, $direction);
+                },
+                fn(Builder $q) => $q->orderBy('created_at', 'desc'),
+            )
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
-            ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
 
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 4) {
+        if ($this->filter >= 0 && $this->filter < 3) {
             $this->filter = 0;
             if (!empty($this->search)) {
-                $this->filter++;
-            }
-            if ($this->client_id != 0) {
                 $this->filter++;
             }
             if ($this->barang_id != 0) {
@@ -156,15 +118,9 @@ new class extends Component {
                 $this->filter++;
             }
         }
-
         return [
             'transaksi' => $this->transaksi(),
-            'barang' => Barang::with('jenis')
-                ->whereHas('jenis', function ($q) {
-                    $q->where('name', 'like', '%Telur%');
-                })
-                ->get(),
-            'client' => Client::where('type', 'like', '%Pedagang%')->get(),
+            'barang' => Barang::all(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -182,11 +138,11 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Transaksi Penjualan Telur" separator progress-indicator>
+    <x-header title="Penambahan Stok" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-                <x-button label="Create" link="/telur-keluar/create" responsive icon="o-plus" class="btn-primary" />
+                <x-button label="Create" link="/penambahan-stok/create" responsive icon="o-plus" class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-header>
@@ -196,8 +152,7 @@ new class extends Component {
             <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
         </div>
         <div class="md:col-span-6">
-            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
-                icon="o-magnifying-glass" />
+            <x-input placeholder="Cari..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
         </div>
         <div class="md:col-span-1">
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"
@@ -205,19 +160,17 @@ new class extends Component {
         </div>
     </div>
 
+    <!-- TABLE -->
     <x-card class="overflow-x-auto">
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="telur-keluar/{id}/show?invoice={invoice}">
-            @scope('cell-kategori.name', $transaksi)
-                {{ $transaksi->kategori?->name ?? '-' }}
-            @endscope
+            link="penambahan-stok/{id}/show?barang={barang.name}">
 
             @scope('actions', $transaksi)
                 <div class="flex">
                     @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
                         <x-button icon="o-pencil"
-                            link="/telur-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            link="/penambahan-stok/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                     @if (Auth::user()->role_id == 1)
@@ -235,9 +188,6 @@ new class extends Component {
         <div class="grid gap-5">
             <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
-
-            <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
-                single searchable />
 
             <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barang" icon="o-flag"
                 single searchable />

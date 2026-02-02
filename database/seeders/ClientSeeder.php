@@ -7,293 +7,172 @@ use Illuminate\Support\Facades\DB;
 
 class ClientSeeder extends Seeder
 {
-    /**
-     * Jalankan seeder.
-     */
     public function run(): void
     {
-        // 🟢 Data dengan keterangan ELF
-        $clientsElf = [
-            'Agus','Bonari','Iwan','Nunuk','Candra','Eko Bedali','Kusnar','Jainal Candirejo','Cahyo','Unsu',
-            'Kusuma','Sutik Candirejo','Maria','Suryanto','Sigit','Musid','Sugeng Krebet','Diki','Sugeng',
-            'Suprat','Mamik','Isnafuah','Edi dawung','Rohmad','Sukar','Imam Karangbendo','Agus dawung','Wardoyo',
-            'Wiji','Kaseri','Samsul dayu','Sunarman',' Elf','Gunawan','Purbo','Yanto dawung','Basuki',
-            'Ika Karangbendo','Ngari','Naning','Andri Karangbendo','Rowi','B Sun','Andri Kalicilik','Ririd',
+        // Nonaktifkan foreign key check jika ada relasi
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('clients')->truncate();
+
+        $data = [
+            ["id"=>"1","name"=>"Agus Pojok","alamat"=>"Jl. Melati No. 35","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"19266500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 08:52:01"],
+            ["id"=>"2","name"=>"Bonari","alamat"=>"Jl. Melati No. 4","type"=>"Peternak","keterangan"=>"Elf","bon"=>"662113125.00","titipan"=>"645036900.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 13:12:20"],
+            ["id"=>"3","name"=>"Iwan Dawung","alamat"=>"Jl. Melati No. 46","type"=>"Peternak","keterangan"=>"Elf","bon"=>"83476600.00","titipan"=>"96147790.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 07:54:38"],
+            ["id"=>"4","name"=>"Nunuk","alamat"=>"Jl. Melati No. 3","type"=>"Peternak","keterangan"=>"Elf","bon"=>"151020900.00","titipan"=>"131864700.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-19 14:16:35"],
+            ["id"=>"5","name"=>"Candra","alamat"=>"Jl. Melati No. 45","type"=>"Peternak","keterangan"=>"Elf","bon"=>"7200000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 13:13:04"],
+            ["id"=>"6","name"=>"Eko Bedali","alamat"=>"Jl. Melati No. 1","type"=>"Peternak","keterangan"=>"Elf","bon"=>"900500.00","titipan"=>"912650.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 09:41:05"],
+            ["id"=>"7","name"=>"Kusnar","alamat"=>"Jl. Melati No. 37","type"=>"Peternak","keterangan"=>"Elf","bon"=>"2250000.00","titipan"=>"2421750.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 09:07:39"],
+            ["id"=>"8","name"=>"Jainal Candirejo","alamat"=>"Jl. Melati No. 29","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"3678050.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 10:47:45"],
+            ["id"=>"9","name"=>"Cahyo","alamat"=>"Jl. Melati No. 8","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-11-01 11:45:25"],
+            ["id"=>"10","name"=>"Unsu","alamat"=>"Jl. Melati No. 12","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 14:05:10"],
+            ["id"=>"11","name"=>"Kusuma","alamat"=>"Jl. Melati No. 49","type"=>"Peternak","keterangan"=>"Elf","bon"=>"43970600.00","titipan"=>"38055450.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 12:40:33"],
+            ["id"=>"12","name"=>"Sutik Candirejo","alamat"=>"Jl. Melati No. 40","type"=>"Peternak","keterangan"=>"Elf","bon"=>"68457200.00","titipan"=>"68642710.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:56:11"],
+            ["id"=>"13","name"=>"Maria","alamat"=>"Jl. Melati No. 33","type"=>"Peternak","keterangan"=>"Elf","bon"=>"74040000.00","titipan"=>"74040000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 12:34:54"],
+            ["id"=>"14","name"=>"Suryanto","alamat"=>"Jl. Melati No. 49","type"=>"Peternak","keterangan"=>"Elf","bon"=>"84673800.00","titipan"=>"95129100.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 10:32:27"],
+            ["id"=>"15","name"=>"Sigit","alamat"=>"Jl. Melati No. 11","type"=>"Peternak","keterangan"=>"Elf","bon"=>"46969000.00","titipan"=>"51670950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:49:21"],
+            ["id"=>"16","name"=>"Musid","alamat"=>"Jl. Melati No. 44","type"=>"Peternak","keterangan"=>"Elf","bon"=>"39115150.00","titipan"=>"36233700.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 10:26:07"],
+            ["id"=>"17","name"=>"Sugeng Krebet","alamat"=>"Jl. Melati No. 3","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 16:31:31"],
+            ["id"=>"18","name"=>"Diki","alamat"=>"Jl. Melati No. 29","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-11-01 11:45:25"],
+            ["id"=>"19","name"=>"Sugeng","alamat"=>"Jl. Melati No. 36","type"=>"Peternak","keterangan"=>"Elf","bon"=>"22887350.00","titipan"=>"21821700.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 10:01:19"],
+            ["id"=>"20","name"=>"Suprat","alamat"=>"Jl. Melati No. 29","type"=>"Peternak","keterangan"=>"Elf","bon"=>"62775750.00","titipan"=>"54430750.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:19:00"],
+            ["id"=>"21","name"=>"Mamik","alamat"=>"Jl. Melati No. 14","type"=>"Peternak","keterangan"=>"Elf","bon"=>"19801500.00","titipan"=>"20006500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:00:58"],
+            ["id"=>"22","name"=>"Isnafuah","alamat"=>"Jl. Melati No. 41","type"=>"Peternak","keterangan"=>"Elf","bon"=>"18932650.00","titipan"=>"18031350.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 12:42:54"],
+            ["id"=>"23","name"=>"Edi dawung","alamat"=>"Jl. Melati No. 31","type"=>"Peternak","keterangan"=>"Elf","bon"=>"-850.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-11-27 08:02:40"],
+            ["id"=>"24","name"=>"Rohmad","alamat"=>"Jl. Melati No. 48","type"=>"Peternak","keterangan"=>"Elf","bon"=>"465000.00","titipan"=>"13449000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 10:53:57"],
+            ["id"=>"25","name"=>"Sukar","alamat"=>"Jl. Melati No. 8","type"=>"Peternak","keterangan"=>"Elf","bon"=>"7555000.00","titipan"=>"13534000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 10:31:28"],
+            ["id"=>"26","name"=>"Imam Karangbendo","alamat"=>"Jl. Melati No. 3","type"=>"Peternak","keterangan"=>"Elf","bon"=>"106064100.00","titipan"=>"105894100.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 10:30:22"],
+            ["id"=>"27","name"=>"Agus dawung","alamat"=>"Jl. Melati No. 33","type"=>"Peternak","keterangan"=>"Elf","bon"=>"29627500.00","titipan"=>"27560700.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:46:47"],
+            ["id"=>"28","name"=>"Wardoyo","alamat"=>"Jl. Melati No. 34","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:08:41"],
+            ["id"=>"29","name"=>"Wiji","alamat"=>"Jl. Melati No. 47","type"=>"Peternak","keterangan"=>"Elf","bon"=>"168719000.00","titipan"=>"247639250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:48:45"],
+            ["id"=>"30","name"=>"Kaseri","alamat"=>"Jl. Melati No. 3","type"=>"Peternak","keterangan"=>"Elf","bon"=>"86540000.00","titipan"=>"107714400.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:50:02"],
+            ["id"=>"31","name"=>"Samsul dayu","alamat"=>"Jl. Melati No. 50","type"=>"Peternak","keterangan"=>"Elf","bon"=>"9989600.00","titipan"=>"10378200.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:07:36"],
+            ["id"=>"32","name"=>"Sunarman","alamat"=>"Jl. Melati No. 1","type"=>"Peternak","keterangan"=>"Elf","bon"=>"118577000.00","titipan"=>"126017950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:48:09"],
+            ["id"=>"33","name"=>" Elf","alamat"=>"Jl. Melati No. 42","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-11-01 11:45:25"],
+            ["id"=>"34","name"=>"Gunawan","alamat"=>"Jl. Melati No. 43","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:10:41"],
+            ["id"=>"35","name"=>"Purbo","alamat"=>"Jl. Melati No. 13","type"=>"Peternak","keterangan"=>"Elf","bon"=>"41796550.00","titipan"=>"37882500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 08:45:36"],
+            ["id"=>"36","name"=>"Yanto dawung","alamat"=>"Jl. Melati No. 45","type"=>"Peternak","keterangan"=>"Elf","bon"=>"102993800.00","titipan"=>"104860800.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:47:22"],
+            ["id"=>"37","name"=>"Basuki","alamat"=>"Jl. Melati No. 6","type"=>"Peternak","keterangan"=>"Elf","bon"=>"112808400.00","titipan"=>"145586300.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 21:49:53"],
+            ["id"=>"38","name"=>"Ika Karangbendo","alamat"=>"Jl. Melati No. 35","type"=>"Peternak","keterangan"=>"Elf","bon"=>"0.00","titipan"=>"900.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:52:37"],
+            ["id"=>"39","name"=>"Ngari","alamat"=>"Jl. Melati No. 29","type"=>"Peternak","keterangan"=>"Elf","bon"=>"36058840.00","titipan"=>"49631650.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:46:10"],
+            ["id"=>"40","name"=>"Naning","alamat"=>"Jl. Melati No. 15","type"=>"Peternak","keterangan"=>"Elf","bon"=>"65220250.00","titipan"=>"65220250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 13:17:30"],
+            ["id"=>"41","name"=>"Andri Karangbendo","alamat"=>"Jl. Melati No. 27","type"=>"Peternak","keterangan"=>"Elf","bon"=>"5880000.00","titipan"=>"16288856.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:29:44"],
+            ["id"=>"42","name"=>"Rowi","alamat"=>"Jl. Melati No. 8","type"=>"Peternak","keterangan"=>"Elf","bon"=>"51062300.00","titipan"=>"48931000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:02:21"],
+            ["id"=>"43","name"=>"B Sun Candirejo","alamat"=>"Jl. Melati No. 22","type"=>"Peternak","keterangan"=>"Elf","bon"=>"687000.00","titipan"=>"2228450.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 10:33:55"],
+            ["id"=>"44","name"=>"Andri Kalicilik","alamat"=>"Jl. Melati No. 49","type"=>"Peternak","keterangan"=>"Elf","bon"=>"27645650.00","titipan"=>"35181150.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:21:03"],
+            ["id"=>"45","name"=>"Ririd","alamat"=>"Jl. Melati No. 16","type"=>"Peternak","keterangan"=>"Elf","bon"=>"19200000.00","titipan"=>"18317650.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 12:44:51"],
+            ["id"=>"46","name"=>"Suci Kuning","alamat"=>"Jl. Kenanga No. 17","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"145374600.00","titipan"=>"146170000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:15:54"],
+            ["id"=>"47","name"=>"Topah","alamat"=>"Jl. Kenanga No. 10","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"75583000.00","titipan"=>"81988250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 11:11:45"],
+            ["id"=>"48","name"=>"Joko Bonkakah","alamat"=>"Jl. Kenanga No. 35","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"291550.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:46:33"],
+            ["id"=>"49","name"=>"Suryono","alamat"=>"Jl. Kenanga No. 31","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"61714750.00","titipan"=>"64495250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:26:47"],
+            ["id"=>"50","name"=>"Triono","alamat"=>"Jl. Kenanga No. 36","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"64728500.00","titipan"=>"63696500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:20:05"],
+            ["id"=>"51","name"=>"Febri","alamat"=>"Jl. Kenanga No. 15","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"12687500.00","titipan"=>"12758500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 10:33:48"],
+            ["id"=>"52","name"=>"Fadil","alamat"=>"Jl. Kenanga No. 27","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"18300950.00","titipan"=>"18300950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:23:31"],
+            ["id"=>"53","name"=>"Kolik Ngiwak","alamat"=>"Jl. Kenanga No. 34","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"138199028.00","titipan"=>"184023980.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 11:07:17"],
+            ["id"=>"54","name"=>"Jam","alamat"=>"Jl. Kenanga No. 21","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"11551000.00","titipan"=>"11473750.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:45:33"],
+            ["id"=>"55","name"=>"Wulan","alamat"=>"Jl. Kenanga No. 26","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"8382500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:50:27"],
+            ["id"=>"56","name"=>"Leginah","alamat"=>"Jl. Kenanga No. 3","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"1083000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:42:18"],
+            ["id"=>"57","name"=>"Kholis","alamat"=>"Jl. Kenanga No. 24","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"12846000.00","titipan"=>"12116750.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 13:00:27"],
+            ["id"=>"58","name"=>"Septi","alamat"=>"Jl. Kenanga No. 34","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 09:42:24"],
+            ["id"=>"59","name"=>"Arif Bonkakah","alamat"=>"Jl. Kenanga No. 19","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"111300.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 10:38:05"],
+            ["id"=>"60","name"=>"Yadi","alamat"=>"Jl. Kenanga No. 18","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"72685200.00","titipan"=>"71621500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 13:40:23"],
+            ["id"=>"61","name"=>"Nurkholis Tawing","alamat"=>"Jl. Kenanga No. 17","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"119675900.00","titipan"=>"110320200.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:26:14"],
+            ["id"=>"62","name"=>"Karyo","alamat"=>"Jl. Kenanga No. 36","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"70864500.00","titipan"=>"68088500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:13:30"],
+            ["id"=>"63","name"=>"Safii","alamat"=>"Jl. Kenanga No. 33","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"25001800.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 08:55:04"],
+            ["id"=>"64","name"=>"Arifin Dermojayan","alamat"=>"Jl. Kenanga No. 4","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"1583000.00","titipan"=>"1583500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-12-16 09:09:09"],
+            ["id"=>"65","name"=>"Irul Ringinanom","alamat"=>"Jl. Kenanga No. 36","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"13689200.00","titipan"=>"13566950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:44:08"],
+            ["id"=>"66","name"=>"Tini","alamat"=>"Jl. Kenanga No. 47","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:25:33"],
+            ["id"=>"67","name"=>"Didit","alamat"=>"Jl. Kenanga No. 34","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"16312800.00","titipan"=>"9572750.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 13:59:14"],
+            ["id"=>"68","name"=>"Daroini","alamat"=>"Jl. Kenanga No. 13","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"81170350.00","titipan"=>"81170350.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:09:28"],
+            ["id"=>"69","name"=>"Huda Ringinanom","alamat"=>"Jl. Kenanga No. 21","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"48345850.00","titipan"=>"45550450.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:16:31"],
+            ["id"=>"70","name"=>"Joko Manding","alamat"=>"Jl. Kenanga No. 31","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"13735000.00","titipan"=>"13735000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:21:58"],
+            ["id"=>"71","name"=>"Kari","alamat"=>"Jl. Kenanga No. 13","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"6742500.00","titipan"=>"8252800.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:39:58"],
+            ["id"=>"72","name"=>"Saiful","alamat"=>"Jl. Kenanga No. 38","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 09:43:16"],
+            ["id"=>"73","name"=>"Lim","alamat"=>"Jl. Kenanga No. 41","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"37300000.00","titipan"=>"35920900.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:24:59"],
+            ["id"=>"74","name"=>"Ghasa","alamat"=>"Jl. Kenanga No. 40","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"2954600.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:41:10"],
+            ["id"=>"75","name"=>"Adi","alamat"=>"Jl. Kenanga No. 12","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"85000000.00","titipan"=>"84629800.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:49:21"],
+            ["id"=>"76","name"=>"Utami","alamat"=>"Jl. Kenanga No. 33","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"49488500.00","titipan"=>"47916500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:47:23"],
+            ["id"=>"77","name"=>"Harmi","alamat"=>"Jl. Kenanga No. 35","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"54201600.00","titipan"=>"35625000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 13:01:06"],
+            ["id"=>"78","name"=>"Tukiran","alamat"=>"Jl. Kenanga No. 21","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"1096850.00","titipan"=>"1096850.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-12-01 15:59:17"],
+            ["id"=>"79","name"=>"Suratman","alamat"=>"Jl. Kenanga No. 49","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 09:44:29"],
+            ["id"=>"80","name"=>"Dwin","alamat"=>"Jl. Kenanga No. 18","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"100.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-12-05 09:05:00"],
+            ["id"=>"81","name"=>"Koim","alamat"=>"Jl. Kenanga No. 34","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"280875375.00","titipan"=>"384453300.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:38:39"],
+            ["id"=>"82","name"=>"Kafid","alamat"=>"Jl. Kenanga No. 20","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"7487500.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 10:40:49"],
+            ["id"=>"83","name"=>"Hanik","alamat"=>"Jl. Kenanga No. 39","type"=>"Peternak","keterangan"=>"Kuning","bon"=>"54365250.00","titipan"=>"78264000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 13:21:44"],
+            ["id"=>"84","name"=>"Pinka","alamat"=>"Jl. Mawar No. 18","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"480500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 08:56:45"],
+            ["id"=>"85","name"=>"Farida","alamat"=>"Jl. Mawar No. 25","type"=>"Peternak","keterangan"=>"Merah","bon"=>"2961450.00","titipan"=>"6747700.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:55:25"],
+            ["id"=>"86","name"=>"Ngalimin","alamat"=>"Jl. Mawar No. 19","type"=>"Peternak","keterangan"=>"Merah","bon"=>"306000.00","titipan"=>"306450.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:12:11"],
+            ["id"=>"87","name"=>"Karyani","alamat"=>"Jl. Mawar No. 15","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"1200000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 08:57:26"],
+            ["id"=>"88","name"=>"Rudi bontoro","alamat"=>"Jl. Mawar No. 35","type"=>"Peternak","keterangan"=>"Merah","bon"=>"33961450.00","titipan"=>"33411650.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:46:59"],
+            ["id"=>"89","name"=>"Ahmad","alamat"=>"Jl. Mawar No. 15","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"200.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-08 08:58:23"],
+            ["id"=>"90","name"=>"Wiroyo","alamat"=>"Jl. Mawar No. 7","type"=>"Peternak","keterangan"=>"Merah","bon"=>"36680900.00","titipan"=>"32971000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:06:18"],
+            ["id"=>"91","name"=>"Kasianto","alamat"=>"Jl. Mawar No. 35","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"2150.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:03:12"],
+            ["id"=>"92","name"=>"Yanto Sukoanyar","alamat"=>"Jl. Mawar No. 29","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"1741500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:01:10"],
+            ["id"=>"93","name"=>"Jumari","alamat"=>"Jl. Mawar No. 18","type"=>"Peternak","keterangan"=>"Merah","bon"=>"20291750.00","titipan"=>"18030450.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:57:42"],
+            ["id"=>"94","name"=>"Rob","alamat"=>"Jl. Mawar No. 12","type"=>"Peternak","keterangan"=>"Merah","bon"=>"25969950.00","titipan"=>"49723950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 12:54:09"],
+            ["id"=>"95","name"=>"Sutik Sidomulyo","alamat"=>"Jl. Mawar No. 26","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"100.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:56:52"],
+            ["id"=>"96","name"=>"Fais","alamat"=>"Jl. Mawar No. 17","type"=>"Peternak","keterangan"=>"Merah","bon"=>"51732500.00","titipan"=>"59493633.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 12:54:47"],
+            ["id"=>"97","name"=>"Nano","alamat"=>"Jl. Mawar No. 35","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"7381650.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:34:46"],
+            ["id"=>"98","name"=>"Sareh","alamat"=>"Jl. Mawar No. 42","type"=>"Peternak","keterangan"=>"Merah","bon"=>"105729900.00","titipan"=>"61568450.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:20:43"],
+            ["id"=>"99","name"=>"Andi Batuaji","alamat"=>"Jl. Mawar No. 5","type"=>"Peternak","keterangan"=>"Merah","bon"=>"15760250.00","titipan"=>"14202250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:59:01"],
+            ["id"=>"100","name"=>"Aris Sidomulyo","alamat"=>"Jl. Mawar No. 16","type"=>"Peternak","keterangan"=>"Merah","bon"=>"14464395.00","titipan"=>"16287050.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:26:49"],
+            ["id"=>"101","name"=>"Imam sidomulyo","alamat"=>"Jl. Mawar No. 14","type"=>"Peternak","keterangan"=>"Merah","bon"=>"2500000.00","titipan"=>"4874570.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:22:46"],
+            ["id"=>"102","name"=>"Korib","alamat"=>"Jl. Mawar No. 46","type"=>"Peternak","keterangan"=>"Merah","bon"=>"46089000.00","titipan"=>"67326400.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 09:25:12"],
+            ["id"=>"103","name"=>"Irul sidomulyo","alamat"=>"Jl. Mawar No. 30","type"=>"Peternak","keterangan"=>"Merah","bon"=>"4950000.00","titipan"=>"10740550.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 14:43:38"],
+            ["id"=>"104","name"=>"Yuda puyuh","alamat"=>"Jl. Mawar No. 37","type"=>"Peternak","keterangan"=>"Merah","bon"=>"80096500.00","titipan"=>"76985500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 12:52:14"],
+            ["id"=>"105","name"=>"Luis","alamat"=>"Jl. Mawar No. 7","type"=>"Peternak","keterangan"=>"Merah","bon"=>"54590000.00","titipan"=>"56798250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:33:32"],
+            ["id"=>"106","name"=>"Sunarmi","alamat"=>"Jl. Mawar No. 11","type"=>"Peternak","keterangan"=>"Merah","bon"=>"260356500.00","titipan"=>"249264000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:44:28"],
+            ["id"=>"107","name"=>"Kolik sumbernanas","alamat"=>"Jl. Mawar No. 14","type"=>"Peternak","keterangan"=>"Merah","bon"=>"221870250.00","titipan"=>"415435685.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 08:50:07"],
+            ["id"=>"108","name"=>"Edi selorejo","alamat"=>"Jl. Mawar No. 19","type"=>"Peternak","keterangan"=>"Merah","bon"=>"58350500.00","titipan"=>"58241000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 13:02:13"],
+            ["id"=>"109","name"=>"Erna sumberasri","alamat"=>"Jl. Mawar No. 50","type"=>"Peternak","keterangan"=>"Merah","bon"=>"71178600.00","titipan"=>"73188750.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:13:22"],
+            ["id"=>"110","name"=>"Samirin","alamat"=>"Jl. Mawar No. 44","type"=>"Peternak","keterangan"=>"Merah","bon"=>"132626900.00","titipan"=>"142630250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 13:24:53"],
+            ["id"=>"111","name"=>"Yanto Sumberasri","alamat"=>"Jl. Mawar No. 32","type"=>"Peternak","keterangan"=>"Merah","bon"=>"281784250.00","titipan"=>"427123075.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 10:56:14"],
+            ["id"=>"112","name"=>"Rotul","alamat"=>"Jl. Mawar No. 25","type"=>"Peternak","keterangan"=>"Merah","bon"=>"21451700.00","titipan"=>"23065650.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:50:44"],
+            ["id"=>"113","name"=>"Faruq","alamat"=>"Jl. Mawar No. 40","type"=>"Peternak","keterangan"=>"Merah","bon"=>"3058200.00","titipan"=>"3422200.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:49:51"],
+            ["id"=>"114","name"=>"Sukiro","alamat"=>"Jl. Mawar No. 36","type"=>"Peternak","keterangan"=>"Merah","bon"=>"27536150.00","titipan"=>"25411800.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:45:11"],
+            ["id"=>"115","name"=>"Sunar","alamat"=>"Jl. Mawar No. 21","type"=>"Peternak","keterangan"=>"Merah","bon"=>"25634100.00","titipan"=>"30057150.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:27:39"],
+            ["id"=>"116","name"=>"Jainal Karetan","alamat"=>"Jl. Mawar No. 28","type"=>"Peternak","keterangan"=>"Merah","bon"=>"51900050.00","titipan"=>"94541900.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:29:43"],
+            ["id"=>"117","name"=>"Yaul","alamat"=>"Jl. Mawar No. 46","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"287513615.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:51:23"],
+            ["id"=>"118","name"=>"Dewi","alamat"=>"Jl. Mawar No. 8","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"15697850.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:52:44"],
+            ["id"=>"119","name"=>"Savio","alamat"=>"Jl. Mawar No. 32","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"12609138.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:52:00"],
+            ["id"=>"120","name"=>"Likah","alamat"=>"Jl. Mawar No. 10","type"=>"Peternak","keterangan"=>"Merah","bon"=>"6800000.00","titipan"=>"7335570.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:46:32"],
+            ["id"=>"121","name"=>"Rif","alamat"=>"Jl. Mawar No. 16","type"=>"Peternak","keterangan"=>"Merah","bon"=>"1087150.00","titipan"=>"1230000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 09:47:12"],
+            ["id"=>"122","name"=>"Kusnun","alamat"=>"Jl. Mawar No. 18","type"=>"Peternak","keterangan"=>"Merah","bon"=>"184714923.00","titipan"=>"184271600.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 11:07:19"],
+            ["id"=>"123","name"=>"Soniah","alamat"=>"Jl. Mawar No. 40","type"=>"Peternak","keterangan"=>"Merah","bon"=>"43109300.00","titipan"=>"38541100.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 11:08:47"],
+            ["id"=>"124","name"=>"Slamet","alamat"=>"Jl. Mawar No. 1","type"=>"Peternak","keterangan"=>"Merah","bon"=>"141610300.00","titipan"=>"139645500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 11:05:56"],
+            ["id"=>"125","name"=>"P Sun Bebek","alamat"=>"Jl. Mawar No. 3","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:05:43"],
+            ["id"=>"126","name"=>"Nasik","alamat"=>"Jl. Mawar No. 27","type"=>"Peternak","keterangan"=>"Merah","bon"=>"29386000.00","titipan"=>"24638150.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:29:06"],
+            ["id"=>"127","name"=>"Jainudin","alamat"=>"Jl. Mawar No. 17","type"=>"Peternak","keterangan"=>"Merah","bon"=>"0.00","titipan"=>"950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-11-13 00:05:15"],
+            ["id"=>"128","name"=>"Mufas","alamat"=>"Jl. Mawar No. 30","type"=>"Peternak","keterangan"=>"Merah","bon"=>"10897590.00","titipan"=>"11132330.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:36:14"],
+            ["id"=>"130","name"=>"Toko Cangkring","alamat"=>"Jl. Dahlia No. 46","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-24 08:33:21"],
+            ["id"=>"131","name"=>"Sutris faksin","alamat"=>"Jl. Dahlia No. 50","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"36305900.00","titipan"=>"15190500.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-21 14:18:49"],
+            ["id"=>"132","name"=>"Edi Subkhan","alamat"=>"Jl. Dahlia No. 20","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"28035950.00","titipan"=>"39413550.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:48:04"],
+            ["id"=>"133","name"=>"Pri sumberasri","alamat"=>"Jl. Dahlia No. 33","type"=>"Peternak","keterangan"=>"Merah","bon"=>"115411880.00","titipan"=>"121185780.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-30 13:15:37"],
+            ["id"=>"134","name"=>"Gatot","alamat"=>"Jl. Dahlia No. 2","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"53161250.00","titipan"=>"52767250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:46:32"],
+            ["id"=>"135","name"=>"Yusuf","alamat"=>"Jl. Dahlia No. 29","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"87810200.00","titipan"=>"79220000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 08:18:01"],
+            ["id"=>"136","name"=>"Wahyu Dawung","alamat"=>"Jl. Dahlia No. 25","type"=>"Peternak","keterangan"=>"Elf","bon"=>"59790700.00","titipan"=>"57343950.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 07:45:31"],
+            ["id"=>"137","name"=>"Mariono","alamat"=>"Jl. Dahlia No. 28","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"52000.00","titipan"=>"53000.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 13:58:26"],
+            ["id"=>"138","name"=>"Winarsih","alamat"=>"Jl. Dahlia No. 5","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"3995500.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:11:01"],
+            ["id"=>"139","name"=>"Andi Jagoan","alamat"=>"Jl. Dahlia No. 46","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"8350000.00","titipan"=>"2571250.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 15:30:34"],
+            ["id"=>"140","name"=>"Triono kaligedok","alamat"=>"Jl. Dahlia No. 34","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"15860000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 15:07:43"],
+            ["id"=>"141","name"=>"Mad Candirejo","alamat"=>"Jl. Dahlia No. 38","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"14378900.00","titipan"=>"12824930.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-23 10:37:57"],
+            ["id"=>"142","name"=>"Anti","alamat"=>"Jl. Dahlia No. 30","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"5360000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 10:25:33"],
+            ["id"=>"143","name"=>"Kontiyah","alamat"=>"Jl. Dahlia No. 28","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"12144000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-29 13:03:56"],
+            ["id"=>"144","name"=>"Sus","alamat"=>"Jl. Dahlia No. 9","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"2520000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-14 13:47:00"],
+            ["id"=>"145","name"=>"Gawing","alamat"=>"Jl. Dahlia No. 5","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"5200708.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-10 12:39:03"],
+            ["id"=>"146","name"=>"Samsul","alamat"=>"Jl. Dahlia No. 19","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"22080000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:48:35"],
+            ["id"=>"147","name"=>"Sokib rumah ternak","alamat"=>"Jl. Dahlia No. 2","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"5545000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-26 10:09:05"],
+            ["id"=>"148","name"=>"Bagio","alamat"=>"Jl. Dahlia No. 46","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"10320000.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-31 10:39:13"],
+            ["id"=>"149","name"=>"Sutinah","alamat"=>"Jl. Dahlia No. 12","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"373864050.00","titipan"=>"370866669.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 09:03:12"],
+            ["id"=>"150","name"=>"Nanang Kalicilik","alamat"=>"Jl. Dahlia No. 9","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"0.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-28 16:26:36"],
+            ["id"=>"151","name"=>"In toko","alamat"=>"Jl. Dahlia No. 7","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"1959500.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-21 10:02:25"],
+            ["id"=>"152","name"=>"Mastur","alamat"=>"Jl. Dahlia No. 18","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"0.00","titipan"=>"850.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2026-01-27 10:02:04"],
+            ["id"=>"153","name"=>"Agung Kalicilik","alamat"=>"Jl. Dahlia No. 17","type"=>"Peternak","keterangan"=>"Rumah","bon"=>"-30.00","titipan"=>"0.00","created_at"=>"2025-11-01 11:45:25","updated_at"=>"2025-11-01 11:45:25"]
         ];
 
-        // 🟡 Data dengan keterangan KUNING
-        $clientsKuning = [
-            'Suci Kuning','Topah','Joko Bonkakah','Suryono','Triono','Febri','Fadil','Kholik','Jam','Wulan','Leginah',
-            'Kholis','Septi','Arif','Yadi','Nurkholis','Karyo','Safii','Arifin','Irul','Tini','Didit','Daroini',
-            'Huda','Joko Manding','Kari','Saiful','Lim','Ghasa','Adi','Utami','Harmi','Tukiran','Suratman',
-            'Dwin','Koim','Kafid','Hanik',
-        ];
-
-        // 🔴 Data dengan keterangan MERAH
-        $clientsMerah = [
-            'Pinka','Farida','Ngalimin','Karyani','Rudi bontoro','Ahmad','Wiroyo','Kasianto','Yanto Sukoanyar','Jumari',
-            'Rob','Sutik Sidomulyo','Fais','Nano','Sareh','Andi','Aris','Imam sidomulyo','Korib','Irul sidomulyo',
-            'Yuda puyuh','Luis','Sunarmi','Kolik sumbernanas','Edi selorejo','Erna sumberasri','Samirin','Yanto Sumberasri',
-            'Rotul','Faruq','Sukiro','Sunar','Jainal Karetan','Yaul','Dewi','Savio','Likah','Rif','Kusnun','Soniah',
-            'Slamet','P Sun','Nasik','Jainudin','Mufas',
-        ];
-
-        // 🏠 Data dengan keterangan RUMAH
-        $clientsRumah = [
-            'Sun','Toko','Sutris faksin','Edi Subkhan','Pri sumberasri','Gatot','Yusuf','Wahyu','Mariono','Winarsih',
-            'Andi Jagoan','Triono kaligedok','Mad','Anti','Kontiyah','Sus','Gawing','Samsul','Sokib','Bagio','Sutinah',
-            'Nanang Kalicilik','In','Mastur','Agung','Nur','Iqsan','Rindang','Nikmah','Ana','Nanang Rejoso','Siti',
-            'Pom kulon','Rurin','Erna Kalicilik','Kabib','Pom candi',
-        ];
-
-        // 🐓 Data dengan keterangan KANDANG
-        $clientsKandang = [
-            'Kandang Puyuh Ngiwak','Kandang Puyuh Sidomulyo','Kandang bebek','Kandang ayam','Kandang kambing',
-        ];
-
-        // PEDAGANGAN
-        $clientsPedagangan = [
-            'Nunur',
-            'Ali',
-            'Prayit',
-            'Suci',
-            'Seneng',
-        ];
-
-        // KARYAWAN KELILING
-        $clientsKaryawanKeliling = [
-            'Syah', 'Agung 2', 'Tri', 'Heji', 'Arya', 'Hebi', 'Zikin', 'Ipul', 'Imam', 'Shodiq',
-            'Rurin 2', 'Muda', 'Zubet', 'Iwan 2', 'Anton', 'Eko', 'Rafi', 'Son', 'Mursyid', 'Rum',
-            'Sopiyah', 'Irul 2', 'Yuyun', 'Zamron cs', 'Agung 3', 'Sokib 2', 'Din',
-        ];
-
-        // KARYAWAN LAIN
-        $clientsKaryawanLain = [
-            'Koim 2', 'Anak Yatim', 'Didit 2', 'Ela', 'Sipon', 'Yeni', 'Ika/Aris', 'Supri Sopir', 'Sipon 2',
-            'Mun', 'Binti paket', 'Pertashop', 'Polet', 'Toko 2', 'Azka', 'Zulfa', 'Kasan', 'Joko', 'Yoga', 
-            'Bagas', 'Jun', 'Eka', 'Nasik 2', 'Niam', 'Mufas 2', 'Suyoto', 'Azka titip', 'Kateni', 'Ridwan',
-        ];
-
-        $clientSupplier = [
-            'Tray Diamond /DM', 'Tray Super Buah /SB', 'Tray Random', 'Obat SK', 'Obat Ponggok', 'Obat Random', 'Sentrat SK', 'Sentrat Ponggok', 'Sentrat Random', 'Bp.Supriyadi',
-        ];
-
-        $data = [];
-
-        // ELF
-        foreach ($clientsElf as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Melati No. ' . rand(1, 50),
-                'type' => 'Peternak',
-                'keterangan' => 'Elf',
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+        // Membagi data menjadi chunk (potongan) berisi 50 data agar tidak overload
+        foreach (array_chunk($data, 50) as $chunk) {
+            DB::table('clients')->insert($chunk);
         }
 
-        // KUNING
-        foreach ($clientsKuning as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Kenanga No. ' . rand(1, 50),
-                'type' => 'Peternak',
-                'keterangan' => 'Kuning',
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        // MERAH
-        foreach ($clientsMerah as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Mawar No. ' . rand(1, 50),
-                'type' => 'Peternak',
-                'keterangan' => 'Merah',
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        // RUMAH
-        foreach ($clientsRumah as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Dahlia No. ' . rand(1, 50),
-                'type' => 'Peternak',
-                'keterangan' => 'Rumah',
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        // KANDANG
-        foreach ($clientsKandang as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Flamboyan No. ' . rand(1, 50),
-                'type' => 'Peternak',
-                'keterangan' => 'Kandang',
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        foreach ($clientsPedagangan as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Anggrek No. ' . rand(1, 50),
-                'type' => 'Pedagang',
-                'keterangan' => null,
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        foreach ($clientsKaryawanKeliling as $name) {
-            $data[] = [
-                'name' => $name,
-                'alamat' => 'Jl. Teratai No. ' . rand(1, 50),
-                'type' => 'Karyawan',
-                'keterangan' => 'Karyawan Keliling',
-                'bon' => 0,
-                'titipan' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        foreach ($clientsKaryawanLain as $name) {
-        $data[] = [
-            'name' => $name,
-            'alamat' => 'Jl. Cempaka No. ' . rand(1, 50),
-            'type' => 'Karyawan',
-            'keterangan' => 'Karyawan Lain',
-            'bon' => 0,
-                'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-            ];
-        }
-
-        // Supplier
-        foreach ($clientSupplier as $name) {
-        $data[] = [
-            'name' => $name,
-            'alamat' => 'Jl. Raflesia No. ' . rand(1, 50),
-            'type' => 'Supplier',
-            'keterangan' => 'Supplier',
-            'bon' => 0,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-            ];
-        }
-
-        // POCOK
-        $data[] = [
-            'name' => 'Abi',
-            'alamat' => 'Jl. Matahari No. 1',
-            'type' => 'Peternak',
-            'keterangan' => 'Pocok',
-            'bon' => 0,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        // TERNAK KELUAR
-        $data[] = [
-            'name' => 'Jemangin',
-            'alamat' => 'Jl. Sepatu No. 1',
-            'type' => 'Peternak',
-            'keterangan' => 'Ternak Keluar',
-            'bon' => 0,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        // TRUK
-        $data[] = [
-            'name' => 'Bima Pratama Biru 1',
-            'alamat' => 'AG 9964',
-            'type' => 'Truk',
-            'keterangan' => 'Bp. Subakir',
-            'bon' => 223000000,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $data[] = [
-            'name' => 'Bima Pratama Biru 2',
-            'alamat' => 'AG 8393',
-            'type' => 'Truk',
-            'keterangan' => 'Bp. Supri Handoko',
-            'bon' => 255000000,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $data[] = [
-            'name' => 'Bima Pratama Orange 1',
-            'alamat' => 'AG 8529',
-            'type' => 'Truk',
-            'keterangan' => 'Bp. Joko',
-            'bon' => 245000000,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $data[] = [
-            'name' => 'Bima Pratama Orange 2',
-            'alamat' => 'AG 8622',
-            'type' => 'Truk',
-            'keterangan' => 'Bp. Yoga',
-            'bon' => 255000000,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $data[] = [
-            'name' => 'Bima Pratama Hijau 1',
-            'alamat' => 'AG 8026 UL',
-            'type' => 'Truk',
-            'keterangan' => 'Bp. Kasan',
-            'bon' => 500000000,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $data[] = [
-            'name' => 'Bima Pratama Merah Hujau 2',
-            'alamat' => 'AG 0',
-            'type' => 'Truk',
-            'keterangan' => 'Bp. Aris Fermansyah',
-            'bon' => 110000000,
-            'titipan' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        DB::table('clients')->insert($data);
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 }

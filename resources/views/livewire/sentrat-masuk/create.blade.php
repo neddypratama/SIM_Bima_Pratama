@@ -2,6 +2,7 @@
 
 use Livewire\Volt\Component;
 use App\Models\Transaksi;
+use App\Models\StokBatch;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Kategori;
@@ -61,7 +62,7 @@ new class extends Component {
     public function mount(): void
     {
         $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->tanggal = now()->format('Y-m-d\TH:i:s');
         $this->updatedTanggal($this->tanggal);
 
         $this->barangs = Barang::all();
@@ -132,98 +133,83 @@ new class extends Component {
             'details.*.kuantitas' => 'required|numeric|min:1',
         ]);
 
-        $stok = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Debit',
-            'total' => $this->total,
-        ]);
-
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $stok->id,
-                'kategori_id' => $this->kategori_id,
-                'value' => $item['value'], // harga satuan
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+        DB::transaction(function () {
+            $stok = Transaksi::create([
+                'invoice' => $this->invoice,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Debit',
+                'total' => $this->total,
             ]);
 
-            // ✅ Tambah stok barang
-            if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
-                $barang = Barang::find($item['barang_id']);
-                if ($barang) {
-                    $barang->increment('stok', $item['kuantitas']);
-                }
-            }
-        }
+            foreach ($this->details as $item) {
+                $detail = DetailTransaksi::create([
+                    'transaksi_id' => $stok->id,
+                    'kategori_id' => $this->kategori_id,
+                    'value' => $item['value'], // harga satuan
+                    'barang_id' => $item['barang_id'] ?? null,
+                    'kuantitas' => $item['kuantitas'] ?? null,
+                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+                ]);
 
-        $client = Client::find($this->client_id);
-
-        // Normalisasi nama
-        $clientName = trim(str_replace(['  '], [' '], $client->name));
-
-        // Tentukan kategori hutang berdasarkan nama client
-        if (stripos($clientName, 'SK') !== false) {
-            $kategoriName = 'Hutang Sentrat Sk';
-        } elseif (stripos($clientName, 'Ponggok') !== false ) {
-            $kategoriName = 'Hutang Sentrat Ponggok';
-        } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
-            $kategoriName = 'Saldo Bp.Supriyadi';
-        } else {
-            $kategoriName = 'Hutang Sentrat Random';
-        }
-
-        // Ambil kategori dari database
-        $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
-
-        $hutang = Transaksi::create([
-            'invoice' => $this->invoice1,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Kredit',
-            'total' => $this->total,
-        ]);
-
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $hutang->id,
-                'kategori_id' => $kateHutang->id,
-                'value' => $item['value'],
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
-            ]);
-        }
-
-        if ($client) {
-            $client->increment('titipan', $this->total);
-        }
-
-        // Hitung HPP & stok sekali per barang unik
-        $barangIds = collect($this->details)->pluck('barang_id')->unique();
-
-        foreach ($barangIds as $id) {
-            $barang = Barang::find($id);
-            if (!$barang) {
-                continue;
+                // 🔥 INI KUNCI FIFO
+                StokBatch::create([
+                    'barang_id' => $item['barang_id'] ?? null,
+                    'user_id' => $this->user_id,
+                    'detail_transaksi_id' => $detail->id,
+                    'tanggal' => $this->tanggal,
+                    'qty_masuk' => $item['kuantitas'],
+                    'qty_sisa' => $item['kuantitas'],
+                    'harga' => $item['value'], // HPP batch
+                ]);
             }
 
-            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Pakan'))->sum('kuantitas');
+            $client = Client::find($this->client_id);
 
-            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Pakan'))->sum(\DB::raw('value * kuantitas'));
+            // Normalisasi nama
+            $clientName = trim(str_replace(['  '], [' '], $client->name));
 
-            $hppBaru = $stokDebit > 0 ? $totalHarga / $stokDebit : 0;
+            // Tentukan kategori hutang berdasarkan nama client
+            if (stripos($clientName, 'SK') !== false) {
+                $kategoriName = 'Hutang Sentrat Sk';
+            } elseif (stripos($clientName, 'Ponggok') !== false) {
+                $kategoriName = 'Hutang Sentrat Ponggok';
+            } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
+                $kategoriName = 'Saldo Bp.Supriyadi';
+            } else {
+                $kategoriName = 'Hutang Sentrat Random';
+            }
 
-            $barang->update([
-                'hpp' => $hppBaru,
+            // Ambil kategori dari database
+            $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
+
+            $hutang = Transaksi::create([
+                'invoice' => $this->invoice1,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Kredit',
+                'total' => $this->total,
             ]);
-        }
+
+            foreach ($this->details as $item) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $hutang->id,
+                    'kategori_id' => $kateHutang->id,
+                    'value' => $item['value'],
+                    'barang_id' => $item['barang_id'] ?? null,
+                    'kuantitas' => $item['kuantitas'] ?? null,
+                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+                ]);
+            }
+
+            if ($client) {
+                $client->increment('titipan', $this->total);
+            }
+        });
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/sentrat-masuk');
     }
@@ -282,7 +268,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Pembelian Sentrat" />

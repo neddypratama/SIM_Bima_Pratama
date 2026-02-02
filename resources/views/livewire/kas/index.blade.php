@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Volt\Component;
+use App\Models\Kategori;
 use Illuminate\Support\Facades\DB;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -32,11 +33,10 @@ new class extends Component {
     /** 🔹 Query laporan kas per kategori */
     public function laporanKas(): LengthAwarePaginator
     {
-        $kategoriKas = DB::table('kategoris')
-            ->where('type', 'Aset')
-            ->where(function ($q) {
+        $kategoriKas = Kategori::where(function ($q) {
                 $q->where('name', 'like', '%Kas%')->orWhere('name', 'like', '%Bank%');
             })
+            ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Aset'))
             ->pluck('id', 'name');
 
         // dd($kategoriKas);

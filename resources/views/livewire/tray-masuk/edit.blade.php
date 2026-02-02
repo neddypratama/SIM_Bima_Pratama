@@ -7,6 +7,7 @@ use App\Models\Barang;
 use App\Models\Kategori;
 use App\Models\Client;
 use App\Models\User;
+use App\Models\StokBatch;
 use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
@@ -49,11 +50,6 @@ new class extends Component {
         return [
             'users' => User::all(),
             'barangs' => $this->barangs,
-            'kategoris' => Kategori::where('name', 'like', '%Tray%')
-                ->where(function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%')->orWhere('type', 'like', '%Aset%');
-                })
-                ->get(),
             'clients' => Client::where('type', 'like', '%Supplier%')->where('name', 'like', 'Tray%')->get(),
         ];
     }
@@ -152,150 +148,117 @@ new class extends Component {
             'details.*.kuantitas' => 'required|numeric|min:1',
         ]);
 
-        // 1️⃣ Rollback stok lama (hitung ulang stok & HPP tanpa transaksi ini)
-        foreach ($this->transaksi->details as $oldDetail) {
-            $barang = Barang::find($oldDetail->barang_id);
-            if (!$barang) {
-                continue;
-            }
+        \DB::transaction(function () {
+            // 1️⃣ Rollback stok lama (hitung ulang stok & HPP tanpa transaksi ini)
+            foreach ($this->transaksi->details as $oldDetail) {
+                // rollback stok batch
+                $batch = StokBatch::where('detail_transaksi_id', $oldDetail->id)->first();
 
-            // Hitung ulang stok dari semua transaksi lain (tanpa transaksi ini)
-            $stokBaru = Barang::find($oldDetail->barang_id)->stok - $oldDetail->kuantitas;
-
-            // Hitung ulang HPP dari semua transaksi pembelian lain
-            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Tray'))->sum(\DB::raw('value * kuantitas'));
-
-            $totalQty = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $this->transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Tray'))->sum('kuantitas');
-
-            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
-
-            $barang->update([
-                'stok' => $stokBaru,
-                'hpp' => $hppBaru,
-            ]);
-        }
-
-        $suffix = substr($this->transaksi->invoice, -4);
-        $part = explode('-', $this->transaksi->invoice);
-        $tanggal = $part[1];
-        $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
-
-        $client = Client::find($this->client_id);
-
-        // Normalisasi nama
-        $clientName = trim(str_replace(['  '], [' '], $client->name));
-
-        // Tentukan kategori hutang berdasarkan nama client
-        if (stripos($clientName, 'Diamond') !== false || stripos($clientName, 'DM') !== false) {
-            $kategoriName = 'Hutang Tray Diamond /DM';
-        } elseif (stripos($clientName, 'Super Buah') !== false || stripos($clientName, 'SB') !== false) {
-            $kategoriName = 'Hutang Tray Super Buah /SB';
-        } else {
-            $kategoriName = 'Hutang Tray Random';
-        }
-
-        // Ambil kategori dari database
-        $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
-
-        $hutang->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'client_id' => $this->client_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-            'type' => 'Kredit',
-        ]);
-        $hutang->details()->delete();
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $hutang->id,
-                'kategori_id' => $kateHutang->id,
-                'barang_id' => $item['barang_id'],
-                'value' => $item['value'],
-                'kuantitas' => $item['kuantitas'],
-                'sub_total' => $item['value'] * $item['kuantitas'],
-            ]);
-        }
-
-        $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
-        $newClient = Client::find($this->client_id);
-
-        // Jika client lama dan baru berbeda
-        if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-            // Kembalikan titipan client lama
-            $oldClient->decrement('titipan', $this->transaksi->total);
-
-            // Tambahkan titipan ke client baru
-            $newClient->increment('titipan', $this->total);
-        } elseif ($newClient) {
-            // Jika client sama, hanya update selisih total
-            $selisih = $this->total - $this->transaksi->total;
-
-            if ($selisih > 0) {
-                $newClient->increment('titipan', $selisih);
-            } elseif ($selisih < 0) {
-                $newClient->decrement('titipan', abs($selisih));
-            }
-        }
-
-        // 2️⃣ Update transaksi
-        $this->transaksi->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'client_id' => $this->client_id,
-            'tanggal' => $this->tanggal,
-            'total' => $this->total,
-            'type' => 'Debit',
-        ]);
-
-        // 3️⃣ Hapus detail lama
-        $this->transaksi->details()->delete();
-
-        // 4️⃣ Simpan detail baru
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $this->transaksi->id,
-                'kategori_id' => $this->kategori_id,
-                'barang_id' => $item['barang_id'],
-                'value' => $item['value'],
-                'kuantitas' => $item['kuantitas'],
-                'sub_total' => $item['value'] * $item['kuantitas'],
-            ]);
-
-            // ✅ Tambah stok barang
-            if (!empty($item['barang_id']) && !empty($item['kuantitas'])) {
-                $barang = Barang::find($item['barang_id']);
-                if ($barang) {
-                    $barang->increment('stok', $item['kuantitas']);
+                if ($batch) {
+                    // kembalikan sisa ke nol (karena batch akan dihapus)
+                    $batch->delete();
                 }
             }
-        }
 
-        // 5️⃣ Setelah semua detail baru disimpan, update stok & HPP berdasarkan semua transaksi aktif
-        $barangIds = collect($this->details)->pluck('barang_id')->unique();
-
-        foreach ($barangIds as $barangId) {
-            $barang = Barang::find($barangId);
-            if (!$barang) {
-                continue;
-            }
-
-            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Tray'))->sum('kuantitas');
-            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('name', 'Stok Tray'))->sum(\DB::raw('value * kuantitas'));
-            $totalQty = $stokDebit;
-            $stokBaru = $barang->stok;
-
-            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
-
-            // Jika stok <= 0, reset HPP ke 0
-            if ($stokBaru <= 0) {
-                $hppBaru = 0;
-            }
-
-            $barang->update([
-                'hpp' => $hppBaru,
+            // 2️⃣ Update transaksi
+            $this->transaksi->update([
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'client_id' => $this->client_id,
+                'tanggal' => $this->tanggal,
+                'total' => $this->total,
+                'type' => 'Debit',
             ]);
-        }
+
+            // 3️⃣ Hapus detail lama
+            $this->transaksi->details()->delete();
+
+            // 4️⃣ Simpan detail baru
+            foreach ($this->details as $item) {
+                $detail = DetailTransaksi::create([
+                    'transaksi_id' => $this->transaksi->id,
+                    'kategori_id' => $this->kategori_id,
+                    'barang_id' => $item['barang_id'],
+                    'value' => $item['value'],
+                    'kuantitas' => $item['kuantitas'],
+                    'sub_total' => $item['value'] * $item['kuantitas'],
+                ]);
+
+                // buat stok batch FIFO
+                StokBatch::create([
+                    'barang_id' => $item['barang_id'],
+                    'user_id' => $this->user_id,
+                    'detail_transaksi_id' => $detail->id,
+                    'qty_masuk' => $item['kuantitas'],
+                    'qty_sisa' => $item['kuantitas'],
+                    'harga' => $item['value'],
+                    'tanggal' => $this->tanggal,
+                ]);
+            }
+
+            $suffix = substr($this->transaksi->invoice, -4);
+            $part = explode('-', $this->transaksi->invoice);
+            $tanggal = $part[1];
+            $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
+
+            $client = Client::find($this->client_id);
+
+            // Normalisasi nama
+            $clientName = trim(str_replace(['  '], [' '], $client->name));
+
+            // Tentukan kategori hutang berdasarkan nama client
+            if (stripos($clientName, 'Diamond') !== false || stripos($clientName, 'DM') !== false) {
+                $kategoriName = 'Hutang Tray Diamond /DM';
+            } elseif (stripos($clientName, 'Super Buah') !== false || stripos($clientName, 'SB') !== false) {
+                $kategoriName = 'Hutang Tray Super Buah /SB';
+            } else {
+                $kategoriName = 'Hutang Tray Random';
+            }
+
+            // Ambil kategori dari database
+            $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
+
+            $hutang->update([
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'client_id' => $this->client_id,
+                'tanggal' => $this->tanggal,
+                'total' => $this->total,
+                'type' => 'Kredit',
+            ]);
+            $hutang->details()->delete();
+            foreach ($this->details as $item) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $hutang->id,
+                    'kategori_id' => $kateHutang->id,
+                    'barang_id' => $item['barang_id'],
+                    'value' => $item['value'],
+                    'kuantitas' => $item['kuantitas'],
+                    'sub_total' => $item['value'] * $item['kuantitas'],
+                ]);
+            }
+
+            $oldClient = Client::find($this->transaksi->getOriginal('client_id'));
+            $newClient = Client::find($this->client_id);
+
+            // Jika client lama dan baru berbeda
+            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+                // Kembalikan titipan client lama
+                $oldClient->decrement('titipan', $this->transaksi->total);
+
+                // Tambahkan titipan ke client baru
+                $newClient->increment('titipan', $this->total);
+            } elseif ($newClient) {
+                // Jika client sama, hanya update selisih total
+                $selisih = $this->total - $this->transaksi->total;
+
+                if ($selisih > 0) {
+                    $newClient->increment('titipan', $selisih);
+                } elseif ($selisih < 0) {
+                    $newClient->decrement('titipan', abs($selisih));
+                }
+            }
+        });
 
         $this->success('Transaksi berhasil diupdate!', redirectTo: '/tray-masuk');
     }
@@ -316,7 +279,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Pembelian Tray" />

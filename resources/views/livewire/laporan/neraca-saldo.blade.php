@@ -119,7 +119,7 @@ new class extends Component {
         $this->neracaEkuitas = [];
 
         // Ambil transaksi dengan details & kategori
-        $transaksis = Transaksi::with(['details.kategori'])
+        $transaksis = Transaksi::with(['details.kategori', 'details.kategori.detailKategori'])
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get();
@@ -130,7 +130,7 @@ new class extends Component {
                 fn($trx) => $trx->details->map(
                     fn($d) => [
                         'kategori' => $d->kategori?->name,
-                        'type_kategori' => $d->kategori?->type,
+                        'type_kategori' => $d->kategori?->detailKategori->type,
                         'type_transaksi' => strtolower($trx->type),
                         'sub_total' => $d->sub_total ?? 0,
                     ],
@@ -138,17 +138,23 @@ new class extends Component {
             )
             ->filter(fn($d) => $d['kategori']);
 
-        // Ambil semua kategori
-        $allKategoris = Kategori::select('name', 'type')->get();
+        $allKategoris = Kategori::with([
+            'detailKategori' => function ($query) {
+                $query->select('id', 'type');
+            },
+        ])->get(['id', 'name', 'detail_kategori_id']); // ADD THE FOREIGN KEY HERE
 
-        $complete = $allKategoris->map(
-            fn($kategori) => [
+        $complete = $allKategoris->map(function ($kategori) use ($details) {
+            // Access the nested type from the relationship
+            $type = $kategori->detailKategori?->type;
+
+            return [
                 'kategori' => $kategori->name,
-                'type' => $kategori->type,
-                'debit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $kategori->type && $d['type_transaksi'] == 'debit')->sum('sub_total'),
-                'kredit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $kategori->type && $d['type_transaksi'] == 'kredit')->sum('sub_total'),
-            ],
-        );
+                'type' => $type,
+                'debit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $type && $d['type_transaksi'] == 'debit')->sum('sub_total'),
+                'kredit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $type && $d['type_transaksi'] == 'kredit')->sum('sub_total'),
+            ];
+        });
 
         $mapHierarki = function ($mapping, $type) use ($complete) {
             $result = [];

@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Transaksi;
-use App\Models\TransaksiLink;
+use App\Models\StokBatch;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\Client;
@@ -76,34 +76,36 @@ new class extends Component {
 
     public function delete($id): void
     {
-        // Ambil transaksi utama berdasarkan $id
         $transaksi = Transaksi::findOrFail($id);
+
         $inv = substr($transaksi->invoice, -4);
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
 
-        // Ambil HPP & Stok berdasarkan linked_id = transaksi utama
-        $stok = Transaksi::where('invoice', 'like', "%-OBT-$inv")->first();
-        $hpp = Transaksi::where('invoice', 'like', "%-HPP-$inv")->first();
-        $bon = Transaksi::where('invoice', 'like', "%-BON-$inv")->first();
+        $stok = Transaksi::where('invoice', 'like', "%-$tanggal-OBT-$inv")->first();
+        $stok->details()->delete();
+        $stok->delete();
 
-        // ✅ Kembalikan stok barang
-        if ($hpp && $stok) {
-            $hpp->details()->delete();
-            foreach ($stok->details as $detail) {
-                $barang = Barang::find($detail->barang_id);
-                if ($barang) {
-                    $barang->increment('stok', $detail->kuantitas);
-                }
-            }
-            $stok->details()->delete();
-            $stok->delete();
-            $hpp->delete();
-        }
+        $hpp = Transaksi::where('invoice', 'like', "%-$tanggal-HPP-$inv")->first();
+        $hpp->details()->delete();
+        $hpp->delete();
 
         $client = Client::find($transaksi->client_id);
         $client->decrement('bon', (int) $transaksi->total);
 
+        $bon = Transaksi::where('invoice', 'like', "%-$tanggal-BON-$inv")->first();
         $bon->details()->delete();
         $bon->delete();
+
+        foreach ($transaksi->details as $detail) {
+            // rollback stok batch
+            $batch = StokBatch::where('detail_transaksi_id', $detail->id)->first();
+
+            if ($batch) {
+                // kembalikan sisa ke nol (karena batch akan dihapus)
+                $batch->increment('qty_sisa', $$detail->kuantitas);
+            }
+        }
 
         // 🔥 Hapus detail dan transaksi utama
         $transaksi->details()->delete();
@@ -120,7 +122,7 @@ new class extends Component {
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name,keterangan', 'details.kategori:id,name,type'])
+            ->with(['client:id,name,keterangan', 'details.kategori:id,name'])
             ->where('type', 'Kredit')
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', '%Penjualan Obat%');

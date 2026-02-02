@@ -7,6 +7,7 @@ use App\Models\Barang;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
+use App\Models\StokBatch;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -75,43 +76,25 @@ new class extends Component {
             return;
         }
 
-        // 1️⃣ Rollback stok & HPP untuk semua barang dalam transaksi ini
-        foreach ($transaksi->details as $oldDetail) {
-            $barang = Barang::find($oldDetail->barang_id);
-            if (!$barang) {
-                continue;
+        // 🔄 KEMBALIKAN STOK BARANG
+        foreach ($transaksi->details as $detail) {
+            // rollback stok batch
+            $batch = StokBatch::where('detail_transaksi_id', $detail->id)->first();
+
+            if ($batch) {
+                // kembalikan sisa ke nol (karena batch akan dihapus)
+                $batch->delete();
             }
-
-            // Hitung stok baru berdasarkan semua transaksi lain (tanpa transaksi ini)
-            $stokDebit = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
-
-            $stokKredit = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Kredit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
-
-            $stokBaru = $stokDebit - $stokKredit;
-
-            // Hitung ulang HPP dari semua transaksi pembelian lain
-            $totalHarga = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum(\DB::raw('value * kuantitas'));
-
-            $totalQty = DetailTransaksi::where('barang_id', $barang->id)->where('transaksi_id', '!=', $transaksi->id)->whereHas('transaksi', fn($q) => $q->where('type', 'Debit'))->whereHas('kategori', fn($q) => $q->where('type', 'Aset'))->sum('kuantitas');
-
-            $hppBaru = $totalQty > 0 ? $totalHarga / $totalQty : 0;
-
-            // Jika stok <= 0, reset HPP ke 0
-            if ($stokBaru <= 0) {
-                $hppBaru = 0;
-            }
-
-            $barang->update([
-                'stok' => $stokBaru,
-                'hpp' => $hppBaru,
-            ]);
         }
 
         $client = Client::find($transaksi->client_id);
         $client->decrement('titipan', (int) $transaksi->total);
 
         $suffix = substr($transaksi->invoice, -4);
-        $hutang = Transaksi::where('invoice', 'like', "%-UTG-$suffix")->first();
+        $part = explode('-', $transaksi->invoice);
+        $tanggal = $part[1];
+
+        $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
         $hutang->details()->delete();
         $hutang->delete();
 
@@ -132,7 +115,7 @@ new class extends Component {
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->with(['client:id,name', 'details.kategori:id,name'])
             ->where('invoice', 'like', '%-OBT-%')
             ->where('type', 'Debit')
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Obat%'))

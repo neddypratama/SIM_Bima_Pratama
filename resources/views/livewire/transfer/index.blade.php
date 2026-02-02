@@ -91,7 +91,7 @@ new class extends Component {
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->with(['client:id,name', 'details.kategori:id,name'])
             ->whereHas('details.kategori', function ($q) {
                 $q->where('name', 'like', 'Bank %');
             })

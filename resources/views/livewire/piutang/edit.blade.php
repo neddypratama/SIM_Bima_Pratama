@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\User;
 use Mary\Traits\Toast;
 use Livewire\Attributes\Rule;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     use Toast;
@@ -49,7 +50,15 @@ new class extends Component {
         return [
             'users' => User::all(),
             'clients' => Client::all(),
-            'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%')->get(),
+            'kategoris' => Kategori::whereHas('detailKategori', function (Builder $q) {
+                $q->where(function ($q) {
+                    $q->where('type', 'like', '%Aset%');
+                });
+            })
+                ->where('name', 'not like', '%Stok%')
+                ->where('name', 'not like', '%Kas%')
+                ->where('name', 'not like', '%Bank%')
+                ->get(),
             'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Piutang Bertambah'], ['id' => 'Kredit', 'name' => 'Piutang Berkurang']],
         ];
@@ -66,7 +75,7 @@ new class extends Component {
         $this->user_id = $this->piutang->user_id;
         $this->client_id = $this->piutang->client_id;
         $this->type = $this->piutang->type;
-        $this->tanggal = \Carbon\Carbon::parse($this->piutang->tanggal)->format('Y-m-d\TH:i');
+        $this->tanggal = \Carbon\Carbon::parse($this->piutang->tanggal)->format('Y-m-d\TH:i:s');
 
         $inv = substr($transaksi->invoice, -4);
         $part = explode('-', $transaksi->invoice);
@@ -105,112 +114,114 @@ new class extends Component {
     {
         $this->validate();
 
-        $oldClient = Client::find($this->piutang->getOriginal('client_id'));
-        $newClient = Client::find($this->client_id);
-        $tipe = '';
+        DB::transaction(function () {
+            $oldClient = Client::find($this->piutang->getOriginal('client_id'));
+            $newClient = Client::find($this->client_id);
+            $tipe = '';
 
-        if ($this->type == 'Debit') {
-            $tipe = 'Kredit';
-            // Jika client lama dan baru berbeda
-            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                // Kembalikan titipan client lama
-                $oldClient->decrement('bon', $this->piutang->total);
+            if ($this->type == 'Debit') {
+                $tipe = 'Kredit';
+                // Jika client lama dan baru berbeda
+                if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+                    // Kembalikan titipan client lama
+                    $oldClient->decrement('bon', $this->piutang->total);
 
-                // Tambahkan bon ke client baru
-                $newClient->increment('bon', $this->total);
-            } elseif ($newClient) {
-                // Jika client sama, hanya update selisih total
-                $selisih = $this->total - $this->piutang->total;
+                    // Tambahkan bon ke client baru
+                    $newClient->increment('bon', $this->total);
+                } elseif ($newClient) {
+                    // Jika client sama, hanya update selisih total
+                    $selisih = $this->total - $this->piutang->total;
 
-                if ($selisih > 0) {
-                    $newClient->increment('bon', $selisih);
-                } elseif ($selisih < 0) {
-                    $newClient->decrement('bon', abs($selisih));
+                    if ($selisih > 0) {
+                        $newClient->increment('bon', $selisih);
+                    } elseif ($selisih < 0) {
+                        $newClient->decrement('bon', abs($selisih));
+                    }
+                }
+            } else {
+                $tipe = 'Debit';
+                // Jika client lama dan baru berbeda
+                if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
+                    // Kembalikan titipan client lama
+                    $oldClient->increment('bon', $this->piutang->total);
+
+                    // Tambahkan bon ke client baru
+                    $newClient->decrement('bon', $this->total);
+                } elseif ($newClient) {
+                    // Jika client sama, hanya update selisih total
+                    $selisih = $this->total - $this->piutang->total;
+
+                    if ($selisih > 0) {
+                        $newClient->decrement('bon', $selisih);
+                    } elseif ($selisih < 0) {
+                        $newClient->increment('bon', abs($selisih));
+                    }
                 }
             }
-        } else {
-            $tipe = 'Debit';
-            // Jika client lama dan baru berbeda
-            if ($oldClient && $newClient && $oldClient->id !== $newClient->id) {
-                // Kembalikan titipan client lama
-                $oldClient->increment('bon', $this->piutang->total);
 
-                // Tambahkan bon ke client baru
-                $newClient->decrement('bon', $this->total);
-            } elseif ($newClient) {
-                // Jika client sama, hanya update selisih total
-                $selisih = $this->total - $this->piutang->total;
+            // Ambil kategori pembayaran
+            $kategoriBayar = Kategori::find($this->bayar_id);
+            $inv = substr($this->invoice, -4);
+            $part = explode('-', $this->piutang->invoice);
+            $tanggal = $part[1];
 
-                if ($selisih > 0) {
-                    $newClient->decrement('bon', $selisih);
-                } elseif ($selisih < 0) {
-                    $newClient->increment('bon', abs($selisih));
-                }
+            if ($kategoriBayar->name == 'Kas Tunai') {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => $tipe,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => $tipe,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
             }
-        }
 
-        // Ambil kategori pembayaran
-        $kategoriBayar = Kategori::find($this->bayar_id);
-        $inv = substr($this->invoice, -4);
-        $part = explode('-', $this->piutang->invoice);
-        $tanggal = $part[1];
-
-        if ($kategoriBayar->name == 'Kas Tunai') {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+            // Update transaksi utama
+            $this->piutang->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => $tipe,
+                'type' => $this->type,
                 'total' => $this->total,
             ]);
-            $this->bayar->details()->delete();
+
+            $this->piutang->details()->delete();
             DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
+                'transaksi_id' => $this->piutang->id,
+                'kategori_id' => $this->kategori_id,
                 'kuantitas' => null,
+                'value' => null,
                 'sub_total' => $this->total,
             ]);
-        } else {
-            $this->bayar->update([
-                'invoice' => 'INV-' . $tanggal . '-TFR-' . $inv,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => $tipe,
-                'total' => $this->total,
-            ]);
-            $this->bayar->details()->delete();
-            DetailTransaksi::create([
-                'transaksi_id' => $this->bayar->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
-
-        // Update transaksi utama
-        $this->piutang->update([
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => $this->type,
-            'total' => $this->total,
-        ]);
-
-        $this->piutang->details()->delete();
-        DetailTransaksi::create([
-            'transaksi_id' => $this->piutang->id,
-            'kategori_id' => $this->kategori_id,
-            'kuantitas' => null,
-            'value' => null,
-            'sub_total' => $this->total,
-        ]);
+        });
 
         $this->success('Transaksi berhasil diperbarui!', redirectTo: '/piutang');
     }
@@ -232,7 +243,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bon Pak Agus" />

@@ -91,15 +91,18 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']],];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
     }
 
     public function transaksi(): LengthAwarePaginator
     {
         return Transaksi::query()
-            ->with(['client:id,name', 'details.kategori:id,name,type'])
+            ->with(['client:id,name', 'details.kategori:id,name'])
             ->whereHas('details.kategori', function (Builder $q) {
-                $q->where('type', 'like', '%Pengeluaran%')->where('name', 'not like', '%HPP%');
+                $q->where('name', 'not like', '%HPP%');
+            })
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Pengeluaran%');
             })
             ->when($this->kategori_id, function (Builder $q) {
                 $q->whereHas('details', function ($query) {
@@ -139,7 +142,13 @@ new class extends Component {
         return [
             'transaksi' => $this->transaksi(),
             'client' => Client::where('type', 'like', '%Pedagang%')->orWhere('type', 'like', '%Peternak%')->get(),
-            'kategori' => Kategori::where('type', 'Pengeluaran')->where('name', 'not like', '%HPP%')->get(),
+            'kategori' => Kategori::where('name', 'not like', '%HPP%')
+                ->whereHas('detailKategori', function (Builder $q) {
+                    $q->where(function ($q) {
+                        $q->where('type', 'like', '%Pengeluaran%');
+                    });
+                })
+                ->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,

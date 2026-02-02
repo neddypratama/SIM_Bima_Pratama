@@ -3,9 +3,6 @@
 namespace App\Livewire;
 
 use App\Models\Transaksi;
-use App\Models\Kategori;
-use App\Models\Barang;
-use App\Models\JenisBarang;
 use Livewire\Volt\Component;
 use App\Exports\LabaRugiExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -19,8 +16,7 @@ new class extends Component {
 
     public $pendapatanData = [];
     public $pengeluaranData = [];
-    public $expanded = []; // toggle detail
-    public $bebanPajak = 0;
+    public $expanded = [];
 
     public function mount()
     {
@@ -43,70 +39,29 @@ new class extends Component {
 
     public function generateReport()
     {
-        // Ambil tanggal paling awal dan paling akhir di tabel transaksi
-        $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
-        $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
+        $this->pendapatanData = [];
+        $this->pengeluaranData = [];
+        $this->expanded = [];
 
-        if (!$firstTransaction || !$lastTransaction) {
-            $this->pendapatanData = [];
-            $this->pengeluaranData = [];
+        $first = Transaksi::orderBy('tanggal')->first();
+        $last = Transaksi::orderByDesc('tanggal')->first();
+
+        if (!$first || !$last) {
             return;
         }
 
-        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
-        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
+        $start = Carbon::parse($this->startDate ?? $first->tanggal)->startOfDay();
+        $end = Carbon::parse($this->endDate ?? $last->tanggal)->endOfDay();
 
-        // Mapping kelompok
-        $mappingPendapatan = [
-            'Penjualan Telur' => ['Penjualan Telur Horn', 'Penjualan Telur Bebek', 'Penjualan Telur Puyuh', 'Penjualan Telur Arab', 'Penjualan Telur Asin'],
-            'Penjualan Pakan' => ['Penjualan Pakan Sentrat/Pabrikan', 'Penjualan Pakan Kucing'],
-            'Penjualan Obat' => ['Penjualan Obat-Obatan'],
-            'Penjualan Eggtray' => ['Penjualan EggTray'],
-            'Pendapatan Truk' => ['Pendapatan Truk'],
-            'Pendapatan Pengadaan' => ['Pendapatan Pengadaan Jasa'],
-            'Pendapatan Perlengkapan' => ['Penjualan Triplex', 'Penjualan Terpal', 'Penjualan Ban Bekas', 'Penjualan Sak Campur', 'Penjualan Tali'],
-            'Pendapatan Non Penjualan' => ['Pemasukan Telur Reject', 'Pemasukan Transport Setoran', 'Pemasukan Transport Pedagang',],
-            'Pendapatan Lain-Lain' => ['Penjualan Lain-Lain'],
-        ];
+        /* =====================================================
+            1. LAPORAN PENDAPATAN & PENGELUARAN (NON HPP)
+        ===================================================== */
 
-        $mappingPengeluaran = [
-            'HPP Telur' => ['HPP Telur Horn', 'HPP Telur Bebek', 'HPP Telur Puyuh', 'HPP Telur Arab', 'HPP Telur Asin'],
-            'HPP Pakan' => ['HPP Pakan Sentrat/Pabrikan', 'HPP Pakan Kucing'],
-            'HPP Obat' => ['HPP Obat-Obatan'],
-            'HPP Eggtray' => ['HPP Tray'],
-            'Pengeluaran Truk' => ['Pengeluaran Truk'],
-            'Pengeluaran Pengadaan' => ['Pengeluaran Pengadaan Jasa'],
-            'Beban Transport' => ['Beban Transport', 'Beban BBM', 'Beban Servis',],
-            'Beban Operasional' => ['Beban Kantor', 'Beban Gaji', 'Beban Konsumsi', 'Peralatan', 'Perlengkapan', 'Beban TAL'],
-            'Beban Produksi' => ['Beban Telur Bentes', 'Beban Telur Ceplok', 'Beban Telur Kotor', 'Beban Telur Prok', 'Beban Tray Terpakai', 'Beban Barang Kadaluarsa'],
-            'Beban Bunga & Pajak' => ['Beban Bunga', 'Beban Pajak Kendaraan', 'Beban Pajak Pendapatan'],
-            'Beban Sedekah' => ['ZIS'],
-            'Beban Lain-Lain' => ['Beban Lain-Lain'],
-        ];
+        $laporans = DB::table('detail_kategoris as dk')->leftJoin('kategoris as k', 'k.detail_kategori_id', '=', 'dk.id')->select('dk.name as laporan', 'dk.type', 'k.name as kategori')->orderBy('dk.id')->get();
 
-        // --- Pendapatan per kategori ---
-        $pendapatanFlat = Transaksi::with('details.kategori')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pendapatan')
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total'))
-            ->toArray();
-
-        // --- Pengeluaran per kategori umum ---
-        $pengeluaranFlat = Transaksi::with('details.kategori', 'details.barang')
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->filter(fn($d) => $d->kategori && $d->kategori->type == 'Pengeluaran')
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'debit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') == 'kredit')->sum('sub_total'))
-            ->toArray();
-
-        // --- KHUSUS HPP: perhitungan berdasarkan jenis barang ----
+        /* =====================================================
+            3. HPP PALING ATAS (GROUPING)
+        ===================================================== */
 
         // Mapping kelompok HPP utama
         $hppKelompok = [
@@ -129,7 +84,6 @@ new class extends Component {
             ->orderBy('jb.name')
             ->get()
             ->keyBy('hpp_name'); // supaya mudah diakses per nama HPP
-        // dd($hppResults);
 
         // Siapkan struktur pengeluaranFlat sesuai kelompok
         foreach ($hppKelompok as $kelompok => $jenisList) {
@@ -144,79 +98,66 @@ new class extends Component {
             }
 
             // Simpan dalam pengeluaranFlat (mengikuti format laporan laba rugi)
-            $pengeluaranFlat[$kelompok] = [
-                'total' => $total,
-                'detail' => $detail,
-            ];
-        }
-
-        // --- Kelompokkan pendapatan ---
-        $this->pendapatanData = [];
-        foreach ($mappingPendapatan as $kelompok => $subs) {
-            $detail = [];
-            $total = 0;
-            foreach ($subs as $sub) {
-                $nilai = $pendapatanFlat[$sub] ?? 0;
-                $detail[$sub] = $nilai;
-                $total += $nilai;
-            }
-            $this->pendapatanData[$kelompok] = ['total' => $total, 'detail' => $detail];
-        }
-
-        // --- Kelompokkan pengeluaran ---
-        $this->pengeluaranData = [];
-
-        foreach ($mappingPengeluaran as $kelompok => $subs) {
-            $detail = [];
-            $total = 0;
-
-            foreach ($subs as $sub) {
-                $nilai = 0;
-
-                // 1️⃣ Jika subkategori langsung ada di pengeluaranFlat
-                if (isset($pengeluaranFlat[$sub])) {
-                    $nilai = $pengeluaranFlat[$sub];
-                }
-                // 2️⃣ Jika tidak ada di level utama, cek di dalam HPP (bertumpuk)
-                else {
-                    foreach ($pengeluaranFlat as $kelompokHPP => $dataHPP) {
-                        // pastikan struktur array-nya memiliki 'detail'
-                        if (isset($dataHPP['detail'][$sub])) {
-                            $nilai = $dataHPP['detail'][$sub];
-                            break; // stop setelah ketemu
-                        }
-                    }
-                }
-
-                // 3️⃣ Tambahkan ke detail & total
-                $detail[$sub] = $nilai;
-                $total += $nilai;
-            }
-
-            // Simpan hasil akhir kategori besar
             $this->pengeluaranData[$kelompok] = [
                 'total' => $total,
                 'detail' => $detail,
             ];
         }
+
+        foreach ($laporans as $row) {
+            if ($row->type === 'Pendapatan') {
+                $this->pendapatanData[$row->laporan]['detail'][$row->kategori] = 0;
+                $this->pendapatanData[$row->laporan]['total'] ??= 0;
+            }
+
+            if ($row->type === 'Pengeluaran' && !str_starts_with($row->kategori ?? '', 'HPP')) {
+                $this->pengeluaranData[$row->laporan]['detail'][$row->kategori] = 0;
+                $this->pengeluaranData[$row->laporan]['total'] ??= 0;
+            }
+        }
+
+        /* =====================================================
+            2. ISI DATA TRANSAKSI
+        ===================================================== */
+
+        $rows = DB::table('detail_transaksis as dt')
+            ->join('kategoris as k', 'k.id', '=', 'dt.kategori_id')
+            ->join('detail_kategoris as dk', 'dk.id', '=', 'k.detail_kategori_id')
+            ->join('transaksis as t', 't.id', '=', 'dt.transaksi_id')
+            ->whereBetween('t.tanggal', [$start, $end])
+            ->select('dk.name as laporan', 'dk.type', 'k.name as kategori', DB::raw('SUM(dt.sub_total) as total'))
+            ->groupBy('dk.name', 'dk.type', 'k.name')
+            ->get();
+
+        foreach ($rows as $row) {
+            if ($row->type === 'Pendapatan') {
+                $this->pendapatanData[$row->laporan]['detail'][$row->kategori] += $row->total;
+                $this->pendapatanData[$row->laporan]['total'] += $row->total;
+            }
+
+            if ($row->type === 'Pengeluaran' && !str_starts_with($row->kategori, 'HPP')) {
+                $this->pengeluaranData[$row->laporan]['detail'][$row->kategori] += $row->total;
+                $this->pengeluaranData[$row->laporan]['total'] += $row->total;
+            }
+        }
     }
 
     public function with()
     {
-        $totalPendapatan = array_sum(array_map(fn($d) => $d['total'], $this->pendapatanData));
-        $totalPengeluaran = array_sum(array_map(fn($d) => $d['total'], $this->pengeluaranData));
-        $labaSebelumPajak = $totalPendapatan - $totalPengeluaran;
+        $totalPendapatan = array_sum(array_column($this->pendapatanData, 'total'));
+        $totalPengeluaran = array_sum(array_column($this->pengeluaranData, 'total'));
 
         return [
             'pendapatanData' => $this->pendapatanData,
             'pengeluaranData' => $this->pengeluaranData,
             'totalPendapatan' => $totalPendapatan,
             'totalPengeluaran' => $totalPengeluaran,
-            'labaSebelumPajak' => $labaSebelumPajak,
+            'labaSebelumPajak' => $totalPendapatan - $totalPengeluaran,
         ];
     }
 };
 ?>
+
 <div class="p-6 space-y-6">
     <x-header title="Laporan Laba Rugi" separator>
         <x-slot:actions>

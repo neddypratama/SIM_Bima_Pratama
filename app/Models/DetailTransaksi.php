@@ -22,5 +22,10 @@ class DetailTransaksi extends Model
     {
         return $this->belongsTo(Kategori::class);
     }
+
+    public function stokBatches()
+    {
+        return $this->hasMany(StokBatch::class);
+    }
     
 }

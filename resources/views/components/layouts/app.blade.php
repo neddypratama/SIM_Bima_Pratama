@@ -87,6 +87,7 @@
                     <x-menu-sub title="Master Data" icon="fas.database">
                         <x-menu-item title="Jenis Barang" icon="fas.archive" link="/jenisbarangs" />
                         <x-menu-item title="Barang" icon="fas.box" link="/barangs" />
+                        <x-menu-item title="Detail Kategori" icon="fas.table-cells-large" link="/detail-kategoris" />
                         <x-menu-item title="Kategori" icon="fas.table-cells-large" link="/kategoris" />
                         <x-menu-item title="Klien" icon="fas.users" link="/clients" />
                         <x-menu-item title="Transaksi" icon="fas.cart-shopping" link="/transaksis" />
@@ -97,6 +98,7 @@
                 @if (in_array(auth()->user()->role_id, [1, 2]))
                     <x-menu-sub title="Manage Stok" icon="fas.warehouse">
                         <x-menu-item title="Laporan Stok" icon="fas.file" link="/kotor" />
+                        <x-menu-item title="Penambahan Stok" icon="fas.box" link="/penambahan-stok" />
                         <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok-telur" />
                         <x-menu-item title="Stok Tray" icon="fas.box-open" link="/stok-tray" />
                         <x-menu-item title="Stok Pakan" icon="fas.wheat-awn" link="/stok-pakan" />

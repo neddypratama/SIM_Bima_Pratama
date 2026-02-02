@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Transaksi;
-use App\Models\DetailTransaksi;
+use App\Models\StokBatch;
 use App\Models\User;
 use App\Models\JenisBarang;
 use App\Models\Kategori;
@@ -11,6 +11,7 @@ use App\Models\Barang;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     use Toast;
@@ -35,8 +36,20 @@ new class extends Component {
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
         $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
-        $this->kategoriPendapatanList = Kategori::where('type', 'Pendapatan')->get()->toArray();
-        $this->kategoriPengeluaranList = Kategori::where('type', 'Pengeluaran')->get()->toArray();
+        $this->kategoriPendapatanList = Kategori::whereHas('detailKategori', function (Builder $q) {
+            $q->where(function ($q) {
+                $q->where('type', 'like', '%Pendapatan%');
+            });
+        })
+            ->get()
+            ->toArray();
+        $this->kategoriPengeluaranList = Kategori::whereHas('detailKategori', function (Builder $q) {
+            $q->where(function ($q) {
+                $q->where('type', 'like', '%Pengeluaran%');
+            });
+        })
+            ->get()
+            ->toArray();
         $this->setDefaultDates();
         $this->chartPendapatan();
         $this->chartPengeluaran();
@@ -112,7 +125,7 @@ new class extends Component {
 
         $query = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'));
+            ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pendapatan'));
 
         if ($this->selectedKategoriPendapatan) {
             $query->whereHas('details', fn($q) => $q->where('kategori_id', $this->selectedKategoriPendapatan));
@@ -170,7 +183,7 @@ new class extends Component {
 
         $query = Transaksi::with(['details.kategori'])
             ->whereBetween('tanggal', [$start, $end])
-            ->whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'));
+            ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pengeluaran'));
 
         if ($this->selectedKategoriPengeluaran) {
             $query->whereHas('details', fn($q) => $q->where('kategori_id', $this->selectedKategoriPengeluaran));
@@ -257,21 +270,45 @@ new class extends Component {
      */
     private function generateChartDataPie($jenisIds, $judul)
     {
-        if ($jenisIds->isEmpty()) {
+        // 🔹 Ambil stok dari stok_batches, bukan dari barang
+        $stokPerBarang = StokBatch::query()
+            ->selectRaw('barang_id, SUM(qty_sisa) as total_stok')
+            ->where('qty_sisa', '>', 0)
+            ->whereHas('barang', function ($q) use ($jenisIds) {
+                $q->whereIn('jenis_id', $jenisIds);
+            })
+            ->groupBy('barang_id')
+            ->with('barang:id,name')
+            ->get();
+
+        if ($stokPerBarang->isEmpty()) {
             return [];
         }
 
-        $barangs = Barang::select('id', 'name', 'stok')->where('stok', '>', 0)->whereIn('jenis_id', $jenisIds)->get();
+        // 🔹 Bentuk data: [nama_barang => total_stok]
+        $data = $stokPerBarang
+            ->mapWithKeys(
+                fn($row) => [
+                    $row->barang->name => (int) $row->total_stok,
+                ],
+            )
+            ->toArray();
 
-        if ($barangs->isEmpty()) {
-            return [];
-        }
-
-        $grouped = $barangs->groupBy(fn($b) => $b->name);
-        $data = $grouped->map(fn($items) => $items->sum('stok'))->toArray();
-
+        // 🔹 Warna random
         $colors = collect($data)->map(fn() => sprintf('#%06X', mt_rand(0, 0xffffff)))->values()->toArray();
 
+        // 🔹 Setiap barang = 1 dataset (legend rapi)
+        $datasets = [];
+        $i = 0;
+        foreach ($data as $namaBarang => $stok) {
+            $datasets[] = [
+                'label' => $namaBarang,
+                'data' => [$stok],
+                'backgroundColor' => $colors[$i] ?? '#4CAF50',
+                'borderWidth' => 1,
+            ];
+            $i++;
+        }
         return [
             'type' => 'pie',
             'data' => [
@@ -307,37 +344,51 @@ new class extends Component {
             return [];
         }
 
-        $barangs = Barang::select('id', 'name', 'stok')->where('stok', '>', 0)->whereIn('jenis_id', $jenisIds)->get();
+        // 🔹 Ambil stok dari stok_batches, bukan dari barang
+        $stokPerBarang = StokBatch::query()
+            ->selectRaw('barang_id, SUM(qty_sisa) as total_stok')
+            ->where('qty_sisa', '>', 0)
+            ->whereHas('barang', function ($q) use ($jenisIds) {
+                $q->whereIn('jenis_id', $jenisIds);
+            })
+            ->groupBy('barang_id')
+            ->with('barang:id,name')
+            ->get();
 
-        if ($barangs->isEmpty()) {
+        if ($stokPerBarang->isEmpty()) {
             return [];
         }
 
-        $grouped = $barangs->groupBy(fn($b) => $b->name);
-        $data = $grouped->map(fn($items) => $items->sum('stok'))->toArray();
+        // 🔹 Bentuk data: [nama_barang => total_stok]
+        $data = $stokPerBarang
+            ->mapWithKeys(
+                fn($row) => [
+                    $row->barang->name => (int) $row->total_stok,
+                ],
+            )
+            ->toArray();
 
+        // 🔹 Warna random
         $colors = collect($data)->map(fn() => sprintf('#%06X', mt_rand(0, 0xffffff)))->values()->toArray();
 
-        $labels = array_keys($data);
-
-        // 🟢 Perbaikan bagian label — setiap barang jadi satu dataset sendiri
+        // 🔹 Setiap barang = 1 dataset (legend rapi)
         $datasets = [];
-        $index = 0;
+        $i = 0;
         foreach ($data as $namaBarang => $stok) {
             $datasets[] = [
-                'label' => $namaBarang, // ✅ label berbeda per barang
+                'label' => $namaBarang,
                 'data' => [$stok],
-                'backgroundColor' => $colors[$index] ?? '#4CAF50',
+                'backgroundColor' => $colors[$i] ?? '#4CAF50',
                 'borderWidth' => 1,
             ];
-            $index++;
+            $i++;
         }
 
         return [
             'type' => 'bar',
             'data' => [
-                'labels' => [$judul], // cuma satu label utama (judul kategori)
-                'datasets' => $datasets, // ✅ tiap barang punya label unik
+                'labels' => [$judul],
+                'datasets' => $datasets,
             ],
             'options' => [
                 'responsive' => true,
@@ -362,7 +413,7 @@ new class extends Component {
 
     public function incomeTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pendapatan'))
+        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pendapatan'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -374,7 +425,7 @@ new class extends Component {
 
     public function expenseTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Pengeluaran'))
+        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pengeluaran'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -386,7 +437,7 @@ new class extends Component {
 
     public function assetTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Aset'))
+        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Aset'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -398,7 +449,7 @@ new class extends Component {
 
     public function liabiliatsTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori', fn($q) => $q->where('type', 'Liabilitas'))
+        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Liabilitas'))
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 

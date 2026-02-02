@@ -52,7 +52,7 @@ new class extends Component {
     {
         $this->barangs = Barang::all();
         $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->tanggal = now()->format('Y-m-d\TH:i:s');
         $this->kategori_id = Kategori::where('name', 'Kas Deby')->first()?->id;
         $this->updatedTanggal($this->tanggal);
     }
@@ -71,60 +71,62 @@ new class extends Component {
     {
         $this->validate();
 
-        $tunai = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'type' => $this->type,
-            'total' => $this->total,
-        ]);
-
-        DetailTransaksi::create([
-            'transaksi_id' => $tunai->id,
-            'kategori_id' => $this->kategori_id,
-            'kuantitas' => null,
-            'value' => null,
-            'sub_total' => $this->total,
-        ]);
-
-        $kateModal = Kategori::where('name', 'like', '%Modal Awal')->first();
-
-        if ($this->type == 'Debit') {
-            $modal = Transaksi::create([
-                'invoice' => $this->invoice1,
+        DB::transaction(function () {
+            $tunai = Transaksi::create([
+                'invoice' => $this->invoice,
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
-                'type' => 'Kredit',
+                'type' => $this->type,
                 'total' => $this->total,
             ]);
 
             DetailTransaksi::create([
-                'transaksi_id' => $modal->id,
-                'kategori_id' => $kateModal->id,
+                'transaksi_id' => $tunai->id,
+                'kategori_id' => $this->kategori_id,
                 'kuantitas' => null,
                 'value' => null,
                 'sub_total' => $this->total,
-            ]);
-        } else {
-            $modal = Transaksi::create([
-                'invoice' => $this->invoice1,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => 'Debit',
-                'total' => $this->total,
             ]);
 
-            DetailTransaksi::create([
-                'transaksi_id' => $modal->id,
-                'kategori_id' => $kateModal->id,
-                'kuantitas' => null,
-                'value' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
+            $kateModal = Kategori::where('name', 'like', '%Modal Awal')->first();
+
+            if ($this->type == 'Debit') {
+                $modal = Transaksi::create([
+                    'invoice' => $this->invoice1,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $this->total,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $modal->id,
+                    'kategori_id' => $kateModal->id,
+                    'kuantitas' => null,
+                    'value' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else {
+                $modal = Transaksi::create([
+                    'invoice' => $this->invoice1,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $this->total,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $modal->id,
+                    'kategori_id' => $kateModal->id,
+                    'kuantitas' => null,
+                    'value' => null,
+                    'sub_total' => $this->total,
+                ]);
+            }
+        });
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/deby');
     }
@@ -132,7 +134,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Create Transaksi Kas Tunai" separator progress-indicator />
+    <x-header title="Create Transaksi Kas Deby" separator progress-indicator />
 
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
@@ -146,11 +148,12 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian Transaksi" wire:model="name"
-                            placeholder="Contoh: Bayar Pembelian Telur Ayam Ras" />
+                            placeholder="Contoh: Penarikan Bulan Januari" />
                         <x-select label="Tipe Transaksi" wire:model="type" :options="$optionType" placeholder="Pilih Tipe" />
                     </div>
                     <x-input label="Nominal Pembayaran" wire:model="total" prefix="Rp" money />

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Stok;
+use App\Models\StokBatch;
 use App\Models\Barang;
 use App\Models\Transaksi;
 use Livewire\Volt\Component;
@@ -63,40 +64,107 @@ new class extends Component {
         return Excel::download(new StokPakanExport($this->startDate, $this->endDate), 'stok-pakan.xlsx');
     }
 
+    public function fifo(int $barangId, int $qty, string $type = 'out'): void
+    {
+        DB::transaction(function () use ($barangId, $qty, $type) {
+            if ($qty <= 0) {
+                return;
+            }
+
+            /* =========================
+         OUT → STOK KELUAR
+        ========================== */
+            if ($type === 'out') {
+                $batches = StokBatch::where('barang_id', $barangId)
+                    ->where('qty_sisa', '>', 0)
+                    ->orderBy('tanggal') // FIFO
+                    ->lockForUpdate()
+                    ->get();
+
+                $sisa = $qty;
+
+                foreach ($batches as $batch) {
+                    if ($sisa <= 0) {
+                        break;
+                    }
+
+                    $ambil = min($batch->qty_sisa, $sisa);
+
+                    $batch->decrement('qty_sisa', $ambil);
+
+                    $sisa -= $ambil;
+                }
+
+                if ($sisa > 0) {
+                    throw new \Exception('Stok tidak mencukupi (FIFO OUT)');
+                }
+            }
+
+            /* =========================
+         IN → STOK MASUK / ROLLBACK
+        ========================== */
+            if ($type === 'in') {
+                // masuk kembali ke batch TERAKHIR yang dipakai
+                $batch = StokBatch::where('barang_id', $barangId)->orderByDesc('tanggal')->lockForUpdate()->first();
+
+                if (!$batch) {
+                    throw new \Exception('Batch tidak ditemukan (FIFO IN)');
+                }
+
+                $batch->increment('qty_sisa', $qty);
+            }
+        });
+    }
+
     public function delete($id): void
     {
-        $stok = Stok::with('barang')->findOrFail($id);
-        $inv = substr($stok->invoice, -4);
+        DB::transaction(function () use ($id) {
+            $stok = Stok::findOrFail($id);
+            $inv = substr($stok->invoice, -4);
+            $tgl = explode('-', $stok->invoice)[1];
 
-        $kotor = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Return'))
-            ->first();
-        $kotor->details()->delete();
-        $kotor->delete();
+            /* =========================
+         1️⃣ ROLLBACK FIFO STOK
+        ========================== */
+            // rollback stok masuk lama
+            if ($stok->tambah > 0) {
+                $this->fifo($stok->barang_id, $stok->tambah, 'out');
+            }
 
-        $pecah = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'like', '%Barang Kadaluarsa'))
-            ->first();
-        $pecah->details()->delete();
-        $pecah->delete();
+            // rollback stok keluar lama
+            if ($stok->kurang > 0) {
+                $this->fifo($stok->barang_id, $stok->kurang, 'in');
+            }
 
-        $telur = Transaksi::where('invoice', 'like', "%$inv")
-            ->whereHas('details.kategori', fn($q) => $q->where('name', 'Stok Pakan'))
-            ->get();
-        foreach ($telur as $key) {
-            $key->details()->delete();
-            $key->delete();
-        }
+            if ($stok->kotor > 0) {
+                $this->fifo($stok->barang_id, $stok->kotor, 'in');
+            }
 
-        $barang = $stok->barang;
-        if ($barang) {
-            // kembalikan stok ke kondisi sebelum transaksi
-            $stok_awal = $barang->stok - $stok->tambah + ($stok->kurang + $stok->kotor + $stok->rusak);
-            $barang->update(['stok' => max(0, $stok_awal)]);
-        }
-        $stok->delete();
+            if ($stok->kotor < 0) {
+                $this->fifo($stok->barang_id, abs($stok->kotor), 'out');
+            }
 
-        $this->warning("Stok $id berhasil dihapus", position: 'toast-top');
+            if ($stok->rusak > 0) {
+                $this->fifo($stok->barang_id, $stok->rusak, 'in');
+            }
+
+            /* =========================
+         2️⃣ HAPUS TRANSAKSI TURUNAN
+        ========================== */
+            $transaksis = Transaksi::where('invoice', 'like', "INV-$tgl-%-$inv")->get();
+
+            foreach ($transaksis as $trx) {
+                $trx->details()->delete();
+                $trx->delete();
+            }
+
+            /* =========================
+         3️⃣ HAPUS STOK UTAMA
+        ========================== */
+            $stok->delete();
+        });
+
+        $this->warning('Stok berhasil dihapus & stok dikembalikan', position: 'toast-top');
     }
 
     public function headers(): array
@@ -205,16 +273,16 @@ new class extends Component {
 
             @scope('actions', $transaksi)
                 <div class="flex">
-                    @if (Auth::user()->role_id == 1)
-                        <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
-                            wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
-                            class="btn-ghost btn-sm text-red-500" />
-                    @endif
                     @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
                         <x-button icon="o-pencil"
                             link="/stok-pakan/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
+                    @if (Auth::user()->role_id == 1)
+                        <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-red-500" />
                     @endif
                 </div>
             @endscope

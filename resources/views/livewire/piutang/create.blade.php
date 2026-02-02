@@ -12,6 +12,7 @@ use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -57,7 +58,15 @@ new class extends Component {
         return [
             'users' => User::all(),
             'clients' => Client::all(),
-            'kategoris' => Kategori::where('type', 'like', '%Aset%')->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%')->get(),
+            'kategoris' => Kategori::whereHas('detailKategori', function (Builder $q) {
+                $q->where(function ($q) {
+                    $q->where('type', 'like', '%Aset%');
+                });
+            })
+                ->where('name', 'not like', '%Stok%')
+                ->where('name', 'not like', '%Kas%')
+                ->where('name', 'not like', '%Bank%')
+                ->get(),
             'optionType' => [['id' => 'Debit', 'name' => 'Piutang Bertambah'], ['id' => 'Kredit', 'name' => 'Piutang Berkurang']],
             'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
         ];
@@ -66,7 +75,7 @@ new class extends Component {
     public function mount(): void
     {
         $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->tanggal = now()->format('Y-m-d\TH:i:s');
         $this->updatedTanggal($this->tanggal);
     }
 
@@ -85,75 +94,78 @@ new class extends Component {
     {
         // ✅ Validasi seluruh input sekaligus
         $this->validate();
-        $tipe = '';
 
-        $client = Client::find($this->client_id);
-        if ($this->type == 'Debit') {
-            $tipe = 'Kredit';
-            // dd($this->client_id, $kategori->name, $this->type, $this->total);
-            $client->increment('bon', $this->total);
-        } else {
-            $tipe = 'Debit';
-            $client->decrement('bon', $this->total);
-        }
+        DB::transaction(function () {
+            $tipe = '';
 
-        $piutang = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => $this->type,
-            'total' => $this->total,
-        ]);
+            $client = Client::find($this->client_id);
+            if ($this->type == 'Debit') {
+                $tipe = 'Kredit';
+                // dd($this->client_id, $kategori->name, $this->type, $this->total);
+                $client->increment('bon', $this->total);
+            } else {
+                $tipe = 'Debit';
+                $client->decrement('bon', $this->total);
+            }
 
-        DetailTransaksi::create([
-            'transaksi_id' => $piutang->id,
-            'kategori_id' => $this->kategori_id,
-            'kuantitas' => null,
-            'value' => null,
-            'sub_total' => $this->total,
-        ]);
-
-        $bayar = Kategori::find($this->bayar_id);
-
-        if ($bayar->name == 'Kas Tunai') {
-            $tunai = Transaksi::create([
-                'invoice' => $this->invoice1,
+            $piutang = Transaksi::create([
+                'invoice' => $this->invoice,
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
-                'type' => $tipe,
+                'type' => $this->type,
                 'total' => $this->total,
             ]);
 
             DetailTransaksi::create([
-                'transaksi_id' => $tunai->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
+                'transaksi_id' => $piutang->id,
+                'kategori_id' => $this->kategori_id,
                 'kuantitas' => null,
+                'value' => null,
                 'sub_total' => $this->total,
-            ]);
-        } else {
-            $bank = Transaksi::create([
-                'invoice' => $this->invoice2,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => $tipe,
-                'total' => $this->total,
             ]);
 
-            DetailTransaksi::create([
-                'transaksi_id' => $bank->id,
-                'kategori_id' => $this->bayar_id,
-                'value' => null,
-                'kuantitas' => null,
-                'sub_total' => $this->total,
-            ]);
-        }
+            $bayar = Kategori::find($this->bayar_id);
+
+            if ($bayar->name == 'Kas Tunai') {
+                $tunai = Transaksi::create([
+                    'invoice' => $this->invoice1,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => $tipe,
+                    'total' => $this->total,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $tunai->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else {
+                $bank = Transaksi::create([
+                    'invoice' => $this->invoice2,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => $tipe,
+                    'total' => $this->total,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $bank->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            }
+        });
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/piutang');
     }
@@ -175,7 +187,7 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bon Pak Agus" />

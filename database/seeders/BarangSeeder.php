@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\JenisBarang;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -11,184 +9,140 @@ class BarangSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * @return void
      */
-    public function run(): void
+    public function run()
     {
-        // Ambil id dari setiap jenis barang
-        $telurBebek   = JenisBarang::where('name', 'Telur Bebek')->first()->id ?? null;
-        $telurHorn    = JenisBarang::where('name', 'Telur Horn')->first()->id ?? null;
-        $telurPuyuh   = JenisBarang::where('name', 'Telur Puyuh')->first()->id ?? null;
-        $telurArab    = JenisBarang::where('name', 'Telur Arab')->first()->id ?? null;
-        $telurAsin    = JenisBarang::where('name', 'Telur Asin')->first()->id ?? null;
-        $tray         = JenisBarang::where('name', 'Tray')->first()->id ?? null;
-        $obat         = JenisBarang::where('name', 'Obat-Obatan')->first()->id ?? null;
-        $sentrat      = JenisBarang::where('name', 'Pakan Sentrat/Pabrikan')->first()->id ?? null;
-        $pakanCurah      = JenisBarang::where('name', 'Pakan Curah')->first()->id ?? null;
-        $pakanKucing      = JenisBarang::where('name', 'Pakan Kucing')->first()->id ?? null;
-
-        $barangs = [
-            // 🥚 Telur Bebek
-            ['Golden', $telurBebek, 0],
-            ['BK', $telurBebek, 0],
-            ['BK Pth', $telurBebek, 0],
-            ['AB Pth', $telurBebek, 0],
-
-            // 🥚 Telur Horn
-            ['Horen', $telurHorn, 0],
-            ['Horen Pth', $telurHorn, 0],
-
-            // 🐥 Telur Puyuh
-            ['Puyuh Bj', $telurPuyuh, 0],
-            ['Puyuh Kg', $telurPuyuh, 0],
-
-            // 🐥 Telur Asin
-            ['Asin', $telurAsin, 0],
-
-            // 🐔 Telur Arab
-            ['Arab Mrh', $telurArab, 0],
-            ['Arab Pct', $telurArab, 0],
-
-            // 📦 Tray
-            ['Puyuh Baru', $tray, 0],
-            ['Puyuh Second', $tray, 0],
-            ['Puyuh Tutup', $tray, 0],
-            ['DM', $tray, 0],
-            ['Horen Baru', $tray, 0],
-            ['Horen Second', $tray, 0],
-            ['Horen Tutup', $tray, 0],
-            ['PMS', $tray, 0],
-            ['Asin', $tray, 0],
-            ['Asin Tutup', $tray, 0],
-            ['Bebek', $tray, 0],
-            ['KK', $tray, 0],
-            ['MEDAN', $tray, 0],
-            ['CPL', $tray, 0],
-
-            // 💊 Obat-Obatan
-            ['NEOBRO 250gr', $obat, 0],
-            ['VITA STRESS 250gr', $obat, 0], 
-            ['VITA STRESS DUS', $obat, 0],
-            ['FORTEVIT 250gr', $obat, 0],
-            ['EGG STIMULANT', $obat, 0],
-            ['EGG STIMULANT DUS', $obat, 0],
-            ['THERAPY', $obat, 0],
-            ['TRYMIZINE 250gr', $obat, 0],
-            ['TURBO 250gr', $obat, 0],
-            ['VITANAK', $obat, 0],
-            ['KOLERIDIN 250gr', $obat, 0],
-            ['BROMOQUAD', $obat, 0],
-            ['ANTISEPT', $obat, 0],
-            ['OBAT GUREM 15gr', $obat, 0],
-            ['LEVAMID 00gr', $obat, 0],
-            ['DOXERIN PLUS', $obat, 0],
-            ['COLAMOX', $obat, 0],
-            ['DOXERIN', $obat, 0],
-            ['CAPRIMUN E', $obat, 0],
-            ['AMINOVIT', $obat, 0],
-            ['PARAGIN 250gr', $obat, 0],
-            ['PARAGIN 00gr', $obat, 0],
-            ['RISAKOL 500ml', $obat, 0],
-            ['RISAKOL 200ml', $obat, 0],
-            ['RISAKOL KECIL 90kp', $obat, 0],
-            ['RISAKOL 450kp', $obat, 0],
-            ['VITACHICK KECIL 250gr', $obat, 0],
-            ['AVIT 200gr', $obat, 0],
-            ['SUPER EGG 200gr', $obat, 0],
-            ['AMOXITIN 250gr', $obat, 0],
-            ['AMOXITIN DUS', $obat, 0],
-            ['LARVASIN', $obat, 0],
-            ['MEDIMILK', $obat, 0],
-            ['MEDI EGG', $obat, 0],
-            ['VET STREP', $obat, 0],
-            ['TITOMIK SAK 25KG', $obat, 0],
-            ['ASABIO STP CAIR', $obat, 0],
-            ['ASABIO STP POWDER', $obat, 0],
-            ['ASABIO SAK', $obat, 0],
-            ['INTERTRIM', $obat, 0],
-            ['MINERAL DUS', $obat, 0],
-            ['MINERAL LOS', $obat, 0],
-            ['GROW MINERAL', $obat, 0],
-            ['CURTAMIX SAK 15 KG', $obat, 0],
-            ['VITADOX MP', $obat, 0],
-            ['REVOBIO SAK 25 KG', $obat, 0],
-            ['PREMIK KANDANG KAMBING', $obat, 0],
-            ['ASABIO KANDANG KAMBING', $obat, 0],
-
-            // 🌾 Stok Sentrat
-            ['144', $sentrat, 0],
-            ['144R', $sentrat, 0],
-            ['124P', $sentrat, 0],
-            ['CFR', $sentrat, 0],
-            ['BP', $sentrat, 0],
-            ['511', $sentrat, 0],
-            ['Stater', $sentrat, 0],
-            ['Golden', $sentrat, 0],
-            ['SLC', $sentrat, 0],
-            ['K36', $sentrat, 0],
-            ['PY', $sentrat, 0],
-            ['NF', $sentrat, 0],
-            ['Grower', $sentrat, 0],
-            ['591 Kardus', $sentrat, 0],
-            ['594 Kardus', $sentrat, 0],
-            ['PRIMA', $sentrat, 0],
-            ['PG', $sentrat, 0],
-            ['PARDOK', $sentrat, 0],
-            ['B401', $sentrat, 0],
-            ['520', $sentrat, 0],
-            ['521', $sentrat, 0],
-            ['611', $sentrat, 0],
-            ['612', $sentrat, 0],
-            ['511 Kardus', $sentrat, 0],
-
-            // Pakan Curah
-            ['Jagung OC', $pakanCurah, 0],
-            ['Katul/Separator', $pakanCurah, 0],
-            ['Sekam Giling', $pakanCurah, 0],
-            ['Karak OC', $pakanCurah, 0],
-            ['Karak Giling', $pakanCurah, 0],
-            ['Kebi', $pakanCurah, 0],
-            ['Jagung Giling', $pakanCurah, 0],
-            ['Katul A1 Puyuh', $pakanCurah, 0],
-            ['Katul A1 Ayam', $pakanCurah, 0],
-            ['Katul A2', $pakanCurah, 0],
-            ['Katul B', $pakanCurah, 0],
-            ['Katul C', $pakanCurah, 0],
-            ['Kebi A', $pakanCurah, 0],
-            ['Kebi B', $pakanCurah, 0],
-
-            // Pakan Kucing
-            ['CAT CHOIZE OREN SALMON 800gr', $pakanKucing, 0],
-            ['CAT CHOIZE HIJAU TUNA 800gr', $pakanKucing, 0],
-            ['CAT CHOIZE HIJAU TUNA 801gr Sak', $pakanKucing, 0],
-            ['CAT CHOIZE KUNING KITTEN 1KG', $pakanKucing, 0],
-            ['EXCEL UNGU IKAN 500gr', $pakanKucing, 0],
-            ['EXCEL UNGU IKAN 501gr Sak', $pakanKucing, 0],
-            ['EXCEL HIJAU DONAT 500gr', $pakanKucing, 0],
-            ['EXCEL HIJAU DONAT 500gr SAK', $pakanKucing, 0],
-            ['EXCEL MOM KITTEN', $pakanKucing, 0],
-            ['FELIBITE DONAT', $pakanKucing, 0],
-            ['FELIBITE IKAN', $pakanKucing, 0],
-            ['FELIBITE IKAN SAK', $pakanKucing, 0],
-            ['FELIBITE DONAT SAK', $pakanKucing, 0],
-            ['BOLT PINK SALMON KRISTAL SAK', $pakanKucing, 0],
-            ['BOLT PINK SALMON KRISTAL', $pakanKucing, 0],
-            ['BOLT KUNING TUNA DONAT SAK', $pakanKucing, 0],
-            ['BOLT UNGU TUNA IKAN SAK', $pakanKucing, 0],
+        $data = [
+            ['id' => '1', 'name' => 'Golden', 'jenis_id' => '1', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:48:04'],
+            ['id' => '2', 'name' => 'BK', 'jenis_id' => '1', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:11:35'],
+            ['id' => '3', 'name' => 'Asin Pth', 'jenis_id' => '5', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-30 05:37:21'],
+            ['id' => '4', 'name' => 'AB Pth', 'jenis_id' => '1', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:54:27'],
+            ['id' => '5', 'name' => 'Horen', 'jenis_id' => '2', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 21:40:05'],
+            ['id' => '6', 'name' => 'Horen Pth', 'jenis_id' => '2', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 21:40:05'],
+            ['id' => '7', 'name' => 'Puyuh Bj', 'jenis_id' => '3', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 08:18:19'],
+            ['id' => '8', 'name' => 'Puyuh Kg', 'jenis_id' => '3', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 21:37:28'],
+            ['id' => '9', 'name' => 'Asin', 'jenis_id' => '5', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 11:23:35'],
+            ['id' => '10', 'name' => 'Arab Mrh', 'jenis_id' => '4', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 08:43:01'],
+            ['id' => '11', 'name' => 'Arab Pct', 'jenis_id' => '4', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '12', 'name' => 'Puyuh Baru DM', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 20:34:08'],
+            ['id' => '13', 'name' => 'Puyuh Second', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 09:48:40'],
+            ['id' => '14', 'name' => 'Puyuh Tutup', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 09:57:11'],
+            ['id' => '15', 'name' => 'DM', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-26 09:20:50'],
+            ['id' => '16', 'name' => 'Horen Baru', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 21:49:53'],
+            ['id' => '17', 'name' => 'Horen Second', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 20:24:26'],
+            ['id' => '18', 'name' => 'Horen Tutup', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 20:27:47'],
+            ['id' => '19', 'name' => 'PMS', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '20', 'name' => 'Asin', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 09:37:00'],
+            ['id' => '21', 'name' => 'Asin Tutup', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 10:21:28'],
+            ['id' => '22', 'name' => 'Bebek', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 10:16:39'],
+            ['id' => '23', 'name' => 'KK', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 09:37:00'],
+            ['id' => '24', 'name' => 'MEDAN', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-21 18:51:34'],
+            ['id' => '25', 'name' => 'CPL', 'jenis_id' => '6', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 10:29:56'],
+            ['id' => '26', 'name' => 'NEOBRO 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-05 10:27:00'],
+            ['id' => '27', 'name' => 'VITA STRESS 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:40:18'],
+            ['id' => '29', 'name' => 'FORTEVIT 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:40:18'],
+            ['id' => '30', 'name' => 'EGG STIMULANT', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:40:18'],
+            ['id' => '32', 'name' => 'THERAPY', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-08 10:50:02'],
+            ['id' => '34', 'name' => 'TURBO 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-17 10:56:13'],
+            ['id' => '35', 'name' => 'VITANAK', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-29 05:59:39'],
+            ['id' => '36', 'name' => 'KOLERIDIN 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-22 13:35:02'],
+            ['id' => '37', 'name' => 'BROMOQUAD', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 13:01:06'],
+            ['id' => '38', 'name' => 'ANTISEPT', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-19 14:09:25'],
+            ['id' => '39', 'name' => 'OBAT GUREM 15gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:04:46'],
+            ['id' => '40', 'name' => 'LEVAMIDE (1 dus isi 10)', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-26 10:43:19'],
+            ['id' => '41', 'name' => 'DOXERIN PLUS', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:15:54'],
+            ['id' => '42', 'name' => 'COLAMOX', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-18 11:51:09'],
+            ['id' => '43', 'name' => 'DOXERIN', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-01 10:59:53'],
+            ['id' => '44', 'name' => 'CAPRIMUN E', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-21 10:12:54'],
+            ['id' => '45', 'name' => 'AMINOVIT', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '46', 'name' => 'PARAGIN 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-09 09:51:38'],
+            ['id' => '48', 'name' => 'RISAKOL 500ml', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '49', 'name' => 'RISAKOL 200ml', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '50', 'name' => 'RISAKOL KECIL 90kp', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '51', 'name' => 'RISAKOL 450kp', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-30 11:04:29'],
+            ['id' => '52', 'name' => 'VITACHICK KECIL 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-15 23:03:07'],
+            ['id' => '53', 'name' => 'AVIT 200gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '54', 'name' => 'SUPER EGG 200gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '55', 'name' => 'AMOXITIN 250gr', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-28 10:03:08'],
+            ['id' => '57', 'name' => 'LARVAZINE', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-18 11:36:07'],
+            ['id' => '58', 'name' => 'MEDIMILK', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '59', 'name' => 'MEDI EGG', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '60', 'name' => 'VET STREP', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '61', 'name' => 'TITOMIK SAK 25KG', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 10:18:15'],
+            ['id' => '62', 'name' => 'ASABIO STP CAIR', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-18 11:36:07'],
+            ['id' => '63', 'name' => 'ASABIO STP POWDER', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-24 13:19:27'],
+            ['id' => '64', 'name' => 'ASABIO SAK', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 10:18:15'],
+            ['id' => '65', 'name' => 'INTERTRIM', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-13 20:30:23'],
+            ['id' => '66', 'name' => 'MINERAL DUS (ISI 25 BKS)', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 16:23:27'],
+            ['id' => '67', 'name' => 'MINERAL LOS', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 16:23:27'],
+            ['id' => '68', 'name' => 'GROW MINERAL', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '69', 'name' => 'CURTAMIX SAK 15 KG', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-15 23:06:42'],
+            ['id' => '70', 'name' => 'VITADOX MP', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-27 10:23:00'],
+            ['id' => '71', 'name' => 'REVOBIO SAK 25 KG', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-03 09:55:42'],
+            ['id' => '72', 'name' => 'PREMIK KANDANG KAMBING', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-19 12:08:10'],
+            ['id' => '73', 'name' => 'ASABIO KANDANG KAMBING', 'jenis_id' => '7', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-23 10:03:29'],
+            ['id' => '74', 'name' => '144', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:37:58'],
+            ['id' => '75', 'name' => '144R', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-30 08:55:26'],
+            ['id' => '76', 'name' => '124P', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:36:14'],
+            ['id' => '77', 'name' => 'CFR', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-30 13:45:29'],
+            ['id' => '78', 'name' => 'BP 104', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:37:58'],
+            ['id' => '79', 'name' => '511', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 11:10:15'],
+            ['id' => '80', 'name' => 'Starter', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:14:36'],
+            ['id' => '81', 'name' => 'Golden', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-30 14:43:31'],
+            ['id' => '82', 'name' => 'SLC', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:32:00'],
+            ['id' => '83', 'name' => 'K36', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 12:55:54'],
+            ['id' => '84', 'name' => 'PY100', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:33:32'],
+            ['id' => '85', 'name' => 'KLK SPR', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:29:43'],
+            ['id' => '86', 'name' => 'Grower', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-03 14:52:29'],
+            ['id' => '87', 'name' => 'KLK S36', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 14:03:43'],
+            ['id' => '88', 'name' => 'SLC MAX', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-11 13:35:04'],
+            ['id' => '90', 'name' => 'PG', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 09:13:22'],
+            ['id' => '91', 'name' => 'PARDOC', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-06 16:27:36'],
+            ['id' => '92', 'name' => 'B401', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-23 19:11:34'],
+            ['id' => '93', 'name' => '520', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-07 10:12:37'],
+            ['id' => '94', 'name' => '521', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:09:58'],
+            ['id' => '95', 'name' => 'Crumble A', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:38:37'],
+            ['id' => '96', 'name' => 'Crumble P', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:37:58'],
+            ['id' => '97', 'name' => 'PARS', 'jenis_id' => '8', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-17 11:57:45'],
+            ['id' => '98', 'name' => 'Jagung OC', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:06:51'],
+            ['id' => '99', 'name' => 'Katul/Separator', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:37:58'],
+            ['id' => '100', 'name' => 'Sekam Giling', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 11:04:45'],
+            ['id' => '101', 'name' => 'Karak OC', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-29 20:38:45'],
+            ['id' => '102', 'name' => 'Karak Giling', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-27 20:08:14'],
+            ['id' => '104', 'name' => 'Jagung Giling', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:32:00'],
+            ['id' => '105', 'name' => 'Katul A1 Puyuh', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 12:44:25'],
+            ['id' => '106', 'name' => 'Katul A1 Ayam', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:36:14'],
+            ['id' => '107', 'name' => 'Katul A2', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:26:15'],
+            ['id' => '108', 'name' => 'Katul B', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:06:51'],
+            ['id' => '109', 'name' => 'Katul C', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-15 10:08:49'],
+            ['id' => '110', 'name' => 'Kebi A', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 12:35:45'],
+            ['id' => '111', 'name' => 'Kebi B', 'jenis_id' => '9', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-28 09:45:33'],
+            ['id' => '112', 'name' => 'CAT CHOIZE OREN SALMON 800gr', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-18 11:58:18'],
+            ['id' => '113', 'name' => 'CAT CHOIZE HIJAU TUNA 800gr', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-25 13:13:05'],
+            ['id' => '115', 'name' => 'CAT CHOIZE KUNING KITTEN 1KG', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-31 10:42:31'],
+            ['id' => '116', 'name' => 'EXCEL UNGU IKAN 500gr', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 13:05:04'],
+            ['id' => '118', 'name' => 'EXCEL HIJAU DONAT 500gr', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-03 11:10:39'],
+            ['id' => '120', 'name' => 'EXCEL MOM KITTEN', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-24 10:04:37'],
+            ['id' => '121', 'name' => 'FELIBITE DONAT', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-25 13:13:05'],
+            ['id' => '122', 'name' => 'FELIBITE IKAN', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-12-25 13:13:05'],
+            ['id' => '125', 'name' => 'BOLT PINK SALMON KRISTAL SAK', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '126', 'name' => 'BOLT PINK SALMON KRISTAL', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2025-11-01 11:45:25'],
+            ['id' => '127', 'name' => 'BOLT KUNING TUNA DONAT SAK', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 09:39:44'],
+            ['id' => '128', 'name' => 'BOLT UNGU TUNA IKAN SAK', 'jenis_id' => '10', 'created_at' => '2025-11-01 11:45:25', 'updated_at' => '2026-01-29 09:39:44'],
+            ['id' => '129', 'name' => 'ASABIO PLUS', 'jenis_id' => '7', 'created_at' => '2025-11-02 10:22:45', 'updated_at' => '2025-12-18 11:36:07'],
+            ['id' => '130', 'name' => 'KOLERIDIN KAPSUL', 'jenis_id' => '7', 'created_at' => '2025-11-02 10:25:29', 'updated_at' => '2026-01-13 10:56:23'],
+            ['id' => '131', 'name' => 'INTROVIT E SELEN', 'jenis_id' => '7', 'created_at' => '2025-11-02 10:28:15', 'updated_at' => '2025-11-13 20:39:31'],
+            ['id' => '132', 'name' => 'TRIMIZIN', 'jenis_id' => '7', 'created_at' => '2025-11-02 10:31:20', 'updated_at' => '2026-01-20 10:14:29'],
+            ['id' => '133', 'name' => 'Puyuh Baru BA', 'jenis_id' => '6', 'created_at' => '2025-11-06 09:59:39', 'updated_at' => '2025-11-12 19:32:51'],
+            ['id' => '134', 'name' => '524 AX', 'jenis_id' => '8', 'created_at' => '2025-11-15 16:43:00', 'updated_at' => '2025-11-17 14:07:18'],
+            ['id' => '135', 'name' => 'DOC/Pullet', 'jenis_id' => '9', 'created_at' => '2025-11-17 08:50:55', 'updated_at' => '2025-12-02 15:09:36'],
+            ['id' => '136', 'name' => 'K402', 'jenis_id' => '8', 'created_at' => '2025-11-29 09:26:18', 'updated_at' => '2026-01-31 10:12:27'],
+            ['id' => '137', 'name' => 'Levamid 1 kg', 'jenis_id' => '7', 'created_at' => '2025-12-03 07:35:20', 'updated_at' => '2025-12-18 11:36:07'],
+            ['id' => '138', 'name' => '122', 'jenis_id' => '8', 'created_at' => '2026-01-24 09:12:09', 'updated_at' => '2026-01-28 10:09:05'],
         ];
 
-
-        $insertData = [];
-        foreach ($barangs as [$nama, $jenis, $stok]) {
-            $insertData[] = [
-                'name' => $nama,
-                'jenis_id' => $jenis,
-                'stok' => $stok,
-                'hpp' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        DB::table('barangs')->insert($insertData);
+        DB::table('barangs')->insert($data);
     }
 }

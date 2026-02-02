@@ -26,16 +26,4 @@ class Transaksi extends Model
         return $this->hasMany(DetailTransaksi::class);
     }
 
-    // di Transaksi.php
-    public function linked()
-    {
-        return $this->hasMany(TransaksiLink::class, 'transaksi_id');
-    }
-
-    public function linkedTransaksis()
-    {
-        return $this->belongsToMany(Transaksi::class, 'transaksi_links', 'transaksi_id', 'linked_id');
-    }
-
-
 }

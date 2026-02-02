@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Volt\Component;
+use App\Models\StokBatch;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
@@ -11,6 +12,7 @@ use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -53,8 +55,10 @@ new class extends Component {
             'barangs' => $this->barangs,
             'kategoris' => Kategori::where('name', 'like', '%Pakan%')
                 ->where('name', 'not like', 'Pakan Curah')
-                ->where(function ($q) {
-                    $q->where('type', 'like', '%Pendapatan%');
+                ->whereHas('detailKategori', function (Builder $q) {
+                    $q->where(function ($q) {
+                        $q->where('type', 'like', '%Pendapatan%');
+                    });
                 })
                 ->get(),
             'clients' => Client::where('type', 'like', '%Peternak%')->get(),
@@ -64,7 +68,7 @@ new class extends Component {
     public function mount(): void
     {
         $this->user_id = auth()->id();
-        $this->tanggal = now()->format('Y-m-d\TH:i');
+        $this->tanggal = now()->format('Y-m-d\TH:i:s');
         $this->updatedTanggal($this->tanggal);
 
         $this->barangs = Barang::all();
@@ -101,6 +105,26 @@ new class extends Component {
         }
     }
 
+    private function hitungHppFifo(int $barangId, int $qty): float
+    {
+        $sisa = $qty;
+        $totalHpp = 0;
+
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->get();
+
+        foreach ($batches as $batch) {
+            if ($sisa <= 0) {
+                break;
+            }
+
+            $ambil = min($batch->qty_sisa, $sisa);
+            $totalHpp += $ambil * $batch->harga;
+            $sisa -= $ambil;
+        }
+
+        return $qty > 0 ? $totalHpp / $qty : 0;
+    }
+
     public function updatedDetails($value, $key): void
     {
         // --- Jika kategori dipilih ---
@@ -131,22 +155,29 @@ new class extends Component {
         if (str_ends_with($key, '.barang_id')) {
             $index = explode('.', $key)[0];
             $barang = Barang::find($value);
+            $stok = StokBatch::where('barang_id', $value)->get()->sum('qty_sisa') ?? 0;
+
             if ($barang) {
-                $this->details[$index]['max_qty'] = $barang->stok;
+                $this->details[$index]['max_qty'] = $stok;
                 $this->details[$index]['kuantitas'] = max(1, $this->details[$index]['kuantitas'] ?? 1);
-                $this->details[$index]['hpp'] = (float) $barang->hpp;
             }
         }
 
         // --- Jika qty diubah ---
         if (str_ends_with($key, '.kuantitas')) {
             $index = explode('.', $key)[0];
-            $qty = $value ?: 1;
-            $maxQty = $this->details[$index]['max_qty'] ?? null;
-            if ($maxQty !== null && $qty > $maxQty) {
+            $qty = max(1, (int) $value);
+            $maxQty = $this->details[$index]['max_qty'] ?? 0;
+
+            if ($qty > $maxQty) {
                 $qty = $maxQty;
             }
+
             $this->details[$index]['kuantitas'] = $qty;
+
+            if (!empty($this->details[$index]['barang_id'])) {
+                $this->details[$index]['hpp'] = $this->hitungHppFifo($this->details[$index]['barang_id'], $qty);
+            }
         }
 
         // --- Update total jika ada perubahan harga/qty/hpp ---
@@ -170,6 +201,25 @@ new class extends Component {
         });
     }
 
+    private function fifoOut(int $barangId, float $qty): void
+    {
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->lockForUpdate()->get();
+
+        foreach ($batches as $batch) {
+            if ($qty <= 0) {
+                break;
+            }
+
+            $ambil = min($batch->qty_sisa, $qty);
+            $batch->decrement('qty_sisa', $ambil);
+            $qty -= $ambil;
+        }
+
+        if ($qty > 0) {
+            throw new \Exception('Stok tidak mencukupi (FIFO OUT gagal)');
+        }
+    }
+
     public function save(): void
     {
         $this->validate();
@@ -189,119 +239,117 @@ new class extends Component {
             }
         }
 
-        $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();
-        $kategoriHpp = Kategori::where('name', 'HPP')->first();
-        $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
-        $kategoriPri = Kategori::where('name', 'Penjualan Pakan Curah')->first();
+        DB::transaction(function () {
+            $kategoriSentrat = Kategori::where('name', 'Stok Pakan')->first();
+            $kategoriHpp = Kategori::where('name', 'HPP')->first();
+            $kategoriBon = Kategori::where('name', 'Piutang Peternak')->first();
+            $kategoriPri = Kategori::where('name', 'Penjualan Pakan Curah')->first();
 
-        $totalTransaksi = 0;
-        $detailData = [];
+            $totalTransaksi = 0;
+            $detailData = [];
 
-        $bon = Transaksi::create([
-            'invoice' => $this->invoice1,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Debit',
-            'total' => $this->total,
-        ]);
-
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $bon->id,
-                'kategori_id' => $kategoriBon->id,
-                'value' => $item['value'], // harga satuan
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga (harga satuan * qty
-            ]);
-        }
-
-        $client = Client::find($this->client_id);
-
-        if ($client) {
-            $client->increment('bon', $this->total);
-        }
-
-        $transaksi = Transaksi::create([
-            'invoice' => $this->invoice,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Kredit',
-            'total' => $this->total,
-        ]);
-
-        foreach ($this->details as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $transaksi->id,
-                'kategori_id' => $item['kategori_id'],
-                'value' => $item['value'], // harga satuan
-                'barang_id' => $item['barang_id'] ?? null,
-                'kuantitas' => $item['kuantitas'] ?? null,
-                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga
-            ]);
-            if ($item['kategori_id'] == $kategoriPri->id) {
-                $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
-                $supriyadi->increment('titipan', ($item['value'] - $item['hpp'] ?? 0) * ($item['kuantitas'] ?? 1));
-            }
-        }
-
-        foreach ($this->details as $item) {
-            $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
-                $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Pakan'))->where('type', 'Debit');
-            });
-
-            $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
-            $totalQty = $detailQuery->sum('kuantitas');
-            $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
-
-            $totalTransaksi += ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1);
-
-            $detailData[] = [
-                'barang_id' => $item['barang_id'],
-                'kuantitas' => $item['kuantitas'] ?? 1,
-                'value' => $item['hpp'] ?? $hargaSatuan,
-                'sub_total' => ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1),
-            ];
-        }
-
-        if ($kategoriHpp) {
-            $hpp = Transaksi::create([
-                'invoice' => $this->invoice3,
+            $bon = Transaksi::create([
+                'invoice' => $this->invoice1,
                 'name' => $this->name,
                 'user_id' => $this->user_id,
                 'tanggal' => $this->tanggal,
                 'client_id' => $this->client_id,
                 'type' => 'Debit',
+                'total' => $this->total,
+            ]);
+
+            foreach ($this->details as $item) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $bon->id,
+                    'kategori_id' => $kategoriBon->id,
+                    'value' => $item['value'], // harga satuan
+                    'barang_id' => $item['barang_id'] ?? null,
+                    'kuantitas' => $item['kuantitas'] ?? null,
+                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga (harga satuan * qty
+                ]);
+            }
+
+            $client = Client::find($this->client_id);
+
+            if ($client) {
+                $client->increment('bon', $this->total);
+            }
+
+            $transaksi = Transaksi::create([
+                'invoice' => $this->invoice,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Kredit',
+                'total' => $this->total,
+            ]);
+
+            foreach ($this->details as $item) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $transaksi->id,
+                    'kategori_id' => $item['kategori_id'],
+                    'value' => $item['value'], // harga satuan
+                    'barang_id' => $item['barang_id'] ?? null,
+                    'kuantitas' => $item['kuantitas'] ?? null,
+                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga
+                ]);
+                $hpp = $this->fifoOut($item['barang_id'], $item['kuantitas']);
+                if ($item['kategori_id'] == $kategoriPri->id) {
+                    $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
+                    $supriyadi->increment('titipan', ($item['value'] - $item['hpp'] ?? 0) * ($item['kuantitas'] ?? 1));
+                }
+            }
+
+            foreach ($this->details as $item) {
+                $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
+                    $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Pakan'))->where('type', 'Debit');
+                });
+
+                $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
+                $totalQty = $detailQuery->sum('kuantitas');
+                $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
+
+                $totalTransaksi += ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1);
+
+                $detailData[] = [
+                    'barang_id' => $item['barang_id'],
+                    'kuantitas' => $item['kuantitas'] ?? 1,
+                    'value' => $item['hpp'] ?? $hargaSatuan,
+                    'sub_total' => ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1),
+                ];
+            }
+
+            if ($kategoriHpp) {
+                $hpp = Transaksi::create([
+                    'invoice' => $this->invoice3,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'client_id' => $this->client_id,
+                    'type' => 'Debit',
+                    'total' => $totalTransaksi,
+                ]);
+
+                foreach ($detailData as $d) {
+                    DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hpp->id, 'kategori_id' => $kategoriHpp->id]));
+                }
+            }
+
+            $stok = Transaksi::create([
+                'invoice' => $this->invoice2,
+                'name' => $this->name,
+                'user_id' => $this->user_id,
+                'tanggal' => $this->tanggal,
+                'client_id' => $this->client_id,
+                'type' => 'Kredit',
                 'total' => $totalTransaksi,
             ]);
 
             foreach ($detailData as $d) {
-                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hpp->id, 'kategori_id' => $kategoriHpp->id]));
+                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id, 'kategori_id' => $kategoriSentrat->id]));
             }
-        }
-
-        $stok = Transaksi::create([
-            'invoice' => $this->invoice2,
-            'name' => $this->name,
-            'user_id' => $this->user_id,
-            'tanggal' => $this->tanggal,
-            'client_id' => $this->client_id,
-            'type' => 'Kredit',
-            'total' => $totalTransaksi,
-        ]);
-
-        foreach ($detailData as $d) {
-            DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id], ['kategori_id' => $kategoriSentrat->id]));
-
-            $barang = Barang::find($d['barang_id']);
-            if ($barang) {
-                $barang->decrement('stok', $d['kuantitas']);
-            }
-        }
+        });
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/sentrat-keluar');
     }
@@ -349,7 +397,8 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian Transaksi" wire:model="name" placeholder="Contoh: Penjualan Sentrat" />
