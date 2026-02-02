@@ -47,8 +47,21 @@ new class extends Component {
         $last = Transaksi::orderBy('tanggal', 'desc')->first();
 
         if (!$first || !$last) {
-            $this->pendapatanData = [];
-            $this->pengeluaranData = [];
+            $this->pendapatanData = [
+                'Penjualan Pakan Curah' => [
+                    'total' => 0,
+                    'detail' => [],
+                ],
+            ];
+
+            $this->pengeluaranData = [
+                'HPP Pakan Curah' => [
+                    'total' => 0,
+                    'detail' => [],
+                ],
+            ];
+
+            $this->stokCurah = 0;
             return;
         }
 
