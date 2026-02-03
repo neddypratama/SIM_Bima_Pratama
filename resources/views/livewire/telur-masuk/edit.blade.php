@@ -118,7 +118,7 @@ new class extends Component {
         $this->details[] = [
             'value' => 0,
             'barang_id' => null,
-            'kuantitas' => 1,
+            'kuantitas' => 0.1,
         ];
 
         $index = count($this->details) - 1;
