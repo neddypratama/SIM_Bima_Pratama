@@ -54,7 +54,24 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'clients' => Client::all(),
+            'clients' => Client::query()
+                ->withSum(
+                    [
+                        'transaksi as hutang_kredit' => function ($q) {
+                            $q->where('type', 'Kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                        },
+                    ],
+                    'total',
+                )
+                ->withSum(
+                    [
+                        'transaksi as hutang_debit' => function ($q) {
+                            $q->where('type', 'Debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                        },
+                    ],
+                    'total',
+                )
+                ->get(),
             'kategoris' => Kategori::whereHas('detailKategori', function (Builder $q) {
                 $q->where(function ($q) {
                     $q->where('type', 'like', '%Liabilitas%');
@@ -92,7 +109,7 @@ new class extends Component {
 
         DB::transaction(function () {
             $tipe = '';
-            
+
             if ($this->type == 'Kredit') {
                 $tipe = 'Debit';
             } else {
@@ -178,13 +195,14 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Titipan Pak Agus" />
                         <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$clients"
                             single searchable clearable label="Client">
-                            {{-- Tampilan item di dropdown --}} @scope('item', $clients)
+                            @scope('item', $clients)
                                 <x-list-item :item="$clients" sub-value="invoice">
                                     <x-slot:actions>
                                         <x-badge :value="$clients->type ?? 'Tanpa Client'" class="badge-soft badge-secondary badge-sm" />
@@ -194,7 +212,7 @@ new class extends Component {
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->titipan, 0, ',', '.') }}
+                                {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->hutang_kredit - $clients->hutang_debit, 0, ',', '.') }}
                             @endscope
                         </x-choices-offline>
                     </div>

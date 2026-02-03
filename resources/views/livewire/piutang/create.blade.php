@@ -57,7 +57,24 @@ new class extends Component {
     {
         return [
             'users' => User::all(),
-            'clients' => Client::all(),
+            'clients' => Client::query()
+                ->withSum(
+                    [
+                        'transaksi as piutang_kredit' => function ($q) {
+                            $q->where('type', 'Kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
+                        },
+                    ],
+                    'total',
+                )
+                ->withSum(
+                    [
+                        'transaksi as piutang_debit' => function ($q) {
+                            $q->where('type', 'Debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
+                        },
+                    ],
+                    'total',
+                )
+                ->get(),
             'kategoris' => Kategori::whereHas('detailKategori', function (Builder $q) {
                 $q->where(function ($q) {
                     $q->where('type', 'like', '%Aset%');
@@ -200,7 +217,7 @@ new class extends Component {
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->bon, 0, ',', '.') }}
+                                {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->piutang_debit - $clients->piutang_kredit, 0, ',', '.') }}
                             @endscope
                         </x-choices-offline>
                     </div>

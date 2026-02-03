@@ -69,31 +69,38 @@ new class extends Component {
     public function clients(): LengthAwarePaginator
     {
         return Client::query()
-
-            /* ================= BON (PIUTANG | DEBIT) ================= */
             ->withSum(
                 [
-                    'transaksi as bon' => function ($q) {
-                        $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
-                            $q->where('name', 'like', 'Piutang%');
-                        });
+                    'transaksi as piutang_debit' => function ($q) {
+                        $q->where('type', 'debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
                     },
                 ],
                 'total',
             )
-
-            /* ================= TITIPAN (HUTANG | KREDIT) ================= */
             ->withSum(
                 [
-                    'transaksi as titipan' => function ($q) {
-                        $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
-                            $q->where('name', 'like', 'Hutang%');
-                        });
+                    'transaksi as piutang_kredit' => function ($q) {
+                        $q->where('type', 'kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
                     },
                 ],
                 'total',
             )
-
+            ->withSum(
+                [
+                    'transaksi as hutang_kredit' => function ($q) {
+                        $q->where('type', 'kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                    },
+                ],
+                'total',
+            )
+            ->withSum(
+                [
+                    'transaksi as hutang_debit' => function ($q) {
+                        $q->where('type', 'debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                    },
+                ],
+                'total',
+            )
             ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->when($this->tipeClient, fn($q) => $q->where('type', $this->tipeClient))
             ->when($this->tipePeternak, fn($q) => $q->where('keterangan', $this->tipePeternak))
@@ -160,14 +167,14 @@ new class extends Component {
             {{-- Kolom Bon --}}
             @scope('cell_bon', $client)
                 <span class="font-bold text-blue-600">
-                    Rp {{ number_format($client->bon, 0, ',', '.') }}
+                    Rp {{ number_format(($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0), 0, ',', '.') }}
                 </span>
             @endscope
 
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
                 <span class="font-bold text-red-600">
-                    Rp {{ number_format($client->titipan, 0, ',', '.') }}
+                    Rp {{ number_format(($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0), 0, ',', '.') }}
                 </span>
             @endscope
 

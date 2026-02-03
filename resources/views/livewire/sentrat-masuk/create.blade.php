@@ -77,7 +77,7 @@ new class extends Component {
                 $this->details[] = [
                     'barang_id' => null,
                     'value' => 0,
-                    'kuantitas' => 1,
+                    'kuantitas' => 0.1,
                 ];
             }
 
@@ -130,7 +130,7 @@ new class extends Component {
         $this->validate([
             'details.*.value' => 'required|numeric|min:0',
             'details.*.barang_id' => 'required|exists:barangs,id',
-            'details.*.kuantitas' => 'required|numeric|min:1',
+            'details.*.kuantitas' => 'required|numeric|min:0.1',
         ]);
 
         DB::transaction(function () {
@@ -215,7 +215,7 @@ new class extends Component {
         $this->details[] = [
             'value' => 0,
             'barang_id' => null,
-            'kuantitas' => 1,
+            'kuantitas' => 0.1,
         ];
 
         $index = count($this->details) - 1;
@@ -303,7 +303,7 @@ new class extends Component {
                             <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp " money="IDR" />
                             <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
-                                type="number" min="1" step="0.01" />
+                                type="number" min="0.1" step="0.1" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
                         <div class="flex justify-end">
