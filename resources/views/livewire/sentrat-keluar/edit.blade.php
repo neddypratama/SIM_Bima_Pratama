@@ -377,14 +377,7 @@ new class extends Component {
 
             // 3️⃣ Rollback titipan lama (jika sebelumnya pernah masuk ke Supriyadi)
             $oldDetails = DetailTransaksi::where('transaksi_id', $transaksi->id)->whereHas('kategori', fn($q) => $q->where('name', 'Penjualan Pakan Curah'))->get();
-
-            if ($oldDetails->count() > 0) {
-                $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
-                if ($supriyadi) {
-                    $rollbackTotal = $oldDetails->sum('sub_total');
-                    $supriyadi->decrement('titipan', $rollbackTotal);
-                }
-            }
+            
 
             $this->transaksi->details()->delete();
 
@@ -410,14 +403,6 @@ new class extends Component {
 
                 // FIFO keluar stok
                 $this->fifoOut($item['barang_id'], $item['kuantitas']);
-            }
-
-            // 6️⃣ Tambah titipan baru
-            if ($totalTitipanBaru > 0) {
-                $supriyadi = Client::where('name', 'like', 'Bp%Supriyadi%')->first();
-                if ($supriyadi) {
-                    $supriyadi->increment('titipan', $totalTitipanBaru);
-                }
             }
         });
 

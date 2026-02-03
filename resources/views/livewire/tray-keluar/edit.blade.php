@@ -126,14 +126,14 @@ new class extends Component {
 
             if ($barang) {
                 $this->details[$index]['max_qty'] = $stok;
-                $this->details[$index]['kuantitas'] = max(0.1, $this->details[$index]['kuantitas'] ?? 0.1);
+                $this->details[$index]['kuantitas'] = max(1, $this->details[$index]['kuantitas'] ?? 1);
             }
         }
 
         // --- Jika qty diubah ---
         if (str_ends_with($key, '.kuantitas')) {
             $index = explode('.', $key)[0];
-            $qty = max(0.1, (int) $value);
+            $qty = max(1, (int) $value);
             $maxQty = $this->details[$index]['max_qty'] ?? 0;
 
             if ($qty > $maxQty) {
@@ -365,7 +365,7 @@ new class extends Component {
         $this->details[] = [
             'value' => 0,
             'barang_id' => null,
-            'kuantitas' => 0.1,
+            'kuantitas' => 1,
             'hpp' => 0,
             'max_qty' => null,
         ];
