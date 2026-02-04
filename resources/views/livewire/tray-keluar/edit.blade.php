@@ -126,14 +126,14 @@ new class extends Component {
 
             if ($barang) {
                 $this->details[$index]['max_qty'] = $stok;
-                $this->details[$index]['kuantitas'] = max(0.1, $this->details[$index]['kuantitas'] ?? 1);
+                $this->details[$index]['kuantitas'] = max(0.01, $this->details[$index]['kuantitas'] ?? 1);
             }
         }
 
         // --- Jika qty diubah ---
         if (str_ends_with($key, '.kuantitas')) {
             $index = explode('.', $key)[0];
-            $qty = max(0.1, $value);
+            $qty = max(0.01, $value);
             $maxQty = $this->details[$index]['max_qty'] ?? 0;
 
             if ($qty > $maxQty) {
@@ -213,7 +213,7 @@ new class extends Component {
             'details' => 'required|array|min:1',
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
-            'details.*.kuantitas' => 'required|numeric|min:0.1',
+            'details.*.kuantitas' => 'required|numeric|min:0.01',
         ]);
 
         foreach ($this->details as $i => $item) {
@@ -365,7 +365,7 @@ new class extends Component {
         $this->details[] = [
             'value' => 0,
             'barang_id' => null,
-            'kuantitas' => 0.1,
+            'kuantitas' => 0.01,
             'hpp' => 0,
             'max_qty' => null,
         ];
@@ -441,8 +441,8 @@ new class extends Component {
                             <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
                                 prefix="Rp " money="IDR" />
                             <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
-                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="0.1"
-                                step="0.1" :max="$item['max_qty'] ?? null" />
+                                wire:model.lazy="details.{{ $index }}.kuantitas" type="number" min="0.01"
+                                step="0.01" :max="$item['max_qty'] ?? null" />
                             <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
