@@ -181,7 +181,9 @@ new class extends Component {
             {{-- ✅ Kolom Sisa (Bon - Titipan) --}}
             @scope('cell_sisa', $client)
                 @php
-                    $sisa = ($client->piutang_debit ?? 0 - $client->piutang_kredit ?? 0) - ($client->hutang_kredit ?? 0 - $client->hutang_debit ?? 0);
+                    $bon = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0);
+                    $titipan = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0);
+                    $sisa = $bon - $titipan;
                     $warna = $sisa > 0 ? 'text-green-600' : ($sisa < 0 ? 'text-yellow-600' : 'text-gray-600');
                 @endphp
                 <span class="font-bold {{ $warna }}">
