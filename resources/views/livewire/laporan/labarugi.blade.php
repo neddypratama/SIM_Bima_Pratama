@@ -116,6 +116,8 @@ new class extends Component {
             }
         }
 
+        // dd($laporans); 
+
         /* =====================================================
             2. ISI DATA TRANSAKSI
         ===================================================== */
@@ -125,6 +127,7 @@ new class extends Component {
             ->join('detail_kategoris as dk', 'dk.id', '=', 'k.detail_kategori_id')
             ->join('transaksis as t', 't.id', '=', 'dt.transaksi_id')
             ->whereBetween('t.tanggal', [$start, $end])
+            ->where('k.name', 'not like', '% Pakan Curah')
             ->select('dk.name as laporan', 'dk.type', 'k.name as kategori', DB::raw('SUM(dt.sub_total) as total'))
             ->groupBy('dk.name', 'dk.type', 'k.name')
             ->get();
