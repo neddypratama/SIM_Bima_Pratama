@@ -256,7 +256,7 @@ new class extends Component {
                 <span class="font-bold text-blue-600">
                     Rp
                     {{ number_format(
-                        $piutang = max(0, ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0)),
+                        $piutang = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0),
                         0,
                         ',',
                         '.',
@@ -268,7 +268,7 @@ new class extends Component {
             @scope('cell_titipan', $client)
                 <span class="font-bold text-green-600">
                     Rp
-                    {{ number_format($hutang = max(0, ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0)), 0, ',', '.') }}
+                    {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0), 0, ',', '.') }}
                 </span>
             @endscope
 

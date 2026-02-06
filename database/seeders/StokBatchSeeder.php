@@ -24,7 +24,7 @@ class StokBatchSeeder extends Seeder
             ["id" => "3","name" => "Asin Pth","stok" => "0.00","hpp" => "1421.00",],
             ["id" => "4","name" => "AB Pth","stok" => "0.00","hpp" => "900.00",],
             ["id" => "5","name" => "Horen","stok" => "7858.08","hpp" => "23800.00",],
-            ["id" => "6","name" => "Horen Pth","stok" => "8.00","hpp" => "0.00",],
+            ["id" => "6","name" => "Horen Pth","stok" => "8.00","hpp" => "20000.00",],
             ["id" => "7","name" => "Puyuh Bj","stok" => "43650.00","hpp" => "270.00",],
             ["id" => "8","name" => "Puyuh Kg","stok" => "486.78","hpp" => "24000.00",],
             ["id" => "9","name" => "Asin","stok" => "425.00","hpp" => "2257.00",],

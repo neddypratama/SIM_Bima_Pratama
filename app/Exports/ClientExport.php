@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\Client;
-use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -11,24 +10,69 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class ClientExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
 {
-    protected $startDate;
-    protected $endDate;
-
-    public function __construct() {
-
-    }
-    
-
     /**
-     * Ambil data transaksi + relasi
+     * Ambil data client + agregasi transaksi
      */
     public function collection()
     {
-        return Client::all();
+        return Client::query()
+
+            /* ================= PIUTANG (BON) ================= */
+            ->withSum(
+                [
+                    'transaksi as piutang_debit' => function ($q) {
+                        $q->where('type', 'Debit')
+                          ->whereHas('details.kategori', fn ($q) =>
+                              $q->where('name', 'like', 'Piutang%')
+                          );
+                    },
+                ],
+                'total'
+            )
+
+            ->withSum(
+                [
+                    'transaksi as piutang_kredit' => function ($q) {
+                        $q->where('type', 'Kredit')
+                          ->whereHas('details.kategori', fn ($q) =>
+                              $q->where('name', 'like', 'Piutang%')
+                          );
+                    },
+                ],
+                'total'
+            )
+
+            /* ================= HUTANG (TITIPAN) ================= */
+            ->withSum(
+                [
+                    'transaksi as hutang_kredit' => function ($q) {
+                        $q->where('type', 'Kredit')
+                          ->whereHas('details.kategori', fn ($q) =>
+                              $q->where('name', 'like', 'Hutang%')
+                          );
+                    },
+                ],
+                'total'
+            )
+
+            ->withSum(
+                [
+                    'transaksi as hutang_debit' => function ($q) {
+                        $q->where('type', 'Debit')
+                          ->whereHas('details.kategori', fn ($q) =>
+                              $q->where('name', 'like', 'Hutang%')
+                          );
+                    },
+                ],
+                'total'
+            )
+
+            ->orderBy('name')
+            ->get();
     }
 
     /**
-     * Atur heading kolom Excel
+     * Heading Excel
      */
     public function headings(): array
     {
@@ -36,25 +80,30 @@ class ClientExport implements FromCollection, WithHeadings, ShouldAutoSize, With
             'Nama',
             'Tipe',
             'Alamat',
-            'keterangan',
-            'Bon',
-            'Titipan',
+            'Keterangan',
+            'Bon (Piutang)',
+            'Titipan (Hutang)',
         ];
     }
 
     /**
-     * Atur data per row
+     * Mapping per row
      */
     public function map($client): array
     {
-            $rows[] = [
-                $client->name,
-                $client->type,
-                $client->alamat,
-                $client->keterangan,
-                $client->bon ?? 0,
-                $client->titipan ?? 0,
-            ];
-        return $rows;
+        // BON = Debit - Kredit
+        $bon = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0);
+
+        // TITIPAN = Kredit - Debit
+        $titipan = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0);
+
+        return [
+            $client->name,
+            $client->type,
+            $client->alamat,
+            $client->keterangan,
+            $bon,
+            $titipan,
+        ];
     }
 }

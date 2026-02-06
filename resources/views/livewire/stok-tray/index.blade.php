@@ -9,7 +9,7 @@ use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Exports\StokTelurExport;
+use App\Exports\StokTrayExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
@@ -61,7 +61,7 @@ new class extends Component {
         $this->exportModal = false;
         $this->success('Export dimulai...', position: 'toast-top');
 
-        return Excel::download(new StokTelurExport($this->startDate, $this->endDate), 'stok-telur.xlsx');
+        return Excel::download(new StokTrayExport($this->startDate, $this->endDate), 'stok-tray.xlsx');
     }
 
     public function fifo(int $barangId, int $qty, string $type = 'out'): void

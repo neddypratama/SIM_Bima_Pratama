@@ -8,7 +8,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class StokTelurExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
+class StokTrayExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
 {
     protected $startDate;
     protected $endDate;
@@ -25,7 +25,7 @@ class StokTelurExport implements FromCollection, WithHeadings, ShouldAutoSize, W
     public function collection()
     {
         return Stok::with(['user', 'barang.jenis', 'barang'])
-            ->whereHas('barang.jenis', fn($q) => $q->where('name', 'like', '%Telur%'))
+            ->whereHas('barang.jenis', fn($q) => $q->where('name', 'like', '%Tray%'))
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')

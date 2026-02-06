@@ -5,7 +5,7 @@ namespace App\Livewire;
 use App\Models\Transaksi;
 use App\Models\Barang;
 use Livewire\Volt\Component;
-use App\Exports\LabaRugiExport;
+use App\Exports\CurahExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -29,7 +29,7 @@ new class extends Component {
 
     public function export(): BinaryFileResponse
     {
-        return Excel::download(new LabaRugiExport($this->startDate, $this->endDate), 'laba_rugi_curah.xlsx');
+        return Excel::download(new CurahExport($this->startDate, $this->endDate), 'laba_rugi_curah.xlsx');
     }
 
     public function updatedStartDate()

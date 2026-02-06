@@ -9,6 +9,8 @@ use Livewire\Volt\Component;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\DB;
+use App\Exports\AsetExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 new class extends Component {
     public $startDate;
@@ -28,6 +30,11 @@ new class extends Component {
         if (in_array($field, ['startDate', 'endDate'])) {
             $this->generateReport();
         }
+    }
+
+    public function export(): BinaryFileResponse
+    {
+        return Excel::download(new AsetExport($this->endDate), 'aset.xlsx');
     }
 
     public function generateReport()

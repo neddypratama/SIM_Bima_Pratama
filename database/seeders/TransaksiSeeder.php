@@ -480,7 +480,7 @@ class TransaksiSeeder extends Seeder
             };
 
             // --- PROSES PIUTANG (BON) ---
-            if ($item['bon'] > 0) {
+            if ($item['bon'] != 0) {
                 $kategoriFinalId = null;
 
                 if ($client->type == 'Peternak') {
@@ -510,7 +510,7 @@ class TransaksiSeeder extends Seeder
             }
 
             // --- PROSES HUTANG (TITIPAN) ---
-            if ($item['titipan'] > 0) {
+            if ($item['titipan'] != 0) {
                 $kategoriFinalId = null;
 
                 if ($client->type == 'Peternak') {

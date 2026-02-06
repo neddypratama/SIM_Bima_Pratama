@@ -2,14 +2,15 @@
 
 namespace App\Exports;
 
-use App\Models\Transaksi;
+use App\Models\StokBatch;
+use App\Models\Barang;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
+class StokBatchExport implements FromCollection, WithHeadings, ShouldAutoSize, WithMapping
 {
     protected $startDate;
     protected $endDate;
@@ -25,7 +26,8 @@ class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, W
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'details.kategori:id,name'])
+        return StokBatch::query()
+            ->with(['barang:id,name', 'user:id,name'])
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy('tanggal', 'asc')
@@ -38,43 +40,30 @@ class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, W
     public function headings(): array
     {
         return [
-            'Invoice',
-            'Rincian',
             'Tanggal',
-            'Client',
-            'Kategori',
+            'Pembuat',
+            'Jenis Barang',
             'Barang',
-            'Kuantitas',
-            'Harga Satuan',
-            'Subtotal',
-            'Total',
-            'Pembuat'
+            'HPP',
+            'Stok',
+            'Sisa',
         ];
     }
 
     /**
      * Atur data per row
      */
-    public function map($transaksi): array
+    public function map($stok): array
     {
-        $rows = [];
-        // dd($transaksi);
-
-        foreach ($transaksi->details as $detail) {
-            $rows[] = [
-                $transaksi->invoice,
-                $transaksi->name,
-                $transaksi->tanggal,
-                $transaksi->client?->name ?? '-',
-                $detail->kategori?->name ?? '-',
-                $detail->barang?->name ?? '-',
-                $detail->kuantitas,
-                $detail->value ?? 0,
-                $detail->kuantitas * ($detail->value ?? 0),
-                $transaksi->total,
-                $transaksi->user->name
+        $rows = [
+                $stok->tanggal,
+                $stok->user->name,
+                $stok->barang->jenis->name ?? '-',
+                $stok->barang?->name ?? '-',
+                $stok->harga ?? 0,
+                $stok->qty_masuk ?? 0,
+                $stok->qty_sisa ?? 0,
             ];
-        }
 
         return $rows;
     }

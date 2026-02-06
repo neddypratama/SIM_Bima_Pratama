@@ -57,7 +57,7 @@ new class extends Component {
             1. LAPORAN PENDAPATAN & PENGELUARAN (NON HPP)
         ===================================================== */
 
-        $laporans = DB::table('detail_kategoris as dk')->leftJoin('kategoris as k', 'k.detail_kategori_id', '=', 'dk.id')->select('dk.name as laporan', 'dk.type', 'k.name as kategori')->orderBy('dk.id')->get();
+        $laporans = DB::table('detail_kategoris as dk')->leftJoin('kategoris as k', 'k.detail_kategori_id', '=', 'dk.id')->where('k.name', 'not like', '% Pakan Curah')->select('dk.name as laporan', 'dk.type', 'k.name as kategori')->orderBy('dk.id')->get();
 
         /* =====================================================
             3. HPP PALING ATAS (GROUPING)
