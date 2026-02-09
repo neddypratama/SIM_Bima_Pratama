@@ -22,8 +22,9 @@ new class extends Component {
     public string $invoice = '';
     public string $invoice1 = '';
     public string $invoice2 = '';
-    public string $invoice3 = '';
-    public string $invoice4 = '';
+    
+    public string $invoice7 = '';
+    public string $invoice8 = '';
 
     #[Rule('required')]
     public ?int $barang_id = null;
@@ -72,6 +73,10 @@ new class extends Component {
             $this->invoice2 = 'INV-' . $tanggal . '-KDL-' . $str;
             $this->invoice3 = 'INV-' . $tanggal . '-OBT1-' . $str;
             $this->invoice4 = 'INV-' . $tanggal . '-OBT2-' . $str;
+            $this->invoice5 = 'INV-' . $tanggal . '-TBH-' . $str;
+            $this->invoice6 = 'INV-' . $tanggal . '-OBT3-' . $str;
+            $this->invoice7 = 'INV-' . $tanggal . '-KRG-' . $str;
+            $this->invoice8 = 'INV-' . $tanggal . '-OBT4-' . $str;
         }
     }
 
@@ -96,7 +101,7 @@ new class extends Component {
         }
     }
 
-    private function tambahStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    private function tambahStokFifoDanHitungHpp(int $barangId, float $qtyKeluar): float
     {
         $totalHpp = 0;
 
@@ -119,7 +124,7 @@ new class extends Component {
         return $totalHpp;
     }
 
-    private function kurangiStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    private function kurangiStokFifoDanHitungHpp(int $barangId, float $qtyKeluar): float
     {
         $totalHpp = 0;
 
@@ -168,12 +173,90 @@ new class extends Component {
                 'rusak' => $this->pecah,
             ]);
 
-            $totalMasuk = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
-            $totalKeluar = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
-
             $kateKotor = Kategori::where('name', 'like', '%Stok Return%')->first();
             $katePecah = Kategori::where('name', 'like', '%Barang Kadaluarsa%')->first();
             $kateTelur = Kategori::where('name', 'like', '%Stok Obat-Obatan%')->first();
+            $kateStok = Kategori::where('name', 'like', '%Penyesuaian Stok')->first();
+
+            if ($this->tambah > 0) {
+                $hppTambah = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
+                $tambah = Transaksi::create([
+                    'invoice' => $this->invoice5,
+                    'name' => 'Obat Tambah ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppTambah,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $tambah->id,
+                    'kategori_id' => $kateStok->id ?? null,
+                    'value' => $hppTambah / $this->tambah,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->tambah,
+                    'sub_total' => $hppTambah,
+                ]);
+
+                // Obat Kadaluarsa - Kredit
+                $telur2 = Transaksi::create([
+                    'invoice' => $this->invoice6,
+                    'name' => 'Obat Tambah ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppTambah,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur2->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppTambah / $this->tambah,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->tambah,
+                    'sub_total' => $hppTambah,
+                ]);
+            }
+
+            if ($this->kurang > 0) {
+                $hppKurang = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
+                $tambah = Transaksi::create([
+                    'invoice' => $this->invoice7,
+                    'name' => 'Obat Kurang ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppKurang,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $tambah->id,
+                    'kategori_id' => $kateStok->id ?? null,
+                    'value' => $hppKurang / $this->kurang,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->kurang,
+                    'sub_total' => $hppKurang,
+                ]);
+
+                // Obat Kadaluarsa - Kredit
+                $telur2 = Transaksi::create([
+                    'invoice' => $this->invoice8,
+                    'name' => 'Obat Kurang ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppKurang,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur2->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppKurang / $this->kurang,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->kurang,
+                    'sub_total' => $hppKurang,
+                ]);
+            }
 
             if ($this->kotor > 0) {
                 $hppKotor = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kotor);
@@ -314,7 +397,8 @@ new class extends Component {
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div class="col-span-2">

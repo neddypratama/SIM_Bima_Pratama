@@ -150,7 +150,7 @@ class StokBatchSeeder extends Seeder
         // Ambil Kategori Penting
         $kateAwal  = Kategori::where('name', 'like', '%Modal Awal%')->first();
         $adminId   = 1;
-        $tanggal   = now()->format('Y-m-d H:i:s');
+        $tanggal   = '2026-02-01 00:00:00';
         
         $date = \Carbon\Carbon::parse($tanggal)->format('Ymd');
         $inv = "INV-$date-AWL-";

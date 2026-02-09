@@ -7,6 +7,8 @@ use App\Models\StokBatch;
 
 new class extends Component {
     public Stok $stok;
+    public ?Transaksi $tambah = null;
+    public ?Transaksi $kurang = null;
     public ?Transaksi $pecah = null;
     public $telur = [];
     public int $stok_sekarang = 0;
@@ -22,6 +24,16 @@ new class extends Component {
         $tanggal = $part[1];
 
         $this->stok_sekarang = StokBatch::where('barang_id', $stok->barang_id)->sum('qty_sisa');
+
+        // Cari transaksi Telur Kotor (INV-...-KTR-xxxx)
+        $this->tambah = Transaksi::with(['client', 'details.kategori', 'details.barang'])
+            ->where('invoice', 'like', "INV-$tanggal-TBH-" . $suffix)
+            ->first();
+
+        // Cari transaksi Telur Pecah (INV-...-PCH-xxxx)
+        $this->kurang = Transaksi::with(['client', 'details.kategori', 'details.barang'])
+            ->where('invoice', 'like', "INV-$tanggal-KRG-" . $suffix)
+            ->first();
 
         // Cari transaksi Telur Pecah (INV-...-PCH-xxxx)
         $this->pecah = Transaksi::with(['client', 'details.kategori', 'details.barang'])
@@ -101,6 +113,170 @@ new class extends Component {
             </div>
         </div>
     </x-card>
+
+    @if ($this->tambah)
+        <x-header class="mt-3" title="Detail {{ $tambah->invoice }}" separator progress-indicator />
+
+        <x-card>
+            {{-- Informasi tambah --}}
+            <div class="p-7 mt-2 rounded-lg shadow-md">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <p class="mb-3">Invoice</p>
+                        <p class="font-semibold">{{ $tambah->invoice }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">Rincian Transaksi</p>
+                        <p class="font-semibold">{{ $tambah->name ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">Tanggal</p>
+                        <p class="font-semibold">{{ \Carbon\Carbon::parse($tambah->tanggal)->format('d-m-Y H:i') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Informasi Client --}}
+            <div class="p-7 mt-4 rounded-lg shadow-md">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="mb-3">Nama Client</p>
+                        <p class="font-semibold">{{ $tambah->client?->name ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">Alamat Client</p>
+                        <p class="font-semibold">{{ $tambah->client?->alamat ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">User</p>
+                        <p class="font-semibold">{{ $tambah->user?->name ?? '-' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Detail Barang --}}
+            <div class="p-7 mt-4 rounded-lg shadow-md">
+                <p class="mb-3 font-semibold">Detail Barang</p>
+                @forelse ($tambah->details as $detail)
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3 rounded-lg p-5 ">
+                        <div>
+                            <p class="mb-1 text-gray-500">Barang</p>
+                            <p class="font-semibold">{{ $detail->barang?->name ?? '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Qty</p>
+                            <p class="font-semibold">{{ $detail->kuantitas }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Harga</p>
+                            <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Total</p>
+                            <p class="font-semibold">Rp
+                                {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Kategori</p>
+                            <p class="font-semibold">{{ $detail->kategori->name ?? '-' }}</p>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-gray-500 text-sm">Tidak ada detail barang untuk tambah ini.</p>
+                @endforelse
+            </div>
+
+            {{-- Total --}}
+            <div class="p-7 mt-4 rounded-lg shadow-md">
+                <p class="mb-3">Grand Total</p>
+                <p class="font-semibold text-end text-yellow-500 text-xl">
+                    Rp. {{ number_format($tambah->total, 0, ',', '.') }}
+                </p>
+            </div>
+        </x-card>
+    @endif
+
+    @if ($this->kurang)
+        <x-header class="mt-3" title="Detail {{ $kurang->invoice }}" separator progress-indicator />
+
+        <x-card>
+            {{-- Informasi kurang --}}
+            <div class="p-7 mt-2 rounded-lg shadow-md">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <p class="mb-3">Invoice</p>
+                        <p class="font-semibold">{{ $kurang->invoice }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">Rincian Transaksi</p>
+                        <p class="font-semibold">{{ $kurang->name ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">Tanggal</p>
+                        <p class="font-semibold">{{ \Carbon\Carbon::parse($kurang->tanggal)->format('d-m-Y H:i') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Informasi Client --}}
+            <div class="p-7 mt-4 rounded-lg shadow-md">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="mb-3">Nama Client</p>
+                        <p class="font-semibold">{{ $kurang->client?->name ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">Alamat Client</p>
+                        <p class="font-semibold">{{ $kurang->client?->alamat ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="mb-3">User</p>
+                        <p class="font-semibold">{{ $kurang->user?->name ?? '-' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Detail Barang --}}
+            <div class="p-7 mt-4 rounded-lg shadow-md">
+                <p class="mb-3 font-semibold">Detail Barang</p>
+                @forelse ($kurang->details as $detail)
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3 rounded-lg p-5 ">
+                        <div>
+                            <p class="mb-1 text-gray-500">Barang</p>
+                            <p class="font-semibold">{{ $detail->barang?->name ?? '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Qty</p>
+                            <p class="font-semibold">{{ $detail->kuantitas }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Harga</p>
+                            <p class="font-semibold">Rp {{ number_format($detail->value, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Total</p>
+                            <p class="font-semibold">Rp
+                                {{ number_format($detail->value * $detail->kuantitas, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="mb-1 text-gray-500">Kategori</p>
+                            <p class="font-semibold">{{ $detail->kategori->name ?? '-' }}</p>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-gray-500 text-sm">Tidak ada detail barang untuk kurang ini.</p>
+                @endforelse
+            </div>
+
+            {{-- Total --}}
+            <div class="p-7 mt-4 rounded-lg shadow-md">
+                <p class="mb-3">Grand Total</p>
+                <p class="font-semibold text-end text-yellow-500 text-xl">
+                    Rp. {{ number_format($kurang->total, 0, ',', '.') }}
+                </p>
+            </div>
+        </x-card>
+    @endif
 
     @if ($this->pecah)
         <x-header class="mt-3" title="Detail {{ $pecah->invoice }}" separator progress-indicator />

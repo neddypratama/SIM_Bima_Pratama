@@ -22,6 +22,10 @@ new class extends Component {
     public string $invoice = '';
     public string $invoice1 = '';
     public string $invoice2 = '';
+    public string $invoice3 = '';
+    public string $invoice4 = '';
+    public string $invoice5 = '';
+    public string $invoice6 = '';
 
     #[Rule('required')]
     public ?int $barang_id = null;
@@ -65,6 +69,10 @@ new class extends Component {
             $this->invoice = 'INV-' . $tanggal . '-STK-' . $str;
             $this->invoice1 = 'INV-' . $tanggal . '-PKI-' . $str;
             $this->invoice2 = 'INV-' . $tanggal . '-TRY1-' . $str;
+            $this->invoice3 = 'INV-' . $tanggal . '-TBH-' . $str;
+            $this->invoice4 = 'INV-' . $tanggal . '-TRY2-' . $str;
+            $this->invoice5 = 'INV-' . $tanggal . '-KRG-' . $str;
+            $this->invoice6 = 'INV-' . $tanggal . '-TRY3-' . $str;
         }
     }
 
@@ -89,7 +97,7 @@ new class extends Component {
         }
     }
 
-    private function tambahStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    private function tambahStokFifoDanHitungHpp(int $barangId, float $qtyKeluar): float
     {
         $totalHpp = 0;
 
@@ -112,7 +120,7 @@ new class extends Component {
         return $totalHpp;
     }
 
-    private function kurangiStokFifoDanHitungHpp(int $barangId, int $qtyKeluar): float
+    private function kurangiStokFifoDanHitungHpp(int $barangId, float $qtyKeluar): float
     {
         $totalHpp = 0;
 
@@ -160,11 +168,89 @@ new class extends Component {
                 'rusak' => $this->pakai,
             ]);
 
-            $totalMasuk = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
-            $totalKeluar = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
-
             $katePakai = Kategori::where('name', 'like', '%Tray Terpakai%')->first();
             $kateTray = Kategori::where('name', 'like', '%Stok Tray%')->first();
+            $kateStok = Kategori::where('name', 'like', '%Penyesuaian Stok')->first();
+
+            if ($this->tambah > 0) {
+                $hppTambah = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
+                $tambah = Transaksi::create([
+                    'invoice' => $this->invoice3,
+                    'name' => 'Tray Tambah ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppTambah,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $tambah->id,
+                    'kategori_id' => $kateStok->id ?? null,
+                    'value' => $hppTambah / $this->tambah,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->tambah,
+                    'sub_total' => $hppTambah,
+                ]);
+
+                // Tray Kadaluarsa - Kredit
+                $telur2 = Transaksi::create([
+                    'invoice' => $this->invoice4,
+                    'name' => 'Tray Tambah ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppTambah,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur2->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppTambah / $this->tambah,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->tambah,
+                    'sub_total' => $hppTambah,
+                ]);
+            }
+
+            if ($this->kurang > 0) {
+                $hppKurang = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
+                $tambah = Transaksi::create([
+                    'invoice' => $this->invoice5,
+                    'name' => 'Tray Kurang ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $hppKurang,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $tambah->id,
+                    'kategori_id' => $kateStok->id ?? null,
+                    'value' => $hppKurang / $this->kurang,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->kurang,
+                    'sub_total' => $hppKurang,
+                ]);
+
+                // Tray Kadaluarsa - Kredit
+                $telur2 = Transaksi::create([
+                    'invoice' => $this->invoice6,
+                    'name' => 'Tray Kurang ' . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $hppKurang,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $telur2->id,
+                    'kategori_id' => $kateTelur->id ?? null,
+                    'value' => $hppKurang / $this->kurang,
+                    'barang_id' => $this->barang_id,
+                    'kuantitas' => $this->kurang,
+                    'sub_total' => $hppKurang,
+                ]);
+            }
 
             // TELUR PROK - Debit
             if ($this->pakai > 0) {

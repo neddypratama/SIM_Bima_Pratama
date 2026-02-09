@@ -465,7 +465,7 @@ class TransaksiSeeder extends Seeder
 
         foreach ($data as $item) {
             $userId = 1; 
-            $tanggal = now()->format('Y-m-d\TH:i:s');
+            $tanggal = '2026-02-01 00:00:00';
             
             // Ambil client berdasarkan ID
             $client = Client::find($item['id']);

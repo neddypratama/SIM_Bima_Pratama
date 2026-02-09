@@ -37,7 +37,7 @@ class DetailTransaksiSeeder extends Seeder
             $type = $item['type'];
             
             $userId = 1; 
-            $tanggal = now()->format('Y-m-d\TH:i:s');
+            $tanggal = '2026-02-01 00:00:00';
             $date = \Carbon\Carbon::parse($tanggal)->format('Ymd');
 
             $prefix = "INV-$date-$kode-";

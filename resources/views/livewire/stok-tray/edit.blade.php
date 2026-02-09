@@ -154,51 +154,96 @@ new class extends Component {
         $tgl = explode('-', $this->stokModel->invoice)[1];
         $kateTelur = Kategori::where('name', 'like', '%Stok Tray%')->first();
 
-        $trx = Transaksi::firstOrCreate(
-            ['invoice' => "INV-$tgl-$kode1-$inv"],
-            [
-                'name' => "$nama " . Barang::find($this->barang_id)->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => 'Debit',
-            ],
-        );
+        if ($qty > 0) {
+            $trx = Transaksi::firstOrCreate(
+                ['invoice' => "INV-$tgl-$kode1-$inv"],
+                [
+                    'name' => "$nama " . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $totalHpp,
+                ],
+            );
 
-        $trx->update(['total' => $totalHpp]);
+            DetailTransaksi::updateOrCreate(
+                ['transaksi_id' => $trx->id],
+                [
+                    'barang_id' => $this->barang_id,
+                    'kategori_id' => Kategori::where('name', 'like', "%$nama%")->first()->id,
+                    'value' => $totalHpp / $qty,
+                    'kuantitas' => $qty,
+                    'sub_total' => $totalHpp,
+                ],
+            );
 
-        DetailTransaksi::updateOrCreate(
-            ['transaksi_id' => $trx->id],
-            [
-                'barang_id' => $this->barang_id,
-                'kategori_id' => Kategori::where('name', 'like', "%$nama%")->first()->id,
-                'value' => $totalHpp / $qty,
-                'kuantitas' => $qty,
-                'sub_total' => $totalHpp,
-            ],
-        );
+            $tlr = Transaksi::firstOrCreate(
+                ['invoice' => "INV-$tgl-$kode2-$inv"],
+                [
+                    'name' => "$nama " . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $totalHpp,
+                ],
+            );
 
-        $tlr = Transaksi::firstOrCreate(
-            ['invoice' => "INV-$tgl-$kode2-$inv"],
-            [
-                'name' => "$nama " . Barang::find($this->barang_id)->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'type' => 'Kredit',
-            ],
-        );
+            DetailTransaksi::updateOrCreate(
+                ['transaksi_id' => $tlr->id],
+                [
+                    'barang_id' => $this->barang_id,
+                    'kategori_id' => $kateTelur->id,
+                    'value' => $totalHpp / $qty,
+                    'kuantitas' => $qty,
+                    'sub_total' => $totalHpp,
+                ],
+            );
+        }
+        if ($qty < 0) {
+            $trx = Transaksi::firstOrCreate(
+                ['invoice' => "INV-$tgl-$kode1-$inv"],
+                [
+                    'name' => "$nama " . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Kredit',
+                    'total' => $totalHpp,
+                ],
+            );
 
-        $tlr->update(['total' => $totalHpp]);
+            DetailTransaksi::updateOrCreate(
+                ['transaksi_id' => $trx->id],
+                [
+                    'barang_id' => $this->barang_id,
+                    'kategori_id' => Kategori::where('name', 'like', "%$nama%")->first()->id,
+                    'value' => $totalHpp / abs($qty),
+                    'kuantitas' => abs($qty),
+                    'sub_total' => $totalHpp,
+                ],
+            );
 
-        DetailTransaksi::updateOrCreate(
-            ['transaksi_id' => $tlr->id],
-            [
-                'barang_id' => $this->barang_id,
-                'kategori_id' => $kateTelur->id,
-                'value' => $totalHpp / $qty,
-                'kuantitas' => $qty,
-                'sub_total' => $totalHpp,
-            ],
-        );
+            $tlr = Transaksi::firstOrCreate(
+                ['invoice' => "INV-$tgl-$kode2-$inv"],
+                [
+                    'name' => "$nama " . Barang::find($this->barang_id)->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $totalHpp,
+                ],
+            );
+
+            DetailTransaksi::updateOrCreate(
+                ['transaksi_id' => $tlr->id],
+                [
+                    'barang_id' => $this->barang_id,
+                    'kategori_id' => $kateTelur->id,
+                    'value' => $totalHpp / abs($qty),
+                    'kuantitas' => abs($qty),
+                    'sub_total' => $totalHpp,
+                ],
+            );
+        }
     }
 
     public function update(): void
@@ -216,8 +261,8 @@ new class extends Component {
             /* =========================
                 1️⃣ ROLLBACK TRANSAKSI LAMA
             ========================== */
+            $this->fifo($stok->barang_id, $stok->tambah, 'out');
             $this->fifo($stok->barang_id, $stok->kurang, 'in');
-            $this->fifo($stok->barang_id, $stok->kotor, 'in');
             $this->fifo($stok->barang_id, $stok->rusak, 'in');
 
             // === 3. Update stok model ===
@@ -233,7 +278,17 @@ new class extends Component {
             /* =========================
                 3️⃣ APPLY TRANSAKSI BARU
             ========================== */
-            $this->fifo($this->barang_id, $this->kurang, 'out');
+            if ($this->tambah > 0) {
+                $hpp = $this->fifo($this->barang_id, $this->tambah, 'in', true);
+
+                $trx = $this->syncTransaksi('TBH', 'TRY2', 'Penyesuaian Stok', $hpp, $this->tambah);
+            }
+
+            if ($this->kurang > 0) {
+                $hpp = $this->fifo($this->barang_id, $this->kurang, 'out', true);
+
+                $trx = $this->syncTransaksi('KRG', 'TRY3', 'Penyesuaian Stok', $hpp, $this->kurang * -1);
+            }
 
             /* =========================
             TELUR BENTES
@@ -262,7 +317,8 @@ new class extends Component {
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1" />
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div class="col-span-2">
