@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Client;
+use App\Models\Transaksi;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +27,8 @@ new class extends Component {
     public ?string $tipeClient = null; // <- value yang dipilih
 
     public int $filter = 0;
+
+    public float $curah = 0;
 
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
@@ -198,10 +201,22 @@ new class extends Component {
             if (!$this->tipePeternak == null) {
                 $this->filter += 1;
             }
+
+            $this->curah = Transaksi::with('details.kategori', 'details.barang')
+                ->whereHas('details.kategori.detailKategori', function ($q) {
+                    // Mencari type di tabel detail_kategoris
+                    $q->where('type', 'Pendapatan');
+                })
+                ->whereHas('details.kategori', function ($q) {
+                    // Mencari name di tabel kategoris
+                    $q->where('name', 'Penjualan Pakan Curah');
+                })
+                ->sum('total');
         }
 
         return [
             'clients' => $this->clients(),
+            'curah' => $this->curah,
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -255,21 +270,23 @@ new class extends Component {
             @scope('cell_bon', $client)
                 <span class="font-bold text-blue-600">
                     Rp
-                    {{ number_format(
-                        $piutang = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0),
-                        0,
-                        ',',
-                        '.',
-                    ) }}
+                    {{ number_format($piutang = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0), 0, ',', '.') }}
                 </span>
             @endscope
 
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
-                <span class="font-bold text-green-600">
-                    Rp
-                    {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0), 0, ',', '.') }}
-                </span>
+                @if ($client->name == 'Bp.Supriyadi')
+                    <span class="font-bold text-green-600">
+                        Rp
+                        {{ number_format($hutang = (($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0)) + ($this->curah ?? 0), 0, ',', '.') }}
+                    </span>
+                @else
+                    <span class="font-bold text-green-600">
+                        Rp
+                        {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0), 0, ',', '.') }}
+                    </span>
+                @endif
             @endscope
 
             {{-- Tombol Aksi --}}

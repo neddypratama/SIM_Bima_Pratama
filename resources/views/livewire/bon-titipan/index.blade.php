@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Client;
+use App\Models\Transaksi;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +29,7 @@ new class extends Component {
     public int $filter = 0;
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
     public int $perPage = 25;
+    public float $curah = 0;
 
     public function clear(): void
     {
@@ -125,10 +127,21 @@ new class extends Component {
             $count++;
         }
         $this->filter = $count;
+        $this->curah = Transaksi::with('details.kategori', 'details.barang')
+            ->whereHas('details.kategori.detailKategori', function ($q) {
+                // Mencari type di tabel detail_kategoris
+                $q->where('type', 'Pendapatan');
+            })
+            ->whereHas('details.kategori', function ($q) {
+                // Mencari name di tabel kategoris
+                $q->where('name', 'Penjualan Pakan Curah');
+            })
+            ->sum('total');
 
         return [
             'clients' => $this->clients(),
             'headers' => $this->headers(),
+            'curah' => $this->curah,
         ];
     }
 
@@ -175,17 +188,29 @@ new class extends Component {
 
             {{-- Kolom Titipan --}}
             @scope('cell_titipan', $client)
-                <span class="font-bold text-green-600">
-                    Rp
-                    {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0), 0, ',', '.') }}
-                </span>
+                @if ($client->name == 'Bp.Supriyadi')
+                    <span class="font-bold text-green-600">
+                        Rp
+                        {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0) + ($this->curah ?? 0), 0, ',', '.') }}
+                    </span>
+                @else
+                    <span class="font-bold text-green-600">
+                        Rp
+                        {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0), 0, ',', '.') }}
+                    </span>
+                @endif
             @endscope
 
             {{-- Kolom Sisa (Bon - Titipan) --}}
             @scope('cell_sisa', $client)
                 @php
                     $bon = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0);
-                    $titipan = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0);
+                    if ($client->name == 'Bp.Supriyadi') {
+                        $titipan = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0) + ($this->curah ?? 0);
+                    } else {
+                        $titipan = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0);
+                    }
+                    
                     $sisa = $bon - $titipan;
                     $warna = $sisa > 0 ? 'text-green-600' : ($sisa < 0 ? 'text-yellow-600' : 'text-gray-600');
                 @endphp
