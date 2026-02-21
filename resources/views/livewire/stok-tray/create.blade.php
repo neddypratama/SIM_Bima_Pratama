@@ -204,7 +204,7 @@ new class extends Component {
 
                 DetailTransaksi::create([
                     'transaksi_id' => $telur2->id,
-                    'kategori_id' => $kateTelur->id ?? null,
+                    'kategori_id' => $kateTray->id ?? null,
                     'value' => $hppTambah / $this->tambah,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->tambah,
@@ -244,7 +244,7 @@ new class extends Component {
 
                 DetailTransaksi::create([
                     'transaksi_id' => $telur2->id,
-                    'kategori_id' => $kateTelur->id ?? null,
+                    'kategori_id' => $kateTray->id ?? null,
                     'value' => $hppKurang / $this->kurang,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->kurang,
