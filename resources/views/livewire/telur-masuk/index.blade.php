@@ -93,7 +93,7 @@ new class extends Component {
     {
         $this->selectedId = $id;
         $transaksi = Transaksi::findOrFail($this->selectedId);
-        
+
         DB::transaction(function () {
             $transaksi = Transaksi::findOrFail($this->selectedId);
             $detailTransaksi = $transaksi->details()->get();
@@ -270,7 +270,7 @@ new class extends Component {
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
                     @if (Auth::user()->role_id == 1 ||
-                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) &&
+                            (Carbon::parse($transaksi->created_at)->isSameDay($this->today) &&
                                 $transaksi->user_id == Auth::user()->id &&
                                 $transaksi->status == 'Perbaikan'))
                         <x-button icon="o-pencil"
