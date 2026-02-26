@@ -107,7 +107,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:8')->group(function () {
         Volt::route('/kotor', 'kotor.index');
-        Volt::route('/fix8,1', 'kotor.fix8,1');
+        Volt::route('/fix1', 'kotor.fix1');
         Volt::route('/fix2', 'kotor.fix2');
     });
 
