@@ -43,6 +43,12 @@ new class extends Component {
 
     public int $perPage = 25; // Default jumlah data per halaman
 
+    public $today;
+    public function mount(): void
+    {
+        $this->today = \Carbon\Carbon::today();
+    }
+
     public function clear(): void
     {
         $this->reset(['search', 'client_id', 'kategori_id', 'filter', 'startDate', 'endDate']);
