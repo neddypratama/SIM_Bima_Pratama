@@ -184,8 +184,10 @@ new class extends Component {
                     'tanggal' => $this->tanggal,
                 ]);
 
-                foreach ($this->details as $d) {
-                    $stok = StokBatch::where('detail_transaksi_id', $d['id'])->first();
+                $detail = $this->transaksi->details()->get();
+
+                foreach ($detail as $d) {
+                    $stok = StokBatch::where('detail_transaksi_id', $d->id)->first();
                     if ($stok) {
                         $stok->update([
                             'user_id' => $this->user_id,
@@ -227,7 +229,8 @@ new class extends Component {
                     ]);
                 }
 
-                foreach ($this->details as $d) {
+                $detailHutang = $hutang->details()->get();
+                foreach ($detailHutang as $d) {
                     $d->update([
                         'kategori_id' => $kateHutang->id,
                     ]);
@@ -296,7 +299,7 @@ new class extends Component {
                                 <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
                                     prefix="Rp " money="IDR" readonly />
                                 <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
-                                    type="number" min="0.01" step="0.01" />
+                                    type="number" min="0.01" step="0.01" readonly/>
                                 <x-input label="Total" :value="number_format(
                                     ($item['value'] ?? 0) * ($item['kuantitas'] ?? 0),
                                     0,

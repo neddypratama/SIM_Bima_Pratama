@@ -34,7 +34,6 @@ new class extends Component {
     #[Rule('required')]
     public ?int $client_id = null;
 
-    #[Rule('required')]
     public ?int $kategori_id = null;
 
     public ?string $tanggal = null;
@@ -199,11 +198,20 @@ new class extends Component {
                     'total' => $this->total,
                 ]);
 
-                $detail = $this->transaksi->details()->get();
-                foreach ($detail as $d) {
+                $detailModels = $this->transaksi->details()->get();
+
+                foreach ($detailModels as $index => $d) {
+                    if (!isset($this->details[$index])) {
+                        continue;
+                    }
+
+                    $value = $this->details[$index]['value'] ?? $d->value;
+                    $qty = $this->details[$index]['kuantitas'] ?? $d->kuantitas;
+
                     $d->update([
-                        'value' => $this->details[$d->id]['value'] ?? $d->value,
-                        'sub_total' => ($this->details[$d->id]['value'] ?? $d->value) * ($this->details[$d->id]['kuantitas'] ?? $d->kuantitas),
+                        'value' => $value,
+                        'kuantitas' => $qty,
+                        'sub_total' => $value * $qty,
                     ]);
                 }
 
@@ -214,43 +222,44 @@ new class extends Component {
                 $bon = Transaksi::where('invoice', 'like', "%$tanggal-BON-$str")->first();
                 $aset = Transaksi::where('invoice', 'like', "%$tanggal-OBT-$str")->first();
                 $hpp = Transaksi::where('invoice', 'like', "%$tanggal-HPP-$str")->first();
+                // dd($bon, $aset, $hpp);
+                $bon->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                    'total' => $this->total,
+                ]);
 
-                if ($bon) {
-                    $bon->update([
-                        'name' => $this->name,
-                        'user_id' => $this->user_id,
-                        'client_id' => $this->client_id,
-                        'tanggal' => $this->tanggal,
-                        'total' => $this->total,
-                    ]);
-
-                    $detailBon = $bon->details()->get();
-                    foreach ($detailBon as $d) {
-                        $d->update([
-                            'value' => $this->details[$d->id]['value'] ?? $d->value,
-                            'sub_total' => ($this->details[$d->id]['value'] ?? $d->value) * ($this->details[$d->id]['kuantitas'] ?? $d->kuantitas),
-                        ]);
+                $detailBon = $bon->details()->get();
+                foreach ($detailBon as $d) {
+                    if (!isset($this->details[$index])) {
+                        continue;
                     }
-                }
 
-                if ($aset) {
-                    $aset->update([
-                        'name' => $this->name,
-                        'user_id' => $this->user_id,
-                        'client_id' => $this->client_id,
-                        'tanggal' => $this->tanggal,
+                    $value = $this->details[$index]['value'] ?? $d->value;
+                    $qty = $this->details[$index]['kuantitas'] ?? $d->kuantitas;
+
+                    $d->update([
+                        'value' => $value,
+                        'kuantitas' => $qty,
+                        'sub_total' => $value * $qty,
                     ]);
                 }
 
-                if ($hpp) {
-                    $hpp->update([
-                        'name' => $this->name,
-                        'user_id' => $this->user_id,
-                        'client_id' => $this->client_id,
-                        'tanggal' => $this->tanggal,
-                        'total' => $this->total,
-                    ]);
-                }
+                $aset->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                $hpp->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                ]);
             });
         } elseif ($this->transaksi->status == 'Perbaikan') {
             DB::transaction(function () {
@@ -310,7 +319,17 @@ new class extends Component {
 
 <div class="p-4 space-y-6">
     <x-header title="Edit Transaksi" separator progress-indicator />
-
+    @if ($errors->any())
+        <div class="mb-4">
+            <x-alert icon="o-exclamation-triangle" class="alert-error">
+                <ul class="list-disc list-inside text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </x-alert>
+        </div>
+    @endif
     <x-form wire:submit="save">
         <!-- SECTION: Basic Info -->
         <x-card>
@@ -361,12 +380,12 @@ new class extends Component {
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                                 <x-choices-offline wire:model.live="details.{{ $index }}.barang_id"
                                     label="Barang" :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single
-                                    clearable disabled/>
+                                    clearable disabled />
                                 <x-input label="Harga Jual" wire:model.live="details.{{ $index }}.value"
                                     prefix="Rp " money="IDR" />
                                 <x-input label="Qty (max {{ $item['max_qty'] ?? '-' }})"
                                     wire:model.lazy="details.{{ $index }}.kuantitas" type="number"
-                                    min="0.01" step="0.01" :max="$item['max_qty'] ?? null" readonly/>
+                                    min="0.01" step="0.01" :max="$item['max_qty'] ?? null" readonly />
                                 <x-input label="Total" :value="number_format(
                                     ($item['value'] ?? 0) * ($item['kuantitas'] ?? 0),
                                     0,
@@ -395,13 +414,13 @@ new class extends Component {
                             </div>
                             <div class="flex justify-end">
                                 <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
-                                    class="btn-error btn-sm" label="Hapus Item" disabled/>
+                                    class="btn-error btn-sm" label="Hapus Item" disabled />
                             </div>
                         @endforeach
 
                         <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
                             <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
-                                class="btn-primary" disabled/>
+                                class="btn-primary" disabled />
                             <x-input label="Total Pembayaran" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
                         </div>
                     @else

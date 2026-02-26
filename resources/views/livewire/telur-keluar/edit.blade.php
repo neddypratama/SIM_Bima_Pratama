@@ -237,11 +237,20 @@ new class extends Component {
                     'total' => $this->total,
                 ]);
 
-                $detail = $this->transaksi->details()->get();
-                foreach ($detail as $d) {
+                $detailModels = $this->transaksi->details()->get();
+
+                foreach ($detailModels as $index => $d) {
+                    if (!isset($this->details[$index])) {
+                        continue;
+                    }
+
+                    $value = $this->details[$index]['value'] ?? $d->value;
+                    $qty = $this->details[$index]['kuantitas'] ?? $d->kuantitas;
+
                     $d->update([
-                        'value' => $this->details[$d->id]['value'] ?? $d->value,
-                        'sub_total' => ($this->details[$d->id]['value'] ?? $d->value) * ($this->details[$d->id]['kuantitas'] ?? $d->kuantitas),
+                        'value' => $value,
+                        'kuantitas' => $qty,
+                        'sub_total' => $value * $qty,
                     ]);
                 }
 
@@ -252,43 +261,44 @@ new class extends Component {
                 $bon = Transaksi::where('invoice', 'like', "%$tanggal-BON-$str")->first();
                 $aset = Transaksi::where('invoice', 'like', "%$tanggal-TLR-$str")->first();
                 $hpp = Transaksi::where('invoice', 'like', "%$tanggal-HPP-$str")->first();
+                // dd($bon, $aset, $hpp);
+                $bon->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                    'total' => $this->total,
+                ]);
 
-                if ($bon) {
-                    $bon->update([
-                        'name' => $this->name,
-                        'user_id' => $this->user_id,
-                        'client_id' => $this->client_id,
-                        'tanggal' => $this->tanggal,
-                        'total' => $this->total,
-                    ]);
-
-                    $detailBon = $bon->details()->get();
-                    foreach ($detailBon as $d) {
-                        $d->update([
-                            'value' => $this->details[$d->id]['value'] ?? $d->value,
-                            'sub_total' => ($this->details[$d->id]['value'] ?? $d->value) * ($this->details[$d->id]['kuantitas'] ?? $d->kuantitas),
-                        ]);
+                $detailBon = $bon->details()->get();
+                foreach ($detailBon as $d) {
+                    if (!isset($this->details[$index])) {
+                        continue;
                     }
-                }
 
-                if ($aset) {
-                    $aset->update([
-                        'name' => $this->name,
-                        'user_id' => $this->user_id,
-                        'client_id' => $this->client_id,
-                        'tanggal' => $this->tanggal,
+                    $value = $this->details[$index]['value'] ?? $d->value;
+                    $qty = $this->details[$index]['kuantitas'] ?? $d->kuantitas;
+
+                    $d->update([
+                        'value' => $value,
+                        'kuantitas' => $qty,
+                        'sub_total' => $value * $qty,
                     ]);
                 }
 
-                if ($hpp) {
-                    $hpp->update([
-                        'name' => $this->name,
-                        'user_id' => $this->user_id,
-                        'client_id' => $this->client_id,
-                        'tanggal' => $this->tanggal,
-                        'total' => $this->total,
-                    ]);
-                }
+                $aset->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                $hpp->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                ]);
             });
         } elseif ($this->transaksi->status == 'Perbaikan') {
             DB::transaction(function () {
