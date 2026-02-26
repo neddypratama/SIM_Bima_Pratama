@@ -137,46 +137,13 @@ new class extends Component {
                 'client_id' => $this->client_id,
                 'type' => 'Debit',
                 'total' => $this->total,
-            ]);
-
-            foreach ($this->details as $item) {
-                $detail = DetailTransaksi::create([
-                    'transaksi_id' => $stok->id,
-                    'kategori_id' => $this->kategori_id,
-                    'value' => $item['value'],
-                    'barang_id' => $item['barang_id'] ?? null,
-                    'kuantitas' => $item['kuantitas'] ?? null,
-                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
-                ]);
-
-                // 🔥 INI KUNCI FIFO
-                StokBatch::create([
-                    'barang_id' => $item['barang_id'] ?? null,
-                    'user_id' => $this->user_id,
-                    'detail_transaksi_id' => $detail->id,
-                    'tanggal' => $this->tanggal,
-                    'qty_masuk' => $item['kuantitas'],
-                    'qty_sisa' => $item['kuantitas'],
-                    'harga' => $item['value'], // HPP batch
-                ]);
-            }
-
-            $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
-
-            $hutang = Transaksi::create([
-                'invoice' => $this->invoice1,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => 'Kredit',
-                'total' => $this->total,
+                'status' => 'Perbaikan',
             ]);
 
             foreach ($this->details as $item) {
                 DetailTransaksi::create([
-                    'transaksi_id' => $hutang->id,
-                    'kategori_id' => $kateHutang->id,
+                    'transaksi_id' => $stok->id,
+                    'kategori_id' => $this->kategori_id,
                     'value' => $item['value'],
                     'barang_id' => $item['barang_id'] ?? null,
                     'kuantitas' => $item['kuantitas'] ?? null,

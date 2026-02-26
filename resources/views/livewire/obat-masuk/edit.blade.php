@@ -141,6 +141,7 @@ new class extends Component {
 
     public function save(): void
     {
+        $this->validate();
         $this->validate([
             'details.*.barang_id' => 'required|exists:barangs,id',
             'details.*.value' => 'required|numeric|min:0',
@@ -148,21 +149,6 @@ new class extends Component {
         ]);
 
         \DB::transaction(function () {
-            // 1️⃣ Rollback stok lama (hitung ulang stok & HPP tanpa transaksi ini)
-            foreach ($this->transaksi->details as $oldDetail) {
-                // rollback stok batch
-                $batch = StokBatch::where('detail_transaksi_id', $oldDetail->id)->first();
-
-                if ($batch) {
-                    // kembalikan sisa ke nol (karena batch akan dihapus)
-                    $batch->delete();
-                }
-            }
-
-            /* ===============================
-                2. UPDATE TRANSAKSI HEADER
-            =============================== */
-            // 2️⃣ Update transaksi utama
             $this->transaksi->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
@@ -172,59 +158,15 @@ new class extends Component {
                 'type' => 'Debit',
             ]);
 
-            // 3️⃣ Hapus detail lama
             $this->transaksi->details()->delete();
-
-            /* ===============================
-                3. SIMPAN DETAIL + BATCH BARU
-            =============================== */
             foreach ($this->details as $item) {
-                // simpan detail transaksi
-                $detail = DetailTransaksi::create([
+                DetailTransaksi::create([
                     'transaksi_id' => $this->transaksi->id,
                     'kategori_id' => $this->kategori_id,
                     'barang_id' => $item['barang_id'],
                     'value' => $item['value'],
                     'kuantitas' => $item['kuantitas'],
-                    'sub_total' => $item['value'] * $item['kuantitas'],
-                ]);
-
-                // buat stok batch FIFO
-                StokBatch::create([
-                    'barang_id' => $item['barang_id'],
-                    'user_id' => $this->user_id,
-                    'detail_transaksi_id' => $detail->id,
-                    'qty_masuk' => $item['kuantitas'],
-                    'qty_sisa' => $item['kuantitas'],
-                    'harga' => $item['value'],
-                    'tanggal' => $this->tanggal,
-                ]);
-            }
-
-            $suffix = substr($this->transaksi->invoice, -4);
-            $part = explode('-', $this->transaksi->invoice);
-            $tanggal = $part[1];
-
-            $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
-            $kateHutang = Kategori::where('name', 'like', 'Hutang Peternak')->first();
-
-            $hutang->update([
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'client_id' => $this->client_id,
-                'tanggal' => $this->tanggal,
-                'total' => $this->total,
-                'type' => 'Kredit',
-            ]);
-            $hutang->details()->delete();
-            foreach ($this->details as $item) {
-                DetailTransaksi::create([
-                    'transaksi_id' => $hutang->id,
-                    'kategori_id' => $kateHutang->id,
-                    'barang_id' => $item['barang_id'],
-                    'value' => $item['value'],
-                    'kuantitas' => $item['kuantitas'],
-                    'sub_total' => $item['value'] * $item['kuantitas'],
+                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
                 ]);
             }
         });
@@ -248,7 +190,8 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" />

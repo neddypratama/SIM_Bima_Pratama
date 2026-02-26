@@ -18,7 +18,6 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
-    public string $invoice1 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -105,7 +104,6 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-STR-' . $str;
-            $this->invoice1 = 'INV-' . $tanggal . '-UTG-' . $str;
         }
     }
 
@@ -142,64 +140,14 @@ new class extends Component {
                 'client_id' => $this->client_id,
                 'type' => 'Debit',
                 'total' => $this->total,
-            ]);
-
-            foreach ($this->details as $item) {
-                $detail = DetailTransaksi::create([
-                    'transaksi_id' => $stok->id,
-                    'kategori_id' => $this->kategori_id,
-                    'value' => $item['value'], // harga satuan
-                    'barang_id' => $item['barang_id'] ?? null,
-                    'kuantitas' => $item['kuantitas'] ?? null,
-                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
-                ]);
-
-                // 🔥 INI KUNCI FIFO
-                StokBatch::create([
-                    'barang_id' => $item['barang_id'] ?? null,
-                    'user_id' => $this->user_id,
-                    'detail_transaksi_id' => $detail->id,
-                    'tanggal' => $this->tanggal,
-                    'qty_masuk' => $item['kuantitas'],
-                    'qty_sisa' => $item['kuantitas'],
-                    'harga' => $item['value'], // HPP batch
-                ]);
-            }
-
-            $client = Client::find($this->client_id);
-
-            // Normalisasi nama
-            $clientName = trim(str_replace(['  '], [' '], $client->name));
-
-            // Tentukan kategori hutang berdasarkan nama client
-            if (stripos($clientName, 'SK') !== false) {
-                $kategoriName = 'Hutang Sentrat Sk';
-            } elseif (stripos($clientName, 'Ponggok') !== false) {
-                $kategoriName = 'Hutang Sentrat Ponggok';
-            } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
-                $kategoriName = 'Saldo Bp.Supriyadi';
-            } else {
-                $kategoriName = 'Hutang Sentrat Random';
-            }
-
-            // Ambil kategori dari database
-            $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
-
-            $hutang = Transaksi::create([
-                'invoice' => $this->invoice1,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => 'Kredit',
-                'total' => $this->total,
+                'status' => 'Perbaikan',
             ]);
 
             foreach ($this->details as $item) {
                 DetailTransaksi::create([
-                    'transaksi_id' => $hutang->id,
-                    'kategori_id' => $kateHutang->id,
-                    'value' => $item['value'],
+                    'transaksi_id' => $stok->id,
+                    'kategori_id' => $this->kategori_id,
+                    'value' => $item['value'], // harga satuan
                     'barang_id' => $item['barang_id'] ?? null,
                     'kuantitas' => $item['kuantitas'] ?? null,
                     'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),

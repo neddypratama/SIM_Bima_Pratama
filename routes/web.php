@@ -38,10 +38,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Admin (Role 1)
+    | Admin (Role 8,1)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1')->group(function () {
+    Route::middleware('role:8,1')->group(function () {
         Volt::route('/roles', 'roles.index');
 
         Volt::route('/users', 'users.index');
@@ -51,10 +51,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Admin & Kasir (Role 1,2)
+    | Admin & Kasir (Role 8,1,2)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,2')->group(function () {
+    Route::middleware('role:8,1,2')->group(function () {
         Volt::route('/barangs', 'barangs.index');
         Volt::route('/barangs/create', 'barangs.create');
         Volt::route('/barangs/{barang}/edit', 'barangs.edit');
@@ -101,12 +101,18 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Truk & Kotor (Role 1,2,7)
+    | Truk & Kotor (Role 8,1,2,7)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,2,7')->group(function () {
-        Volt::route('/kotor', 'kotor.index');
 
+    Route::middleware('role:8')->group(function () {
+        Volt::route('/kotor', 'kotor.index');
+        Volt::route('/fix8,1', 'kotor.fix8,1');
+        Volt::route('/fix2', 'kotor.fix2');
+    });
+
+    
+    Route::middleware('role:8,1,2,7')->group(function () {
         Volt::route('/deby', 'deby.index');
         Volt::route('/deby/create', 'deby.create');
         Volt::route('/deby/{transaksi}/edit', 'deby.edit');
@@ -115,10 +121,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Pembelian Telur (Role 1,3)
+    | Pembelian Telur (Role 8,1,3)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,3')->group(function () {
+    Route::middleware('role:8,1,3')->group(function () {
         Volt::route('/telur-masuk', 'telur-masuk.index');
         Volt::route('/telur-masuk/create', 'telur-masuk.create');
         Volt::route('/telur-masuk/{transaksi}/edit', 'telur-masuk.edit');
@@ -127,20 +133,20 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Laporan Telur & Tray (Role 1,3,6,7)
+    | Laporan Telur & Tray (Role 8,1,3,6,7)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,3,6,7')->group(function () {
+    Route::middleware('role:8,1,3,6,7')->group(function () {
         Volt::route('/laporan-telur', 'telur.index');
         Volt::route('/laporan-tray', 'tray.index');
     });
 
     /*
     |--------------------------------------------------------------------------
-    | Pakan & Obat (Role 1,4)
+    | Pakan & Obat (Role 8,1,4)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,4')->group(function () {
+    Route::middleware('role:8,1,4')->group(function () {
         // Pakan
         Volt::route('/laporan-pakan', 'pakan.index');
         Volt::route('/sentrat-keluar', 'sentrat-keluar.index');
@@ -158,10 +164,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Kas Tunai (Role 1,5)
+    | Kas Tunai (Role 8,1,5)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,5')->group(function () {
+    Route::middleware('role:8,1,5')->group(function () {
         Volt::route('/tunai', 'tunai.index');
         Volt::route('/tunai/create', 'tunai.create');
         Volt::route('/tunai/{transaksi}/edit', 'tunai.edit');
@@ -170,10 +176,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Kas Umum, Bon, Piutang, Hutang (Role 1,5,6,7)
+    | Kas Umum, Bon, Piutang, Hutang (Role 8,1,5,6,7)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,5,6,7')->group(function () {
+    Route::middleware('role:8,1,5,6,7')->group(function () {
         Volt::route('/kas', 'kas.index');
         Volt::route('/bon-titipan', 'bon-titipan.index');
 
@@ -192,10 +198,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Kas Bank & Penjualan Telur/Tray (Role 1,6)
+    | Kas Bank & Penjualan Telur/Tray (Role 8,1,6)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,6')->group(function () {
+    Route::middleware('role:8,1,6')->group(function () {
         // Kas Bank (Transfer)
         Volt::route('/transfer', 'transfer.index');
         Volt::route('/transfer/create', 'transfer.create');
@@ -222,10 +228,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Pakan & Obat Masuk (Role 1,4,6)
+    | Pakan & Obat Masuk (Role 8,1,4,6)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,4,6')->group(function () {
+    Route::middleware('role:8,1,4,6')->group(function () {
         // Sentrat
         Volt::route('/sentrat-masuk', 'sentrat-masuk.index');
         Volt::route('/sentrat-masuk/create', 'sentrat-masuk.create');
@@ -241,10 +247,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Pendapatan Lain & Beban (Role 1,5,6)
+    | Pendapatan Lain & Beban (Role 8,1,5,6)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,5,6')->group(function () {
+    Route::middleware('role:8,1,5,6')->group(function () {
         Volt::route('/lainnya', 'lainnya.index');
         Volt::route('/lainnya/create', 'lainnya.create');
         Volt::route('/lainnya/{transaksi}/edit', 'lainnya.edit');
@@ -258,10 +264,10 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Laporan Akhir (Role 1,2,7)
+    | Laporan Akhir (Role 8,1,2,7)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:1,7')->group(function () {
+    Route::middleware('role:8,1,7')->group(function () {
         Volt::route('/laporan-labarugi', 'laporan.labarugi');
         Volt::route('/laporan-neraca-saldo', 'laporan.neraca-saldo');
         Volt::route('/laporan-aset', 'laporan.aset');

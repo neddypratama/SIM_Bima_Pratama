@@ -18,9 +18,6 @@ new class extends Component {
 
     #[Rule('required|unique:transaksis,invoice')]
     public string $invoice = '';
-    public string $invoice1 = '';
-    public string $invoice2 = '';
-    public string $invoice3 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -93,13 +90,10 @@ new class extends Component {
             $tanggal = \Carbon\Carbon::parse($value)->format('Ymd');
             $str = Str::upper(Str::random(4));
             $this->invoice = 'INV-' . $tanggal . '-DPT-' . $str;
-            $this->invoice1 = 'INV-' . $tanggal . '-BON-' . $str;
-            $this->invoice2 = 'INV-' . $tanggal . '-TRY-' . $str;
-            $this->invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
         }
     }
 
-    private function hitungHppFifo(int $barangId, int $qty): float
+    private function hitungHppFifo(int $barangId, float $qty): float
     {
         $sisa = $qty;
         $totalHpp = 0;
@@ -170,25 +164,6 @@ new class extends Component {
         });
     }
 
-    private function fifoOut(int $barangId, float $qty): void
-    {
-        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->lockForUpdate()->get();
-
-        foreach ($batches as $batch) {
-            if ($qty <= 0) {
-                break;
-            }
-
-            $ambil = min($batch->qty_sisa, $qty);
-            $batch->decrement('qty_sisa', $ambil);
-            $qty -= $ambil;
-        }
-
-        if ($qty > 0) {
-            throw new \Exception('Stok tidak mencukupi (FIFO OUT gagal)');
-        }
-    }
-
     public function save(): void
     {
         $this->validate();
@@ -207,34 +182,6 @@ new class extends Component {
             }
         }
         DB::transaction(function () {
-            $kategoriTelur = Kategori::where('name', 'Stok Tray')->first();
-            $kategoriHpp = Kategori::where('name', 'HPP')->first();
-            $kategoriBon = Kategori::where('name', 'like', 'Piutang Peternak')->first();
-
-            $totalTransaksi = 0;
-            $detailData = [];
-
-            $bon = Transaksi::create([
-                'invoice' => $this->invoice1,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => 'Debit',
-                'total' => $this->total,
-            ]);
-
-            foreach ($this->details as $item) {
-                DetailTransaksi::create([
-                    'transaksi_id' => $bon->id,
-                    'kategori_id' => $kategoriBon->id,
-                    'value' => $item['value'], // harga satuan
-                    'barang_id' => $item['barang_id'] ?? null,
-                    'kuantitas' => $item['kuantitas'] ?? null,
-                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga (harga satuan * qty
-                ]);
-            }
-
             $transaksi = Transaksi::create([
                 'invoice' => $this->invoice,
                 'name' => $this->name,
@@ -243,6 +190,7 @@ new class extends Component {
                 'client_id' => $this->client_id,
                 'type' => 'Kredit',
                 'total' => $this->total,
+                'status' => 'Perbaikan',
             ]);
 
             foreach ($this->details as $item) {
@@ -254,56 +202,6 @@ new class extends Component {
                     'kuantitas' => $item['kuantitas'] ?? null,
                     'sub_total' => $item['value'] * ($item['kuantitas'] ?? 1), // total harga
                 ]);
-                $hpp = $this->fifoOut($item['barang_id'], $item['kuantitas']);
-            }
-
-            foreach ($this->details as $item) {
-                $detailQuery = DetailTransaksi::where('barang_id', $item['barang_id'])->whereHas('transaksi', function ($q) {
-                    $q->whereHas('details.kategori', fn($q2) => $q2->where('name', 'Stok Tray'))->where('type', 'Debit');
-                });
-
-                $totalHarga = $detailQuery->sum(\DB::raw('value * kuantitas'));
-                $totalQty = $detailQuery->sum('kuantitas');
-                $hargaSatuan = $totalQty > 0 ? $totalHarga / $totalQty : $item['value'];
-
-                $totalTransaksi += ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1);
-
-                $detailData[] = [
-                    'barang_id' => $item['barang_id'],
-                    'kuantitas' => $item['kuantitas'] ?? 1,
-                    'value' => $item['hpp'] ?? $hargaSatuan,
-                    'sub_total' => ($item['hpp'] ?? $hargaSatuan) * ($item['kuantitas'] ?? 1),
-                ];
-            }
-
-            if ($kategoriHpp) {
-                $hpp = Transaksi::create([
-                    'invoice' => $this->invoice3,
-                    'name' => $this->name,
-                    'user_id' => $this->user_id,
-                    'tanggal' => $this->tanggal,
-                    'client_id' => $this->client_id,
-                    'type' => 'Debit',
-                    'total' => $totalTransaksi,
-                ]);
-
-                foreach ($detailData as $d) {
-                    DetailTransaksi::create(array_merge($d, ['transaksi_id' => $hpp->id, 'kategori_id' => $kategoriHpp->id]));
-                }
-            }
-
-            $stok = Transaksi::create([
-                'invoice' => $this->invoice2,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => 'Kredit',
-                'total' => $totalTransaksi,
-            ]);
-
-            foreach ($detailData as $d) {
-                DetailTransaksi::create(array_merge($d, ['transaksi_id' => $stok->id, 'kategori_id' => $kategoriTelur->id]));
             }
         });
 

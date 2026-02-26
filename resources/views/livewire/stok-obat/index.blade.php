@@ -4,6 +4,8 @@ use App\Models\Stok;
 use App\Models\StokBatch;
 use App\Models\Barang;
 use App\Models\Transaksi;
+use App\Models\Kategori;
+use App\Models\DetailTransaksi;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -167,6 +169,169 @@ new class extends Component {
         $this->warning('Stok berhasil dihapus & stok dikembalikan', position: 'toast-top');
     }
 
+    private function ambilHppFIFO(int $barangId, float $qty): float
+    {
+        $total = 0;
+
+        // =========================
+        // STOK KELUAR (qty > 0)
+        // FIFO + KURANGI BATCH
+        // =========================
+        if ($qty > 0) {
+            $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderByDesc('tanggal')->lockForUpdate()->first();
+
+            $total = $batches->harga * $qty;
+        }
+
+        if ($qty < 0) {
+            $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->lockForUpdate()->get();
+
+            foreach ($batches as $batch) {
+                if ($qty <= 0) {
+                    break;
+                }
+
+                $ambil = min($batch->qty_sisa, $qty);
+
+                $total += $ambil * $batch->harga;
+
+                // kurangi stok batch
+                $batch->qty_sisa -= $ambil;
+                $batch->save();
+
+                $qty -= $ambil;
+            }
+
+            if ($qty > 0) {
+                throw new \Exception("Stok kurang | barang_id {$barangId} | sisa {$qty}");
+            }
+        }
+
+        return $total;
+    }
+
+    public function generatePenyesuaian(): void
+    {
+        DB::transaction(function () {
+            $kateObat = Kategori::where('name', 'like', '%Stok Obat-Obatan%')->first();
+            $kateStok = Kategori::where('name', 'like', '%Penyesuaian Stok')->first();
+
+            $stoks = Stok::whereHas('barang.jenis', function ($q) {
+                $q->where('name', 'like', 'Obat-Obatan');
+            })
+                ->where(function ($q) {
+                    $q->where('tambah', '>', 0)->orWhere('kurang', '>', 0);
+                })
+                ->lockForUpdate()
+                ->orderBy('tanggal')
+                ->get();
+
+            if ($stoks->isEmpty()) {
+                $this->warning('Tidak ada stok yang perlu disesuaikan');
+                return;
+            }
+
+            foreach ($stoks as $stok) {
+                $tanggal = $stok->tanggal;
+                $userId = $stok->user_id;
+                $barang = Barang::find($stok->barang_id);
+                $kode = Str::upper(Str::random(5));
+
+                /* =========================
+             ➕ STOK BERTAMBAH
+            ========================== */
+                if ($stok->tambah > 0) {
+                    $hppTambah = $this->ambilHppFIFO($stok->barang_id, $stok->tambah);
+                    // dd($stok->tambah, $stok->kurang, $hppTambah);
+                    // DEBIT Persediaan
+                    $debit = Transaksi::create([
+                        'invoice' => "INV-{$tanggal}-TBH-{$kode}",
+                        'name' => "Stok Obat Masuk {$barang->name}",
+                        'user_id' => $userId,
+                        'tanggal' => $tanggal,
+                        'type' => 'Debit',
+                        'total' => $hppTambah,
+                    ]);
+
+                    DetailTransaksi::create([
+                        'transaksi_id' => $debit->id,
+                        'kategori_id' => $kateStok->id,
+                        'barang_id' => $stok->barang_id,
+                        'kuantitas' => $stok->tambah,
+                        'value' => $hppTambah / $stok->tambah,
+                        'sub_total' => $hppTambah,
+                    ]);
+
+                    // KREDIT Stok Obat
+                    $kredit = Transaksi::create([
+                        'invoice' => "INV-{$tanggal}-OBT3-{$kode}",
+                        'name' => "Stok Obat Masuk {$barang->name}",
+                        'user_id' => $userId,
+                        'tanggal' => $tanggal,
+                        'type' => 'Kredit',
+                        'total' => $hppTambah,
+                    ]);
+
+                    DetailTransaksi::create([
+                        'transaksi_id' => $kredit->id,
+                        'kategori_id' => $kateObat->id,
+                        'barang_id' => $stok->barang_id,
+                        'kuantitas' => $stok->tambah,
+                        'value' => $hppTambah / $stok->tambah,
+                        'sub_total' => $hppTambah,
+                    ]);
+                }
+
+                /* =========================
+             ➖ STOK BERKURANG
+            ========================== */
+                if ($stok->kurang > 0) {
+                    $hppKurang = $this->ambilHppFIFO($stok->barang_id, $stok->kurang * 1);
+
+                    // DEBIT Stok Obat
+                    $debit = Transaksi::create([
+                        'invoice' => "INV-{$tanggal}-KRG-{$kode}",
+                        'name' => "Stok Obat Keluar {$barang->name}",
+                        'user_id' => $userId,
+                        'tanggal' => $tanggal,
+                        'type' => 'Kredit',
+                        'total' => $hppKurang,
+                    ]);
+
+                    DetailTransaksi::create([
+                        'transaksi_id' => $debit->id,
+                        'kategori_id' => $kateStok->id,
+                        'barang_id' => $stok->barang_id,
+                        'kuantitas' => $stok->kurang,
+                        'value' => $hppKurang / $stok->kurang,
+                        'sub_total' => $hppKurang,
+                    ]);
+
+                    // KREDIT Persediaan
+                    $kredit = Transaksi::create([
+                        'invoice' => "INV-{$tanggal}-OBT4-{$kode}",
+                        'name' => "Stok Obat Keluar {$barang->name}",
+                        'user_id' => $userId,
+                        'tanggal' => $tanggal,
+                        'type' => 'Debit',
+                        'total' => $hppKurang,
+                    ]);
+
+                    DetailTransaksi::create([
+                        'transaksi_id' => $kredit->id,
+                        'kategori_id' => $kateObat->id,
+                        'barang_id' => $stok->barang_id,
+                        'kuantitas' => $stok->kurang,
+                        'value' => $hppKurang / $stok->kurang,
+                        'sub_total' => $hppKurang,
+                    ]);
+                }
+            }
+        });
+
+        $this->success('Transaksi penyesuaian stok berhasil dibuat & balance');
+    }
+
     public function headers(): array
     {
         return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-36'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-36'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'user.name', 'label' => 'Pembuat', 'class' => 'w-16'], ['key' => 'tambah', 'label' => ' Tambah', 'class' => 'w-16'], ['key' => 'kurang', 'label' => ' Kurang', 'class' => 'w-16'], ['key' => 'kotor', 'label' => ' Return', 'class' => 'w-16'], ['key' => 'rusak', 'label' => ' Kadaluarsa', 'class' => 'w-16']];
@@ -244,6 +409,11 @@ new class extends Component {
     <x-header title="Transaksi Stok Obat" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
+                <x-button wire:click="generatePenyesuaian" icon="o-adjustments-horizontal" class="btn-warning"
+                    wire:confirm="Buat transaksi penyesuaian stok dari seluruh data stok?">
+                    Generate Penyesuaian Stok
+                </x-button>
+
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
                 <x-button label="Create" link="/stok-obat/create" responsive icon="o-plus" class="btn-primary" />
             </div>

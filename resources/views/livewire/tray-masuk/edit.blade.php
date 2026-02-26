@@ -149,18 +149,7 @@ new class extends Component {
         ]);
 
         \DB::transaction(function () {
-            // 1️⃣ Rollback stok lama (hitung ulang stok & HPP tanpa transaksi ini)
-            foreach ($this->transaksi->details as $oldDetail) {
-                // rollback stok batch
-                $batch = StokBatch::where('detail_transaksi_id', $oldDetail->id)->first();
-
-                if ($batch) {
-                    // kembalikan sisa ke nol (karena batch akan dihapus)
-                    $batch->delete();
-                }
-            }
-
-            // 2️⃣ Update transaksi
+            
             $this->transaksi->update([
                 'name' => $this->name,
                 'user_id' => $this->user_id,
@@ -178,59 +167,6 @@ new class extends Component {
                 $detail = DetailTransaksi::create([
                     'transaksi_id' => $this->transaksi->id,
                     'kategori_id' => $this->kategori_id,
-                    'barang_id' => $item['barang_id'],
-                    'value' => $item['value'],
-                    'kuantitas' => $item['kuantitas'],
-                    'sub_total' => $item['value'] * $item['kuantitas'],
-                ]);
-
-                // buat stok batch FIFO
-                StokBatch::create([
-                    'barang_id' => $item['barang_id'],
-                    'user_id' => $this->user_id,
-                    'detail_transaksi_id' => $detail->id,
-                    'qty_masuk' => $item['kuantitas'],
-                    'qty_sisa' => $item['kuantitas'],
-                    'harga' => $item['value'],
-                    'tanggal' => $this->tanggal,
-                ]);
-            }
-
-            $suffix = substr($this->transaksi->invoice, -4);
-            $part = explode('-', $this->transaksi->invoice);
-            $tanggal = $part[1];
-            $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
-
-            $client = Client::find($this->client_id);
-
-            // Normalisasi nama
-            $clientName = trim(str_replace(['  '], [' '], $client->name));
-
-            // Tentukan kategori hutang berdasarkan nama client
-            if (stripos($clientName, 'Diamond') !== false || stripos($clientName, 'DM') !== false) {
-                $kategoriName = 'Hutang Tray Diamond /DM';
-            } elseif (stripos($clientName, 'Super Buah') !== false || stripos($clientName, 'SB') !== false) {
-                $kategoriName = 'Hutang Tray Super Buah /SB';
-            } else {
-                $kategoriName = 'Hutang Tray Random';
-            }
-
-            // Ambil kategori dari database
-            $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
-
-            $hutang->update([
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'client_id' => $this->client_id,
-                'tanggal' => $this->tanggal,
-                'total' => $this->total,
-                'type' => 'Kredit',
-            ]);
-            $hutang->details()->delete();
-            foreach ($this->details as $item) {
-                DetailTransaksi::create([
-                    'transaksi_id' => $hutang->id,
-                    'kategori_id' => $kateHutang->id,
                     'barang_id' => $item['barang_id'],
                     'value' => $item['value'],
                     'kuantitas' => $item['kuantitas'],

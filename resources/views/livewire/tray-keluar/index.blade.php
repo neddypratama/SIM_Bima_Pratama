@@ -39,6 +39,8 @@ new class extends Component {
     public ?string $startDate = null;
     public ?string $endDate = null;
 
+    public ?string $selectedId = null;
+
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public int $perPage = 25; // Default jumlah data per halaman
@@ -72,46 +74,154 @@ new class extends Component {
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
-
-        $inv = substr($transaksi->invoice, -4);
-        $part = explode('-', $transaksi->invoice);
-        $tanggal = $part[1];
-
-        $stok = Transaksi::where('invoice', 'like', "%-$tanggal-TRY-$inv")->first();
-        $stok->details()->delete();
-        $stok->delete();
-
-        $hpp = Transaksi::where('invoice', 'like', "%-$tanggal-HPP-$inv")->first();
-        $hpp->details()->delete();
-        $hpp->delete();
-
-        $client = Client::find($transaksi->client_id);
-        $client->decrement('bon', (int) $transaksi->total);
-
-        $bon = Transaksi::where('invoice', 'like', "%-$tanggal-BON-$inv")->first();
-        $bon->details()->delete();
-        $bon->delete();
-
-        foreach ($transaksi->details as $detail) {
-            // rollback stok batch
-            $batch = StokBatch::where('detail_transaksi_id', $detail->id)->first();
-
-            if ($batch) {
-                // kembalikan sisa ke nol (karena batch akan dihapus)
-                $batch->increment('qty_sisa', $$detail->kuantitas);
-            }
+        if ($transaksi->status == 'Selesai') {
+            $this->error('Transaksi sudah selesai, tidak bisa dihapus.');
+            return;
         }
 
-        // 🔥 Hapus detail dan transaksi utama
         $transaksi->details()->delete();
         $transaksi->delete();
 
         $this->warning("Transaksi {$transaksi->invoice}, relasi transaksi, dan semua detailnya berhasil dihapus & stok dikembalikan", position: 'toast-top');
     }
 
+    public function updateStatus($id): void
+    {
+        $this->selectedId = $id;
+        $transaksi = Transaksi::findOrFail($this->selectedId);
+        DB::transaction(function () {
+            $transaksi = Transaksi::findOrFail($this->selectedId);
+            $detailTransaksi = $transaksi->details()->get();
+            $transaksi->update(['status' => 'Selesai']);
+
+            $str = substr($transaksi->invoice, -4);
+            $part = explode('-', $transaksi->invoice);
+            $tanggal = $part[1];
+
+            $invoice1 = 'INV-' . $tanggal . '-BON-' . $str;
+            $invoice2 = 'INV-' . $tanggal . '-TRY-' . $str;
+            $invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
+
+            $kategoriObat = Kategori::where('name', 'Stok Tray')->first();
+            $kategoriHpp = Kategori::where('name', 'HPP')->first();
+            $kategoriBon = Kategori::where('name', 'like', 'Piutang Peternak')->first();
+
+            $bon = Transaksi::create([
+                'invoice' => $invoice1,
+                'name' => $transaksi->name,
+                'user_id' => $transaksi->user_id,
+                'tanggal' => $transaksi->tanggal,
+                'client_id' => $transaksi->client_id,
+                'type' => 'Debit',
+                'total' => $transaksi->total,
+                'status' => 'Selesai',
+            ]);
+
+            $totalHPP = 0;
+            $hppPerBarang = [];
+
+            foreach ($detailTransaksi as $item) {
+                $barang = Barang::find($item->barang_id);
+                $qtyJual = $item->kuantitas;
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $bon->id,
+                    'kategori_id' => $kategoriBon->id,
+                    'value' => $item->value, // harga satuan
+                    'barang_id' => $item->barang_id ?? null,
+                    'kuantitas' => $item->kuantitas ?? null,
+                    'sub_total' => $item->value * ($item->kuantitas ?? 1), // harga total
+                ]);
+
+                /** =========================
+                 * FIFO HPP
+                 ========================== */
+                $hppBarang = 0;
+                $sisa = $qtyJual;
+
+                $batches = StokBatch::where('barang_id', $barang->id)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->lockForUpdate()->get();
+
+                foreach ($batches as $batch) {
+                    if ($sisa <= 0) {
+                        break;
+                    }
+
+                    $pakai = min($batch->qty_sisa, $sisa);
+
+                    $hppBatch = $pakai * $batch->harga;
+
+                    $hppBarang += $hppBatch;
+                    $totalHPP += $hppBatch;
+
+                    $batch->decrement('qty_sisa', $pakai);
+                    $sisa -= $pakai;
+                }
+
+                if ($sisa > 0) {
+                    throw new \Exception("Stok FIFO {$barang->name} tidak mencukupi");
+                }
+
+                $hppPerBarang[$barang->id] = [
+                    'total' => $hppBarang,
+                    'qty' => $qtyJual,
+                ];
+            }
+
+            $hpp = Transaksi::create([
+                'invoice' => $invoice3,
+                'name' => $transaksi->name,
+                'user_id' => $transaksi->user_id,
+                'tanggal' => $transaksi->tanggal,
+                'client_id' => $transaksi->client_id,
+                'type' => 'Debit',
+                'total' => $totalHPP,
+                'status' => 'Selesai',
+            ]);
+
+            foreach ($hppPerBarang as $barangId => $data) {
+                $barang = Barang::find($barangId);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $hpp->id,
+                    'barang_id' => $barang->id,
+                    'kategori_id' => $kategoriHpp->id,
+                    'value' => $data['total'] / $data['qty'], // HPP per unit FIFO
+                    'kuantitas' => $data['qty'],
+                    'sub_total' => $data['total'], // TOTAL HPP BARANG
+                ]);
+            }
+
+            $stok = Transaksi::create([
+                'invoice' => $invoice2,
+                'name' => $transaksi->name,
+                'user_id' => $transaksi->user_id,
+                'tanggal' => $transaksi->tanggal,
+                'client_id' => $transaksi->client_id,
+                'type' => 'Kredit',
+                'total' => $totalHPP,
+                'status' => 'Selesai',
+            ]);
+
+            foreach ($hppPerBarang as $barangId => $data) {
+                $barang = Barang::find($barangId);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $stok->id,
+                    'barang_id' => $barang->id,
+                    'kategori_id' => $kategoriObat->id,
+                    'value' => $data['total'] / $data['qty'], // HPP per unit FIFO
+                    'kuantitas' => $data['qty'],
+                    'sub_total' => $data['total'], // TOTAL HPP BARANG
+                ]);
+            }
+        });
+
+        $this->success("Status transaksi {$transaksi->invoice} berhasil diubah menjadi Selesai", position: 'toast-top');
+    }
+
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'status', 'label' => 'Status', 'class' => 'w-16']];
     }
 
     public function transaksi(): LengthAwarePaginator

@@ -5,7 +5,7 @@ use App\Models\DetailTransaksi;
 use App\Models\Client;
 use App\Models\Barang;
 use App\Models\StokBatch;
-use App\Models\User;
+use App\Models\Kategori;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,12 +19,6 @@ new class extends Component {
     use Toast;
     use WithPagination;
 
-    public $today;
-    public function mount(): void
-    {
-        $this->today = \Carbon\Carbon::today();
-    }
-
     public string $search = '';
     public bool $drawer = false;
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
@@ -37,9 +31,19 @@ new class extends Component {
     public ?string $startDate = null;
     public ?string $endDate = null;
 
+    public ?string $selectedId = null;
+
+    public $today;
+
+    public function mount(): void
+    {
+        $this->today = \Carbon\Carbon::today();
+    }
+
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public int $perPage = 25; // Default jumlah data per halaman
+
     public function clear(): void
     {
         $this->reset(['search', 'client_id', 'filter', 'startDate', 'endDate']);
@@ -74,41 +78,91 @@ new class extends Component {
             $this->error('Transaksi tidak ditemukan.');
             return;
         }
-
-        // 🔄 KEMBALIKAN STOK BARANG
-        foreach ($transaksi->details as $detail) {
-            // rollback stok batch
-            $batch = StokBatch::where('detail_transaksi_id', $detail->id)->first();
-
-            if ($batch) {
-                // kembalikan sisa ke nol (karena batch akan dihapus)
-                $batch->delete();
-            }
+        if ($transaksi->status == 'Selesai') {
+            $this->error('Transaksi sudah selesai, tidak bisa dihapus.');
+            return;
         }
-
-        $client = Client::find($transaksi->client_id);
-        $client->decrement('titipan', (int) $transaksi->total);
-
-        $suffix = substr($transaksi->invoice, -4);
-        $part = explode('-', $transaksi->invoice);
-        $tanggal = $part[1];
-
-        $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$suffix")->first();
-        $hutang->details()->delete();
-        $hutang->delete();
-
-        // 2️⃣ Hapus detail transaksi
         $transaksi->details()->delete();
-
-        // 3️⃣ Hapus transaksi utama
         $transaksi->delete();
 
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
+    public function updateStatus($id): void
+    {
+        $this->selectedId = $id;
+        $transaksi = Transaksi::findOrFail($this->selectedId);
+        DB::transaction(function () {
+            $transaksi = Transaksi::findOrFail($this->selectedId);
+            $detailTransaksi = $transaksi->details()->get();
+            $transaksi->update(['status' => 'Selesai']);
+
+            $str = substr($transaksi->invoice, -4);
+            $part = explode('-', $transaksi->invoice);
+            $tanggal = $part[1];
+
+            $invoice1 = 'INV-' . $tanggal . '-UTG-' . $str;
+
+            $client = Client::find($transaksi->client_id);
+
+            // Normalisasi nama
+            $clientName = trim(str_replace(['  '], [' '], $client->name));
+
+            // Tentukan kategori hutang berdasarkan nama client
+            if (stripos($clientName, 'SK') !== false) {
+                $kategoriName = 'Hutang Sentrat Sk';
+            } elseif (stripos($clientName, 'Ponggok') !== false) {
+                $kategoriName = 'Hutang Sentrat Ponggok';
+            } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
+                $kategoriName = 'Saldo Bp.Supriyadi';
+            } else {
+                $kategoriName = 'Hutang Sentrat Random';
+            }
+
+            // Ambil kategori dari database
+            $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
+
+            $hutang = Transaksi::create([
+                'invoice' => $invoice1,
+                'name' => $transaksi->name,
+                'user_id' => $transaksi->user_id,
+                'tanggal' => $transaksi->tanggal,
+                'client_id' => $transaksi->client_id,
+                'type' => 'Kredit',
+                'total' => $transaksi->total,
+                'status' => 'Selesai',
+            ]);
+
+            foreach ($detailTransaksi as $item) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $hutang->id,
+                    'kategori_id' => $kateHutang->id,
+                    'value' => $item->value,
+                    'barang_id' => $item->barang_id ?? null,
+                    'kuantitas' => $item->kuantitas ?? null,
+                    'sub_total' => ($item->value ?? 0) * ($item->kuantitas ?? 1),
+                ]);
+
+                StokBatch::create([
+                    'barang_id' => $item->barang_id ?? null,
+                    'user_id' => $transaksi->user_id,
+                    'detail_transaksi_id' => $item->id,
+                    'tanggal' => $transaksi->tanggal,
+                    'qty_masuk' => $item->kuantitas,
+                    'qty_sisa' => $item->kuantitas,
+                    'harga' => $item->value, // HPP batch
+                ]);
+            }
+        });
+
+        $this->statusModal = false;
+
+        $this->success("Status transaksi {$transaksi->invoice} berhasil diubah menjadi Selesai", position: 'toast-top');
+    }
+
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']]];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'status', 'label' => 'Status', 'class' => 'w-16']];
     }
 
     public function transaksi(): LengthAwarePaginator
@@ -209,7 +263,15 @@ new class extends Component {
             @scope('cell-kategori.name', $transaksi)
                 {{ $transaksi->kategori?->name ?? '-' }}
             @endscope
-
+            @scope('cell_status', $transaksi)
+                @if ($transaksi->status == 'Selesai')
+                    <span class="badge badge-success">{{ $transaksi->status }}</span>
+                @elseif ($transaksi->status == 'Perbaikan')
+                    <span class="badge badge-warning">{{ $transaksi->status }}</span>
+                @else
+                    <span class="badge badge-error">{{ $transaksi->status }}</span>
+                @endif
+            @endscope
             @scope('actions', $transaksi)
                 <div class="flex">
                     @if (Auth::user()->role_id == 1)
@@ -218,10 +280,17 @@ new class extends Component {
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
                     @if (Auth::user()->role_id == 1 ||
-                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
+                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) &&
+                                $transaksi->user_id == Auth::user()->id &&
+                                $transaksi->status == 'Perbaikan'))
                         <x-button icon="o-pencil"
-                            link="/sentrat-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            link="/obat-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
+                    @if ($transaksi->status == 'Perbaikan')
+                        <x-button icon="o-pencil-square" wire:click="updateStatus({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin mengubah status transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-purple-500" tooltip="Update Status" />
                     @endif
                 </div>
             @endscope
