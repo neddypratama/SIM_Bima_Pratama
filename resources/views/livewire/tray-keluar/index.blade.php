@@ -323,7 +323,15 @@ new class extends Component {
             @scope('cell-kategori.name', $transaksi)
                 {{ $transaksi->kategori?->name ?? '-' }}
             @endscope
-
+            @scope('cell_status', $transaksi)
+                @if ($transaksi->status == 'Selesai')
+                    <span class="badge badge-success">{{ $transaksi->status }}</span>
+                @elseif ($transaksi->status == 'Perbaikan')
+                    <span class="badge badge-warning">{{ $transaksi->status }}</span>
+                @else
+                    <span class="badge badge-error">{{ $transaksi->status }}</span>
+                @endif
+            @endscope
             @scope('actions', $transaksi)
                 <div class="flex">
                     @if (Auth::user()->role_id == 1)
@@ -332,10 +340,17 @@ new class extends Component {
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
                     @if (Auth::user()->role_id == 1 ||
-                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
+                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) &&
+                                $transaksi->user_id == Auth::user()->id &&
+                                $transaksi->status == 'Perbaikan'))
                         <x-button icon="o-pencil"
-                            link="/tray-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            link="/obat-masuk/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
+                    @endif
+                    @if ($transaksi->status == 'Perbaikan')
+                        <x-button icon="o-pencil-square" wire:click="updateStatus({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin mengubah status transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-purple-500" tooltip="Update Status" />
                     @endif
                 </div>
             @endscope
