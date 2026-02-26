@@ -152,29 +152,88 @@ new class extends Component {
             'details.*.kuantitas' => 'required|numeric|min:0.01',
         ]);
 
-        \DB::transaction(function () {
-            $this->transaksi->update([
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'client_id' => $this->client_id,
-                'tanggal' => $this->tanggal,
-                'total' => $this->total,
-                'type' => 'Debit',
-            ]);
-
-            // 3️⃣ Hapus detail lama
-            $this->transaksi->details()->delete();
-            foreach ($this->details as $item) {
-                DetailTransaksi::create([
-                    'transaksi_id' => $this->transaksi->id,
-                    'kategori_id' => $this->kategori_id,
-                    'barang_id' => $item['barang_id'],
-                    'value' => $item['value'],
-                    'kuantitas' => $item['kuantitas'],
-                    'sub_total' => $item['value'] * $item['kuantitas'],
+        if ($this->transaksi->status == 'Perbaikan') {
+            \DB::transaction(function () {
+                $this->transaksi->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                    'total' => $this->total,
+                    'type' => 'Debit',
                 ]);
-            }
-        });
+
+                $this->transaksi->details()->delete();
+                foreach ($this->details as $item) {
+                    DetailTransaksi::create([
+                        'transaksi_id' => $this->transaksi->id,
+                        'kategori_id' => $this->kategori_id,
+                        'barang_id' => $item['barang_id'],
+                        'value' => $item['value'],
+                        'kuantitas' => $item['kuantitas'],
+                        'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1),
+                    ]);
+                }
+            });
+        } elseif ($this->transaksi->status == 'Selesai') {
+            DB::transaction(function () {
+                $this->transaksi->update([
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'client_id' => $this->client_id,
+                    'tanggal' => $this->tanggal,
+                ]);
+
+                foreach ($this->details as $d) {
+                    $stok = StokBatch::where('detail_transaksi_id', $d['id'])->first();
+                    if ($stok) {
+                        $stok->update([
+                            'user_id' => $this->user_id,
+                            'tanggal' => $this->tanggal,
+                        ]);
+                    }
+                }
+
+                $str = substr($this->transaksi->invoice, -4);
+                $part = explode('-', $this->transaksi->invoice);
+                $tanggal = $part[1];
+
+                $hutang = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$str")->first();
+                $client = Client::find($this->transaksi->client_id);
+
+                // Normalisasi nama
+                $clientName = trim(str_replace(['  '], [' '], $client->name));
+
+                // Tentukan kategori hutang berdasarkan nama client
+                if (stripos($clientName, 'SK') !== false) {
+                    $kategoriName = 'Hutang Sentrat Sk';
+                } elseif (stripos($clientName, 'Ponggok') !== false) {
+                    $kategoriName = 'Hutang Sentrat Ponggok';
+                } elseif (stripos($clientName, 'Bp.Supriyadi') !== false) {
+                    $kategoriName = 'Saldo Bp.Supriyadi';
+                } else {
+                    $kategoriName = 'Hutang Sentrat Random';
+                }
+
+                // Ambil kategori dari database
+                $kateHutang = Kategori::where('name', 'like', $kategoriName)->first();
+
+                if ($hutang) {
+                    $hutang->update([
+                        'name' => $this->name,
+                        'user_id' => $this->user_id,
+                        'client_id' => $this->client_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
+                }
+
+                foreach ($this->details as $d) {
+                    $d->update([
+                        'kategori_id' => $kateHutang->id,
+                    ]);
+                }
+            });
+        }
 
         $this->success('Transaksi berhasil diupdate!', redirectTo: '/sentrat-masuk');
     }
@@ -228,27 +287,63 @@ new class extends Component {
                     <x-header title="Detail Items" subtitle="Tambah barang ke transaksi" size="text-2xl" />
                 </div>
                 <div class="col-span-6 grid gap-3">
-                    @foreach ($details as $index => $item)
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
-                            <x-choices-offline wire:model.live="details.{{ $index }}.barang_id" label="Barang"
-                                :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single clearable />
-                            <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
-                                prefix="Rp " money="IDR" />
-                            <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
-                                type="number" min="0.01" step="0.01" />
-                            <x-input label="Total" :value="number_format(($item['value'] ?? 0) * ($item['kuantitas'] ?? 0), 0, '.', ',')" prefix="Rp" readonly />
-                        </div>
-                        <div class="flex justify-end">
-                            <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
-                                class="btn-error btn-sm" label="Hapus Item" />
-                        </div>
-                    @endforeach
+                    @if ($this->transaksi->status == 'Selesai')
+                        @foreach ($details as $index => $item)
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
+                                <x-choices-offline wire:model.live="details.{{ $index }}.barang_id"
+                                    label="Barang" :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single
+                                    clearable disabled />
+                                <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
+                                    prefix="Rp " money="IDR" readonly />
+                                <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
+                                    type="number" min="0.01" step="0.01" />
+                                <x-input label="Total" :value="number_format(
+                                    ($item['value'] ?? 0) * ($item['kuantitas'] ?? 0),
+                                    0,
+                                    '.',
+                                    ',',
+                                )" prefix="Rp" readonly />
+                            </div>
+                            <div class="flex justify-end">
+                                <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
+                                    class="btn-error btn-sm" label="Hapus Item" disabled />
+                            </div>
+                        @endforeach
 
-                    <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
-                        <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
-                            class="btn-primary" />
-                        <x-input label="Total Pembelian" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
-                    </div>
+                        <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
+                            <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
+                                class="btn-primary" disabled />
+                            <x-input label="Total Pembelian" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
+                        </div>
+                    @else
+                        @foreach ($details as $index => $item)
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
+                                <x-choices-offline wire:model.live="details.{{ $index }}.barang_id"
+                                    label="Barang" :options="$filteredBarangs[$index] ?? []" placeholder="Pilih Barang" searchable single
+                                    clearable />
+                                <x-input label="Harga Satuan" wire:model.live="details.{{ $index }}.value"
+                                    prefix="Rp " money="IDR" />
+                                <x-input label="Qty" wire:model.lazy="details.{{ $index }}.kuantitas"
+                                    type="number" min="0.01" step="0.01" />
+                                <x-input label="Total" :value="number_format(
+                                    ($item['value'] ?? 0) * ($item['kuantitas'] ?? 0),
+                                    0,
+                                    '.',
+                                    ',',
+                                )" prefix="Rp" readonly />
+                            </div>
+                            <div class="flex justify-end">
+                                <x-button spinner icon="o-trash" wire:click="removeDetail({{ $index }})"
+                                    class="btn-error btn-sm" label="Hapus Item" />
+                            </div>
+                        @endforeach
+
+                        <div class="flex flex-wrap gap-3 justify-between items-center border-t pt-4">
+                            <x-button spinner icon="o-plus" label="Tambah Item" wire:click="addDetail"
+                                class="btn-primary" />
+                            <x-input label="Total Pembelian" :value="'Rp ' . number_format($total, 0, ',', '.')" readonly class="max-w-xs" />
+                        </div>
+                    @endif
                 </div>
             </div>
         </x-card>
