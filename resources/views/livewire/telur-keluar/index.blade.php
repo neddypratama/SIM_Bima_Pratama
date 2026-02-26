@@ -334,18 +334,17 @@ new class extends Component {
             @endscope
             @scope('actions', $transaksi)
                 <div class="flex">
-                    @if (Auth::user()->role_id == 1 ||
-                            (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
-                        <x-button icon="o-pencil"
-                            link="/telur-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
-                            class="btn-ghost btn-sm text-yellow-500" />
+                    @if (Auth::user()->role_id == 1)
+                        <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-red-500" />
                     @endif
                     @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) &&
                                 $transaksi->user_id == Auth::user()->id &&
                                 $transaksi->status == 'Perbaikan'))
                         <x-button icon="o-pencil"
-                            link="/obat-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            link="/telur-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                     @if ($transaksi->status == 'Perbaikan')

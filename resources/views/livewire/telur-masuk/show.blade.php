@@ -4,8 +4,8 @@ use Livewire\Volt\Component;
 use App\Models\Transaksi;
 
 new class extends Component {
-    public Transaksi $transaksi;
-    public Transaksi $hutang;
+    public ?Transaksi $transaksi;
+    public ?Transaksi $hutang;
 
     public function mount(Transaksi $transaksi): void
     {

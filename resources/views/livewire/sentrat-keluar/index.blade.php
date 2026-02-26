@@ -353,7 +353,7 @@ new class extends Component {
                                 $transaksi->user_id == Auth::user()->id &&
                                 $transaksi->status == 'Perbaikan'))
                         <x-button icon="o-pencil"
-                            link="/obat-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            link="/sentrat-keluar/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                     @if ($transaksi->status == 'Perbaikan')
