@@ -2,6 +2,7 @@
 
 use App\Models\Client;
 use App\Models\Transaksi;
+use App\Models\Barang;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
@@ -202,7 +203,10 @@ new class extends Component {
                 $this->filter += 1;
             }
 
-            $this->curah = Transaksi::with('details.kategori', 'details.barang')
+            $barangCurahMaster = Barang::whereHas('jenis', fn($q) => $q->where('name', 'Pakan Curah'))->pluck('name')->toArray();
+
+            // ✅ Pendapatan sudah bersih (Kredit - Debit) per barang
+            $pendapatanFlat = Transaksi::with('details.kategori', 'details.barang')
                 ->whereHas('details.kategori.detailKategori', function ($q) {
                     // Mencari type di tabel detail_kategoris
                     $q->where('type', 'Pendapatan');
@@ -211,7 +215,23 @@ new class extends Component {
                     // Mencari name di tabel kategoris
                     $q->where('name', 'Penjualan Pakan Curah');
                 })
-                ->sum('total');
+                ->get()
+                ->flatMap(fn($trx) => $trx->details)
+                ->groupBy(fn($d) => $d->barang->name)
+                ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total'))
+                ->toArray();
+
+            // ✅ Urutkan detail pendapatan berdasarkan master barang
+            $pendapatanDetailFinal = [];
+            $totalPendapatan = 0;
+
+            foreach ($barangCurahMaster as $barang) {
+                $nilai = $pendapatanFlat[$barang] ?? 0;
+                $pendapatanDetailFinal[$barang] = $nilai;
+                $totalPendapatan += $nilai;
+            }
+
+            $this->curah = $totalPendapatan;
         }
 
         return [
@@ -279,7 +299,7 @@ new class extends Component {
                 @if ($client->name == 'Bp.Supriyadi')
                     <span class="font-bold text-green-600">
                         Rp
-                        {{ number_format($hutang = (($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0)) + ($this->curah ?? 0), 0, ',', '.') }}
+                        {{ number_format($hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0) + ($this->curah ?? 0), 0, ',', '.') }}
                     </span>
                 @else
                     <span class="font-bold text-green-600">

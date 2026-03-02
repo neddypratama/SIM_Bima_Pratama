@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Transaksi;
-use App\Models\Kategori;
+use App\Models\Barang;
 use App\Models\Client;
 use Livewire\Volt\Component;
 use Carbon\Carbon;
@@ -147,6 +147,7 @@ new class extends Component {
             'Piutang Peternak' => 0,
             'Piutang Karyawan' => 0,
             'Piutang Pedagang' => 0,
+            'Supplier Bp.Supriyadi' => 0,
             'Piutang Tray Diamond /DM' => 0,
             'Piutang Tray Super Buah /SB' => 0,
             'Piutang Tray Random' => 0,
@@ -162,6 +163,7 @@ new class extends Component {
             'Hutang Peternak' => 0,
             'Hutang Karyawan' => 0,
             'Hutang Pedagang' => 0,
+            'Saldo Bp.Supriyadi' => 0,
             'Hutang Tray Diamond /DM' => 0,
             'Hutang Tray Super Buah /SB' => 0,
             'Hutang Tray Random' => 0,
@@ -174,69 +176,86 @@ new class extends Component {
         ];
 
         foreach ($clients as $c) {
-            /* ============================
-             * PIUTANG (ASET)
-             * ============================ */
-            if (($c->saldo_piutang ?? 0) > 0) {
-                $saldo = $c->saldo_piutang;
+            $saldo = $c->saldo_piutang - $c->saldo_hutang;
+            if ($c->name == 'Bp.Supriyadi') {
+                $saldo = $saldo * -1;
+            }
 
-                switch ($c->type) {
-                    case 'Peternak':
-                        $piutang['Piutang Peternak'] += $saldo;
-                        break;
+            if ($saldo === 0) {
+                continue;
+            }
 
-                    case 'Pedagang':
-                        $piutang['Piutang Pedagang'] += $saldo;
-                        break;
-
-                    case 'Karyawan':
-                        $piutang['Piutang Karyawan'] += $saldo;
-                        break;
-
-                    case 'Supplier':
-                        foreach ($piutang as $akun => $_) {
-                            if (str_contains($akun, $c->name)) {
-                                $piutang[$akun] += $saldo;
-                            }
+            if ($saldo > 0) {
+                if ($c->type === 'Peternak') {
+                    $piutang['Piutang Peternak'] += $saldo;
+                } elseif ($c->type === 'Pedagang') {
+                    $piutang['Piutang Pedagang'] += $saldo;
+                } elseif ($c->type === 'Karyawan') {
+                    $piutang['Piutang Karyawan'] += $saldo;
+                } elseif ($c->type === 'Supplier') {
+                    foreach ($piutang as $akun => $_) {
+                        if (str_contains($akun, $c->name)) {
+                            $piutang[$akun] += $saldo;
                         }
-                        break;
+                    }
                 }
             }
 
-            /* ============================
-             * HUTANG (LIABILITAS)
-             * ============================ */
-            if (($c->saldo_hutang ?? 0) > 0) {
-                $saldo = $c->saldo_hutang;
-
-                switch ($c->type) {
-                    case 'Peternak':
-                        $hutang['Hutang Peternak'] += $saldo;
-                        break;
-
-                    case 'Pedagang':
-                        $hutang['Hutang Pedagang'] += $saldo;
-                        break;
-
-                    case 'Karyawan':
-                        $hutang['Hutang Karyawan'] += $saldo;
-                        break;
-
-                    case 'Supplier':
-                        foreach ($hutang as $akun => $_) {
-                            if (str_contains($akun, $c->name)) {
-                                $hutang[$akun] += $saldo;
-                            }
+            if ($saldo < 0) {
+                $nilai = abs($saldo);
+                if ($c->type === 'Peternak') {
+                    $hutang['Hutang Peternak'] += $nilai;
+                } elseif ($c->type === 'Pedagang') {
+                    $hutang['Hutang Pedagang'] += $nilai;
+                } elseif ($c->type === 'Karyawan') {
+                    $hutang['Hutang Karyawan'] += $nilai;
+                } elseif ($c->type === 'Supplier') {
+                    foreach ($hutang as $akun => $_) {
+                        if (str_contains($akun, $c->name)) {
+                            $hutang[$akun] += $nilai;
                         }
-                        break;
+                    }
                 }
             }
         }
 
+        $barangCurahMaster = Barang::whereHas('jenis', fn($q) => $q->where('name', 'Pakan Curah'))->pluck('name')->toArray();
+
+        // ✅ Pendapatan sudah bersih (Kredit - Debit) per barang
+        $pendapatanFlat = Transaksi::with('details.kategori', 'details.barang')
+            ->whereHas('details.kategori.detailKategori', function ($q) {
+                // Mencari type di tabel detail_kategoris
+                $q->where('type', 'Pendapatan');
+            })
+            ->whereHas('details.kategori', function ($q) {
+                // Mencari name di tabel kategoris
+                $q->where('name', 'Penjualan Pakan Curah');
+            })
+            ->whereBetween('tanggal', [$start, $end])
+            ->get()
+            ->flatMap(fn($trx) => $trx->details)
+            ->groupBy(fn($d) => $d->barang->name)
+            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total'))
+            ->toArray();
+
+        // ✅ Urutkan detail pendapatan berdasarkan master barang
+        $pendapatanDetailFinal = [];
+        $totalPendapatan = 0;
+
+        foreach ($barangCurahMaster as $barang) {
+            $nilai = $pendapatanFlat[$barang] ?? 0;
+            $pendapatanDetailFinal[$barang] = $nilai;
+            $totalPendapatan += $nilai;
+        }
+
+        $curah = $totalPendapatan;
+
+        $hutang['Saldo Bp.Supriyadi'] = $hutang['Saldo Bp.Supriyadi'] * -1;
+        $hutang['Saldo Bp.Supriyadi'] += $curah;
+
         /* =====================================================
         | INJECT KE LAPORAN
         ===================================================== */
-
         foreach ($piutang as $akun => $nilai) {
             $asetFlat[$akun] = $nilai;
         }
