@@ -85,10 +85,11 @@ new class extends Component {
          | PIUTANG & HUTANG DARI CLIENT (TOTAL BON)
          ===================================================== */
         $clients = Client::query()
-            /* ================= BON (PIUTANG | DEBIT) ================= */
+
+            /* ================= PIUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as bon' => function ($q) {
+                    'transaksi as piutang_debit' => function ($q) {
                         $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
                             $q->where('name', 'like', 'Piutang%');
                         });
@@ -97,10 +98,21 @@ new class extends Component {
                 'total',
             )
 
-            /* ================= TITIPAN (HUTANG | KREDIT) ================= */
             ->withSum(
                 [
-                    'transaksi as titipan' => function ($q) {
+                    'transaksi as piutang_kredit' => function ($q) {
+                        $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
+                            $q->where('name', 'like', 'Piutang%');
+                        });
+                    },
+                ],
+                'total',
+            )
+
+            /* ================= HUTANG ================= */
+            ->withSum(
+                [
+                    'transaksi as hutang_kredit' => function ($q) {
                         $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
                             $q->where('name', 'like', 'Hutang%');
                         });
@@ -108,7 +120,28 @@ new class extends Component {
                 ],
                 'total',
             )
-            ->get();
+
+            ->withSum(
+                [
+                    'transaksi as hutang_debit' => function ($q) {
+                        $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
+                            $q->where('name', 'like', 'Hutang%');
+                        });
+                    },
+                ],
+                'total',
+            )
+
+            ->get()
+            ->map(function ($client) {
+                // 🔥 ASET → Debit - Kredit
+                $client->saldo_piutang = ($client->piutang_debit ?? 0) - ($client->piutang_kredit ?? 0);
+
+                // 🔥 LIABILITAS → Kredit - Debit
+                $client->saldo_hutang = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0);
+
+                return $client;
+            });
 
         $piutang = [
             'Piutang Peternak' => 0,
@@ -141,48 +174,69 @@ new class extends Component {
         ];
 
         foreach ($clients as $c) {
-            $saldo = $c->bon - $c->titipan;
-            if ($saldo === 0) {
-                continue;
-            }
+            /* ============================
+             * PIUTANG (ASET)
+             * ============================ */
+            if (($c->saldo_piutang ?? 0) > 0) {
+                $saldo = $c->saldo_piutang;
 
-            if ($saldo > 0) {
-                if ($c->type === 'Peternak') {
-                    $piutang['Piutang Peternak'] += $saldo;
-                } elseif ($c->type === 'Pedagang') {
-                    $piutang['Piutang Pedagang'] += $saldo;
-                } elseif ($c->type === 'Karyawan') {
-                    $piutang['Piutang Karyawan'] += $saldo;
-                } elseif ($c->type === 'Supplier') {
-                    foreach ($piutang as $akun => $_) {
-                        if (str_contains($akun, $c->name)) {
-                            $piutang[$akun] += $saldo;
+                switch ($c->type) {
+                    case 'Peternak':
+                        $piutang['Piutang Peternak'] += $saldo;
+                        break;
+
+                    case 'Pedagang':
+                        $piutang['Piutang Pedagang'] += $saldo;
+                        break;
+
+                    case 'Karyawan':
+                        $piutang['Piutang Karyawan'] += $saldo;
+                        break;
+
+                    case 'Supplier':
+                        foreach ($piutang as $akun => $_) {
+                            if (str_contains($akun, $c->name)) {
+                                $piutang[$akun] += $saldo;
+                            }
                         }
-                    }
+                        break;
                 }
             }
 
-            if ($saldo < 0) {
-                $nilai = abs($saldo);
-                if ($c->type === 'Peternak') {
-                    $hutang['Hutang Peternak'] += $nilai;
-                } elseif ($c->type === 'Pedagang') {
-                    $hutang['Hutang Pedagang'] += $nilai;
-                } elseif ($c->type === 'Karyawan') {
-                    $hutang['Hutang Karyawan'] += $nilai;
-                } elseif ($c->type === 'Supplier') {
-                    foreach ($hutang as $akun => $_) {
-                        if (str_contains($akun, $c->name)) {
-                            $hutang[$akun] += $nilai;
+            /* ============================
+             * HUTANG (LIABILITAS)
+             * ============================ */
+            if (($c->saldo_hutang ?? 0) > 0) {
+                $saldo = $c->saldo_hutang;
+
+                switch ($c->type) {
+                    case 'Peternak':
+                        $hutang['Hutang Peternak'] += $saldo;
+                        break;
+
+                    case 'Pedagang':
+                        $hutang['Hutang Pedagang'] += $saldo;
+                        break;
+
+                    case 'Karyawan':
+                        $hutang['Hutang Karyawan'] += $saldo;
+                        break;
+
+                    case 'Supplier':
+                        foreach ($hutang as $akun => $_) {
+                            if (str_contains($akun, $c->name)) {
+                                $hutang[$akun] += $saldo;
+                            }
                         }
-                    }
+                        break;
                 }
             }
         }
 
         /* =====================================================
-         | INJECT KE LAPORAN
-         ===================================================== */
+        | INJECT KE LAPORAN
+        ===================================================== */
+
         foreach ($piutang as $akun => $nilai) {
             $asetFlat[$akun] = $nilai;
         }
