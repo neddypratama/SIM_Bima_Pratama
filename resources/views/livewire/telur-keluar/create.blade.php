@@ -205,29 +205,27 @@ new class extends Component {
             'details.*.kuantitas' => 'required|numeric|min:0.01',
             'details.*.hpp' => 'required|numeric|min:0',
         ]);
+        
+        $transaksi = Transaksi::create([
+            'invoice' => $this->invoice,
+            'name' => $this->name,
+            'user_id' => $this->user_id,
+            'tanggal' => $this->tanggal,
+            'client_id' => $this->client_id,
+            'type' => 'Kredit',
+            'total' => $this->total,
+            'status' => 'Perbaikan',
+        ]);
 
-        foreach ($this->details as $i => $item) {
-            $transaksi = Transaksi::create([
-                'invoice' => $this->invoice,
-                'name' => $this->name,
-                'user_id' => $this->user_id,
-                'tanggal' => $this->tanggal,
-                'client_id' => $this->client_id,
-                'type' => 'Kredit',
-                'total' => $this->total,
-                'status' => 'Perbaikan',
+        foreach ($this->details as $item) {
+            DetailTransaksi::create([
+                'transaksi_id' => $transaksi->id,
+                'kategori_id' => $item['kategori_id'] ?? null,
+                'value' => $item['value'], // harga satuan
+                'barang_id' => $item['barang_id'] ?? null,
+                'kuantitas' => $item['kuantitas'] ?? null,
+                'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga (harga satuan * qty
             ]);
-
-            foreach ($this->details as $item) {
-                DetailTransaksi::create([
-                    'transaksi_id' => $transaksi->id,
-                    'kategori_id' => $item['kategori_id'] ?? null,
-                    'value' => $item['value'], // harga satuan
-                    'barang_id' => $item['barang_id'] ?? null,
-                    'kuantitas' => $item['kuantitas'] ?? null,
-                    'sub_total' => ($item['value'] ?? 0) * ($item['kuantitas'] ?? 1), // total harga (harga satuan * qty
-                ]);
-            }
         }
 
         $this->success('Transaksi berhasil dibuat!', redirectTo: '/telur-keluar');
