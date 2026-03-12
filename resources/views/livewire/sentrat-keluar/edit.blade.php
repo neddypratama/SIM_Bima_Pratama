@@ -263,7 +263,7 @@ new class extends Component {
                 ]);
 
                 $detailBon = $bon->details()->get();
-                foreach ($detailBon as $d) {
+                foreach ($detailBon as $index => $d) {
                     if (!isset($this->details[$index])) {
                         continue;
                     }
