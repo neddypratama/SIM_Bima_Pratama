@@ -123,9 +123,11 @@
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 6]))
                         <x-menu-item title="Penjualan Telur" icon="fas.file-invoice-dollar" link="/telur-keluar" />
+                        <x-menu-item title="Return Telur" icon="fas.arrow-rotate-left" link="/telur-return" />
                         <x-menu-item title="Laporan Tray" icon="fas.store" link="/laporan-tray" />
                         <x-menu-item title="Pembelian Tray" icon="fas.cart-plus" link="/tray-masuk" />
                         <x-menu-item title="Penjualan Tray" icon="fas.file-invoice-dollar" link="/tray-keluar" />
+                        <x-menu-item title="Return Tray" icon="fas.arrow-rotate-left" link="/tray-return" />
                     @endif
                 </x-menu-sub>
 
@@ -136,6 +138,7 @@
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 4]))
                         <x-menu-item title="Penjualan Pakan" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
+                        <x-menu-item title="Return Pakan" icon="fas.arrow-rotate-left" link="/sentrat-return" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 4, 6]))
                         <x-menu-item title="Laporan Obat" icon="fas.store" link="/laporan-obat" />
@@ -143,6 +146,7 @@
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 4]))
                         <x-menu-item title="Penjualan Obat" icon="fas.file-invoice-dollar" link="/obat-keluar" />
+                        <x-menu-item title="Return Obat" icon="fas.arrow-rotate-left" link="/obat-return" />
                     @endif
                 </x-menu-sub>
 

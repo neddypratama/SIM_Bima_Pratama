@@ -20,6 +20,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('client_id')->nullable()->constrained('clients');
             $table->decimal('total', 15, 2);
+            $table->enum('status', ['Perbaikan', 'Selesai', 'Batal'])->default('Perbaikan');
             $table->timestamps();
         });
     }

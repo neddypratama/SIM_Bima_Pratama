@@ -38,6 +38,9 @@ new class extends Component {
     public ?string $endDate = null;
 
     public ?string $selectedId = null;
+    public ?string $selectedInv = null;
+    public bool $statusModal = false;
+    public ?string $status = null;
 
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
@@ -89,138 +92,161 @@ new class extends Component {
         $this->warning("Transaksi {$transaksi->invoice}, relasi transaksi, dan semua detailnya berhasil dihapus & stok dikembalikan", position: 'toast-top');
     }
 
-    public function updateStatus($id): void
+    public function openStatusModal($id): void
     {
         $this->selectedId = $id;
-        $transaksi = Transaksi::findOrFail($this->selectedId);
+        $this->selectedInv = Transaksi::find($id)->invoice ?? null;
+        $this->status = Transaksi::find($id)->status ?? 'Perbaikan';
+        $this->statusModal = true;
+    }
+
+    public function updateStatus(): void
+    {
         DB::transaction(function () {
             $transaksi = Transaksi::findOrFail($this->selectedId);
             $detailTransaksi = $transaksi->details()->get();
-            $transaksi->update(['status' => 'Selesai']);
+            if ($this->status == 'Selesai') {
+                $transaksi->update(['status' => 'Selesai']);
 
-            $str = substr($transaksi->invoice, -4);
-            $part = explode('-', $transaksi->invoice);
-            $tanggal = $part[1];
+                $str = substr($transaksi->invoice, -4);
+                $part = explode('-', $transaksi->invoice);
+                $tanggal = $part[1];
 
-            $invoice1 = 'INV-' . $tanggal . '-BON-' . $str;
-            $invoice2 = 'INV-' . $tanggal . '-OBT-' . $str;
-            $invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
+                $invoice1 = 'INV-' . $tanggal . '-BON-' . $str;
+                $invoice2 = 'INV-' . $tanggal . '-OBT-' . $str;
+                $invoice3 = 'INV-' . $tanggal . '-HPP-' . $str;
 
-            $kategoriObat = Kategori::where('name', 'Stok Obat-Obatan')->first();
-            $kategoriHpp = Kategori::where('name', 'HPP')->first();
-            $kategoriBon = Kategori::where('name', 'like', 'Piutang Peternak')->first();
+                $kategoriObat = Kategori::where('name', 'Stok Obat-Obatan')->first();
+                $kategoriHpp = Kategori::where('name', 'HPP')->first();
+                $kategoriBon = Kategori::where('name', 'like', 'Piutang Peternak')->first();
 
-            $bon = Transaksi::create([
-                'invoice' => $invoice1,
-                'name' => $transaksi->name,
-                'user_id' => $transaksi->user_id,
-                'tanggal' => $transaksi->tanggal,
-                'client_id' => $transaksi->client_id,
-                'type' => 'Debit',
-                'total' => $transaksi->total,
-                'status' => 'Selesai',
-            ]);
-
-            $totalHPP = 0;
-            $hppPerBarang = [];
-
-            foreach ($detailTransaksi as $item) {
-                $barang = Barang::find($item->barang_id);
-                $qtyJual = $item->kuantitas;
-
-                DetailTransaksi::create([
-                    'transaksi_id' => $bon->id,
-                    'kategori_id' => $kategoriBon->id,
-                    'value' => $item->value, // harga satuan
-                    'barang_id' => $item->barang_id ?? null,
-                    'kuantitas' => $item->kuantitas ?? null,
-                    'sub_total' => $item->value * ($item->kuantitas ?? 1), // harga total
+                $bon = Transaksi::create([
+                    'invoice' => $invoice1,
+                    'name' => $transaksi->name,
+                    'user_id' => $transaksi->user_id,
+                    'tanggal' => $transaksi->tanggal,
+                    'client_id' => $transaksi->client_id,
+                    'type' => 'Debit',
+                    'total' => $transaksi->total,
+                    'status' => 'Selesai',
                 ]);
 
-                /** =========================
-                 * FIFO HPP
-                 ========================== */
-                $hppBarang = 0;
-                $sisa = $qtyJual;
+                $totalHPP = 0;
+                $hppPerBarang = [];
 
-                $batches = StokBatch::where('barang_id', $barang->id)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->lockForUpdate()->get();
+                foreach ($detailTransaksi as $item) {
+                    $barang = Barang::find($item->barang_id);
+                    $qtyJual = $item->kuantitas;
 
-                foreach ($batches as $batch) {
-                    if ($sisa <= 0) {
-                        break;
+                    DetailTransaksi::create([
+                        'transaksi_id' => $bon->id,
+                        'kategori_id' => $kategoriBon->id,
+                        'value' => $item->value, // harga satuan
+                        'barang_id' => $item->barang_id ?? null,
+                        'kuantitas' => $item->kuantitas ?? null,
+                        'sub_total' => $item->value * ($item->kuantitas ?? 1), // harga total
+                    ]);
+
+                    /** =========================
+                     * FIFO HPP
+                     ========================== */
+                    $hppBarang = 0;
+                    $sisa = $qtyJual;
+
+                    $batches = StokBatch::where('barang_id', $barang->id)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->lockForUpdate()->get();
+
+                    foreach ($batches as $batch) {
+                        if ($sisa <= 0) {
+                            break;
+                        }
+
+                        $pakai = min($batch->qty_sisa, $sisa);
+
+                        $hppBatch = $pakai * $batch->harga;
+
+                        $hppBarang += $hppBatch;
+                        $totalHPP += $hppBatch;
+
+                        $batch->decrement('qty_sisa', $pakai);
+
+                        // 🔥 SIMPAN KE PENJUALAN ASLI (INI KUNCI)
+                        \App\Models\StokKeluarBatch::create([
+                            'detail_transaksi_id' => $item->id, // ✅ PENJUALAN
+                            'stok_batch_id' => $batch->id,
+                            'qty' => $pakai,
+                            'returned_qty' => 0,
+                            'harga' => $batch->harga,
+                        ]);
+
+                        $sisa -= $pakai;
                     }
 
-                    $pakai = min($batch->qty_sisa, $sisa);
+                    if ($sisa > 0) {
+                        throw new \Exception("Stok FIFO {$barang->name} tidak mencukupi");
+                    }
 
-                    $hppBatch = $pakai * $batch->harga;
-
-                    $hppBarang += $hppBatch;
-                    $totalHPP += $hppBatch;
-
-                    $batch->decrement('qty_sisa', $pakai);
-                    $sisa -= $pakai;
+                    $hppPerBarang[$barang->id] = [
+                        'total' => $hppBarang,
+                        'qty' => $qtyJual,
+                    ];
                 }
 
-                if ($sisa > 0) {
-                    throw new \Exception("Stok FIFO {$barang->name} tidak mencukupi");
+                $hpp = Transaksi::create([
+                    'invoice' => $invoice3,
+                    'name' => $transaksi->name,
+                    'user_id' => $transaksi->user_id,
+                    'tanggal' => $transaksi->tanggal,
+                    'client_id' => $transaksi->client_id,
+                    'type' => 'Debit',
+                    'total' => $totalHPP,
+                    'status' => 'Selesai',
+                ]);
+
+                foreach ($hppPerBarang as $barangId => $data) {
+                    $barang = Barang::find($barangId);
+
+                    DetailTransaksi::create([
+                        'transaksi_id' => $hpp->id,
+                        'barang_id' => $barang->id,
+                        'kategori_id' => $kategoriHpp->id,
+                        'value' => $data['total'] / $data['qty'], // HPP per unit FIFO
+                        'kuantitas' => $data['qty'],
+                        'sub_total' => $data['total'], // TOTAL HPP BARANG
+                    ]);
                 }
 
-                $hppPerBarang[$barang->id] = [
-                    'total' => $hppBarang,
-                    'qty' => $qtyJual,
-                ];
-            }
-
-            $hpp = Transaksi::create([
-                'invoice' => $invoice3,
-                'name' => $transaksi->name,
-                'user_id' => $transaksi->user_id,
-                'tanggal' => $transaksi->tanggal,
-                'client_id' => $transaksi->client_id,
-                'type' => 'Debit',
-                'total' => $totalHPP,
-                'status' => 'Selesai',
-            ]);
-
-            foreach ($hppPerBarang as $barangId => $data) {
-                $barang = Barang::find($barangId);
-
-                DetailTransaksi::create([
-                    'transaksi_id' => $hpp->id,
-                    'barang_id' => $barang->id,
-                    'kategori_id' => $kategoriHpp->id,
-                    'value' => $data['total'] / $data['qty'], // HPP per unit FIFO
-                    'kuantitas' => $data['qty'],
-                    'sub_total' => $data['total'], // TOTAL HPP BARANG
+                $stok = Transaksi::create([
+                    'invoice' => $invoice2,
+                    'name' => $transaksi->name,
+                    'user_id' => $transaksi->user_id,
+                    'tanggal' => $transaksi->tanggal,
+                    'client_id' => $transaksi->client_id,
+                    'type' => 'Kredit',
+                    'total' => $totalHPP,
+                    'status' => 'Selesai',
                 ]);
-            }
 
-            $stok = Transaksi::create([
-                'invoice' => $invoice2,
-                'name' => $transaksi->name,
-                'user_id' => $transaksi->user_id,
-                'tanggal' => $transaksi->tanggal,
-                'client_id' => $transaksi->client_id,
-                'type' => 'Kredit',
-                'total' => $totalHPP,
-                'status' => 'Selesai',
-            ]);
+                foreach ($hppPerBarang as $barangId => $data) {
+                    $barang = Barang::find($barangId);
 
-            foreach ($hppPerBarang as $barangId => $data) {
-                $barang = Barang::find($barangId);
+                    DetailTransaksi::create([
+                        'transaksi_id' => $stok->id,
+                        'barang_id' => $barang->id,
+                        'kategori_id' => $kategoriObat->id,
+                        'value' => $data['total'] / $data['qty'], // HPP per unit FIFO
+                        'kuantitas' => $data['qty'],
+                        'sub_total' => $data['total'], // TOTAL HPP BARANG
+                    ]);
+                }
 
-                DetailTransaksi::create([
-                    'transaksi_id' => $stok->id,
-                    'barang_id' => $barang->id,
-                    'kategori_id' => $kategoriObat->id,
-                    'value' => $data['total'] / $data['qty'], // HPP per unit FIFO
-                    'kuantitas' => $data['qty'],
-                    'sub_total' => $data['total'], // TOTAL HPP BARANG
-                ]);
+                $this->success("Status transaksi {$transaksi->invoice} berhasil diubah menjadi Selesai", position: 'toast-top');
+            } else {
+                $transaksi->update(['status' => 'Batal']);
+                $this->success("Status transaksi {$transaksi->invoice} berhasil diubah menjadi Batal", position: 'toast-top');
             }
         });
 
-        $this->success("Status transaksi {$transaksi->invoice} berhasil diubah menjadi Selesai", position: 'toast-top');
+        $this->statusModal = false;
     }
 
     public function headers(): array
@@ -404,6 +430,24 @@ new class extends Component {
         <x-slot:actions>
             <x-button label="Batal" @click="$wire.exportModal=false" />
             <x-button label="Export" class="btn-primary" wire:click="export" spinner />
+        </x-slot:actions>
+    </x-modal>
+
+    <!-- ✅ MODAL UBAH STATUS -->
+    <x-modal wire:model="statusModal" title="Ubah Status Transaksi" separator>
+        <div class="space-y-4">
+
+            <x-input label="Invoice" value="{{ $selectedInv ?: '-' }}" readonly />
+            <x-select label="Status Baru" placeholder="Pilih Status" wire:model="status" :options="[
+                ['id' => 'Perbaikan', 'name' => 'Perbaikan'],
+                ['id' => 'Selesai', 'name' => 'Selesai'],
+                ['id' => 'Batal', 'name' => 'Batal'],
+            ]" />
+        </div>
+
+        <x-slot:actions>
+            <x-button label="Batal" @click="$wire.statusModal=false" />
+            <x-button label="Simpan" class="btn-primary" wire:click="updateStatus" spinner />
         </x-slot:actions>
     </x-modal>
 </div>
