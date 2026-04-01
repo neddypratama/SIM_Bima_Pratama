@@ -381,8 +381,7 @@ new class extends Component {
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                     @if ($transaksi->status == 'Perbaikan')
-                        <x-button icon="o-pencil-square" wire:click="updateStatus({{ $transaksi->id }})"
-                            wire:confirm="Yakin ingin mengubah status transaksi {{ $transaksi->invoice }} ini?" spinner
+                        <x-button icon="o-pencil-square" wire:click="openStatusModal({{ $transaksi->id }})" spinner
                             class="btn-ghost btn-sm text-purple-500" tooltip="Update Status" />
                     @endif
                 @endscope
