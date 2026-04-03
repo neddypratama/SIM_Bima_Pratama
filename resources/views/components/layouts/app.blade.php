@@ -102,16 +102,18 @@
                 @endif
 
                 {{-- ✅ Stok hanya untuk role 1 dan 2 --}}
-                @if (in_array(auth()->user()->role_id, [1, 8, 2]))
-                    <x-menu-sub title="Manage Stok" icon="fas.warehouse">
-                        <x-menu-item title="Laporan Stok" icon="fas.file" link="/kotor" />
+                <x-menu-sub title="Manage Stok" icon="fas.warehouse">
+                    @if (in_array(auth()->user()->role_id, [1, 8, 2]))
                         <x-menu-item title="Penambahan Stok" icon="fas.box" link="/penambahan-stok" />
+                    @endif
+                    @if (in_array(auth()->user()->role_id, [1, 8, 2]))
+                        <x-menu-item title="Laporan Stok" icon="fas.file" link="/kotor" />
                         <x-menu-item title="Stok Telur" icon="fas.egg" link="/stok-telur" />
                         <x-menu-item title="Stok Tray" icon="fas.box-open" link="/stok-tray" />
                         <x-menu-item title="Stok Pakan" icon="fas.wheat-awn" link="/stok-pakan" />
                         <x-menu-item title="Stok Obat" icon="fas.capsules" link="/stok-obat" />
-                    </x-menu-sub>
-                @endif
+                    @endif
+                </x-menu-sub>
 
                 {{-- ✅ Transactions untuk role sesuai route --}}
                 <x-menu-sub title="Telur & Tray" icon="fas.egg">
