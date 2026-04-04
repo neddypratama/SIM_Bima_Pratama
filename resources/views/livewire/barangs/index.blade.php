@@ -149,9 +149,13 @@ new class extends Component {
                 {{ $barang->stok }} {{ $barang->satuan }}
             @endscope
             @scope('actions', $barang)
-                <x-button icon="o-trash" wire:click="delete({{ $barang['id'] }})"
-                    wire:confirm="Yakin ingin menghapus {{ $barang['name'] }}?" spinner
-                    class="btn-ghost btn-sm text-red-500" />
+                <div class="flex">
+                    <x-button icon="o-pencil" link="/barangs/{{ $barang->id }}/edit"
+                        class="btn-ghost btn-sm text-yellow-500" />
+                    <x-button icon="o-trash" wire:click="delete({{ $barang['id'] }})"
+                        wire:confirm="Yakin ingin menghapus {{ $barang['name'] }}?" spinner
+                        class="btn-ghost btn-sm text-red-500" />
+                </div>
             @endscope
         </x-table>
     </x-card>
