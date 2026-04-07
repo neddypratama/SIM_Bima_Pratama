@@ -267,9 +267,9 @@ new class extends Component {
                 <div class="flex">
                     @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
-                        <x-button icon="o-pencil"
+                        {{-- <x-button icon="o-pencil"
                             link="/stok-tray/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
-                            class="btn-ghost btn-sm text-yellow-500" />
+                            class="btn-ghost btn-sm text-yellow-500" /> --}}
                     @endif
                     @if (Auth::user()->role_id == 1)
                         <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
