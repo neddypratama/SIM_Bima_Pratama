@@ -5,6 +5,7 @@ use App\Models\Barang;
 use App\Models\Kategori;
 use App\Models\Stok;
 use App\Models\StokBatch;
+use App\Models\StokKeluarBatch;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
 use App\Models\User;
@@ -104,30 +105,7 @@ new class extends Component {
         }
     }
 
-    private function tambahStokFifoDanHitungHpp(int $barangId, float $qtyKeluar): float
-    {
-        $totalHpp = 0;
-
-        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderByDesc('tanggal')->lockForUpdate()->get();
-
-        foreach ($batches as $batch) {
-            if ($qtyKeluar <= 0) {
-                break;
-            }
-
-            $ambil = min($batch->qty_sisa, $qtyKeluar);
-
-            $batch->increment('qty_sisa', $ambil);
-
-            $totalHpp += $ambil * $batch->harga;
-
-            $qtyKeluar -= $ambil;
-        }
-
-        return $totalHpp;
-    }
-
-    private function kurangiStokFifoDanHitungHpp(int $barangId, float $qtyKeluar): float
+    private function kurangiStokFifoDanHitungHpp(int $barangId, float $qtyKeluar, int $detailId): float
     {
         $totalHpp = 0;
 
@@ -142,6 +120,15 @@ new class extends Component {
 
             $batch->decrement('qty_sisa', $ambil);
 
+            // ✅ SIMPAN FIFO KELUAR
+            StokKeluarBatch::create([
+                'detail_transaksi_id' => $detailId,
+                'stok_batch_id' => $batch->id,
+                'qty' => $ambil,
+                'returned_qty' => 0,
+                'harga' => $batch->harga,
+            ]);
+
             $totalHpp += $ambil * $batch->harga;
 
             $qtyKeluar -= $ambil;
@@ -154,13 +141,20 @@ new class extends Component {
     {
         $this->validate();
 
-        $barang = Barang::find($this->barang_id);
-        if (!$barang) {
-            $this->error('Barang tidak ditemukan.');
-            return;
-        }
-
         DB::transaction(function () {
+            $barang = Barang::find($this->barang_id);
+            if (!$barang) {
+                $this->error('Barang tidak ditemukan.');
+                return;
+            }
+
+            $totalStok = StokBatch::where('barang_id', $this->barang_id)->sum('qty_sisa');
+
+            if (($this->kurang + $this->kotor + $this->pecah) - $this->tambah > $totalStok) {
+                $this->error('Stok tidak cukup!', position: 'toast-top');
+                return;
+            }
+
             /* =========================
                 LOG STOK
             ========================== */
@@ -182,23 +176,35 @@ new class extends Component {
             $kateStok = Kategori::where('name', 'like', '%Penyesuaian Stok')->first();
 
             if ($this->tambah > 0) {
-                $hppTambah = $this->tambahStokFifoDanHitungHpp($this->barang_id, $this->tambah);
+                $harga = StokBatch::where('barang_id', $this->barang_id)->latest('tanggal')->value('harga') ?? 0;
+
                 $tambah = Transaksi::create([
                     'invoice' => $this->invoice5,
                     'name' => 'Pakan Tambah ' . Barang::find($this->barang_id)->name,
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Debit',
-                    'total' => $hppTambah,
+                    'total' => $harga * $this->tambah,
                 ]);
 
-                DetailTransaksi::create([
+                $detail = DetailTransaksi::create([
                     'transaksi_id' => $tambah->id,
                     'kategori_id' => $kateStok->id ?? null,
-                    'value' => $hppTambah / $this->tambah,
+                    'value' => $harga,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->tambah,
-                    'sub_total' => $hppTambah,
+                    'sub_total' => $harga * $this->tambah,
+                ]);
+
+                // ✅ BUAT BATCH
+                StokBatch::create([
+                    'barang_id' => $this->barang_id,
+                    'detail_transaksi_id' => $detail->id,
+                    'user_id' => $this->user_id,
+                    'qty_masuk' => $this->tambah,
+                    'qty_sisa' => $this->tambah,
+                    'harga' => $harga,
+                    'tanggal' => $this->tanggal,
                 ]);
 
                 // Pakan Kadaluarsa - Kredit
@@ -208,38 +214,46 @@ new class extends Component {
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Kredit',
-                    'total' => $hppTambah,
+                    'total' => $harga * $this->tambah,
                 ]);
 
                 DetailTransaksi::create([
                     'transaksi_id' => $telur2->id,
                     'kategori_id' => $kateTelur->id ?? null,
-                    'value' => $hppTambah / $this->tambah,
+                    'value' => $harga,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->tambah,
-                    'sub_total' => $hppTambah,
+                    'sub_total' => $harga * $this->tambah,
                 ]);
             }
 
             if ($this->kurang > 0) {
-                $hppKurang = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang);
-                $tambah = Transaksi::create([
+                $kurang = Transaksi::create([
                     'invoice' => $this->invoice7,
                     'name' => 'Pakan Kurang ' . Barang::find($this->barang_id)->name,
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Kredit',
-                    'total' => $hppKurang,
+                    'total' => 0,
                 ]);
 
-                DetailTransaksi::create([
-                    'transaksi_id' => $tambah->id,
+                $detail = DetailTransaksi::create([
+                    'transaksi_id' => $kurang->id,
                     'kategori_id' => $kateStok->id ?? null,
-                    'value' => $hppKurang / $this->kurang,
+                    'value' => 0,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->kurang,
+                    'sub_total' => 0,
+                ]);
+
+                $hppKurang = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang, $detail->id);
+
+                $detail->update([
+                    'value' => $hppKurang / $this->kurang,
                     'sub_total' => $hppKurang,
                 ]);
+
+                $kurang->update(['total' => $hppKurang]);
 
                 // Pakan Kadaluarsa - Kredit
                 $telur2 = Transaksi::create([
@@ -262,7 +276,6 @@ new class extends Component {
             }
 
             if ($this->kotor > 0) {
-                $hppKotor = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kotor);
                 // TELUR KOTOR - Debit
                 $kotor = Transaksi::create([
                     'invoice' => $this->invoice1,
@@ -270,17 +283,26 @@ new class extends Component {
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Debit',
-                    'total' => $hppKotor,
+                    'total' => 0,
                 ]);
 
-                DetailTransaksi::create([
+                $detail = DetailTransaksi::create([
                     'transaksi_id' => $kotor->id,
                     'kategori_id' => $kateKotor->id ?? null,
-                    'value' => $hppKotor / $this->kotor,
+                    'value' => 0,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->kotor,
+                    'sub_total' => 0,
+                ]);
+
+                $hppKotor = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->kurang, $detail->id);
+
+                $detail->update([
+                    'value' => $hppKotor / $this->kurang,
                     'sub_total' => $hppKotor,
                 ]);
+
+                $kurang->update(['total' => $hppKotor]);
 
                 // Pakan Return - Kredit
                 $telur1 = Transaksi::create([
@@ -300,8 +322,12 @@ new class extends Component {
                     'kuantitas' => $this->kotor,
                     'sub_total' => $hppKotor,
                 ]);
+                
             } elseif ($this->kotor < 0) {
-                $hppKotor = $this->tambahStokFifoDanHitungHpp($this->barang_id, abs($this->kotor));
+                // ✅ MASUK (buat batch)
+                $qty = abs($this->kotor);
+                $harga = StokBatch::where('barang_id', $this->barang_id)->latest('tanggal')->value('harga') ?? 0;
+
                 // Pakan Return - Debit
                 $kotor = Transaksi::create([
                     'invoice' => $this->invoice1,
@@ -309,16 +335,27 @@ new class extends Component {
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Kredit',
-                    'total' => $hppKotor,
+                    'total' => $harga * $qty,
                 ]);
 
-                DetailTransaksi::create([
+                $detail = DetailTransaksi::create([
                     'transaksi_id' => $kotor->id,
                     'kategori_id' => $kateKotor->id ?? null,
-                    'value' => $hppKotor / abs($this->kotor),
+                    'value' => $harga,
                     'barang_id' => $this->barang_id,
-                    'kuantitas' => abs($this->kotor),
-                    'sub_total' => $hppKotor,
+                    'kuantitas' => $qty,
+                    'sub_total' => $harga * $qty,
+                ]);
+
+                // ✅ WAJIB: BUAT BATCH BARU
+                StokBatch::create([
+                    'barang_id' => $this->barang_id,
+                    'detail_transaksi_id' => $detail->id,
+                    'user_id' => $this->user_id,
+                    'qty_masuk' => $qty,
+                    'qty_sisa' => $qty,
+                    'harga' => $harga,
+                    'tanggal' => $this->tanggal,
                 ]);
 
                 // Pakan Return - Kredit
@@ -328,39 +365,47 @@ new class extends Component {
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Debit',
-                    'total' => $hppKotor,
+                    'total' => $harga * $qty,
                 ]);
 
                 DetailTransaksi::create([
                     'transaksi_id' => $telur1->id,
                     'kategori_id' => $kateTelur->id ?? null,
-                    'value' => $hppKotor / abs($this->kotor),
+                    'value' => $harga,
                     'barang_id' => $this->barang_id,
-                    'kuantitas' => abs($this->kotor),
-                    'sub_total' => $hppKotor,
+                    'kuantitas' => $qty,
+                    'sub_total' => $harga * $qty,
                 ]);
             }
 
             // TELUR PECAH - Debit
             if ($this->pecah > 0) {
-                $hppPecah = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->pecah);
                 $pecah = Transaksi::create([
                     'invoice' => $this->invoice2,
                     'name' => 'Pakan Kadaluarsa ' . Barang::find($this->barang_id)->name,
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,
                     'type' => 'Debit',
-                    'total' => $hppPecah,
+                    'total' => 0,
                 ]);
 
-                DetailTransaksi::create([
+                $detail = DetailTransaksi::create([
                     'transaksi_id' => $pecah->id,
                     'kategori_id' => $katePecah->id ?? null,
-                    'value' => $hppPecah / $this->pecah,
+                    'value' => 0,
                     'barang_id' => $this->barang_id,
                     'kuantitas' => $this->pecah,
+                    'sub_total' => 0,
+                ]);
+
+                $hppPecah = $this->kurangiStokFifoDanHitungHpp($this->barang_id, $this->pecah, $detail->id);
+
+                $detail->update([
+                    'value' => $hppPecah / $this->pecah,
                     'sub_total' => $hppPecah,
                 ]);
+
+                $pecah->update(['total' => $hppPecah]);
 
                 // Pakan Kadaluarsa - Kredit
                 $telur2 = Transaksi::create([
