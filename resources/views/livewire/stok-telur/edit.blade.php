@@ -64,8 +64,8 @@ new class extends Component {
         $stokBatch = StokBatch::where('barang_id', $this->barang_id)->sum('qty_sisa');
 
         // stok asli sebelum transaksi ini
-        $this->stokAsli = $stokBatch - $stokEdit->tambah + ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->bentes + $stokEdit->ceplok + $stokEdit->rusak + $stokEdit->jumbo);
-        $this->stok = $stokBatch;
+        $this->stokAsli = $stokBatch ;
+        $this->stok = $stokBatch- $stokEdit->tambah + ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->bentes + $stokEdit->ceplok + $stokEdit->rusak + $stokEdit->jumbo);
 
         $this->tambah = $stokEdit->tambah;
         $this->kurang = $stokEdit->kurang;
