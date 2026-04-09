@@ -232,22 +232,18 @@ new class extends Component {
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                         @if ($this->stokModel->status == 'Perbaikan')
-                            <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            <x-input label="Tray Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
                                 min="0" />
-                            <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            <x-input label="Tray Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
                                 min="0" />
-                            <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01" />
-                            <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
-                                min="0" />
+                            <x-input label="Tray Pakai" wire:model.lazy="pakai" type="number" step="0.01" />
                         @else
-                            <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            <x-input label="Tray Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
                                 min="0" readonly />
-                            <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            <x-input label="Tray Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
                                 min="0" readonly />
-                            <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01"
+                            <x-input label="Tray Pakai" wire:model.lazy="pakai" type="number" step="0.01"
                                 readonly />
-                            <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
-                                min="0" readonly />
                         @endif
                     </div>
                 </div>

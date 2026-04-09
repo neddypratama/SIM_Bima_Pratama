@@ -145,6 +145,7 @@ new class extends Component {
                 'user_id' => $this->user_id,
                 'barang_id' => $this->barang_id,
                 'tanggal' => $this->tanggal,
+                'status' => 'Perbaikan',
                 'tambah' => $this->tambah,
                 'kurang' => $this->kurang,
                 'kotor' => $this->kotor,

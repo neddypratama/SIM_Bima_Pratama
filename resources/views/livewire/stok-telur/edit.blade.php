@@ -64,7 +64,7 @@ new class extends Component {
         $stokBatch = StokBatch::where('barang_id', $this->barang_id)->sum('qty_sisa');
 
         // stok asli sebelum transaksi ini
-        $this->stokAsli = $stokBatch ;
+        $this->stokAsli = $stokBatch;
         $this->stok = $stokBatch + $stokEdit->tambah - ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->bentes + $stokEdit->ceplok + $stokEdit->rusak + $stokEdit->jumbo);
 
         $this->tambah = $stokEdit->tambah;
@@ -316,21 +316,32 @@ new class extends Component {
                 <div class="col-span-6 grid gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
                         @if ($this->stokModel->status == 'Perbaikan')
-                            <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            <x-input label="Telur Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
                                 min="0" />
-                            <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            <x-input label="Telur Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
                                 min="0" />
-                            <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01" />
-                            <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
+                            <x-input label="Telur Kotor" wire:model.lazy="kotor" type="number" step="0.01" />
+                            <x-input label="Telur Bentes" wire:model.lazy="bentes" type="number" step="0.01"
+                                min="0" />
+                            <x-input label="Telur Ceplok" wire:model.lazy="ceplok" type="number" step="0.01"
+                                min="0" />
+                            <x-input label="Telur Prok" wire:model.lazy="prok" type="number" step="0.01"
+                                min="0" />
+                            <x-input label="Telur Jumbo" wire:model.lazy="jumbo" type="number" step="0.01"
                                 min="0" />
                         @else
-                            <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                            <x-input label="Telur Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
                                 min="0" readonly />
-                            <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                            <x-input label="Telur Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
                                 min="0" readonly />
-                            <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01"
-                                readonly />
-                            <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
+                            <x-input label="Telur Kotor" wire:model.lazy="kotor" type="number" step="0.01" />
+                            <x-input label="Telur Bentes" wire:model.lazy="bentes" type="number" step="0.01"
+                                min="0" readonly />
+                            <x-input label="Telur Ceplok" wire:model.lazy="ceplok" type="number" step="0.01"
+                                min="0" readonly />
+                            <x-input label="Telur Prok" wire:model.lazy="prok" type="number" step="0.01"
+                                min="0" readonly />
+                            <x-input label="Telur Jumbo" wire:model.lazy="jumbo" type="number" step="0.01"
                                 min="0" readonly />
                         @endif
                     </div>

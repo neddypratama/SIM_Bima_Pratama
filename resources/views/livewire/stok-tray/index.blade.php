@@ -297,7 +297,7 @@ new class extends Component {
                         'sub_total' => 0,
                     ]);
 
-                    $hppPakai = $stok->kurangiStokFifoDanHitungHpp($stok->barang_id, $stok->rusak, $detail->id);
+                    $hppPakai = $this->kurangiStokFifoDanHitungHpp($stok->barang_id, $stok->rusak, $detail->id);
 
                     $detail->update([
                         'value' => $hppPakai / $stok->rusak,
