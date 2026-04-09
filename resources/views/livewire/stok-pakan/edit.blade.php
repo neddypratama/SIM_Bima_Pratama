@@ -56,7 +56,7 @@ new class extends Component {
 
         // stok asli sebelum transaksi ini
         $this->stokAsli = $stokBatch ;
-        $this->stok = $stokBatch- $stokEdit->tambah + ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->rusak);
+        $this->stok = $stokBatch + $stokEdit->tambah - ($stokEdit->kurang + $stokEdit->kotor + $stokEdit->rusak);
 
         $this->tambah = $stokEdit->tambah;
         $this->kurang = $stokEdit->kurang;
