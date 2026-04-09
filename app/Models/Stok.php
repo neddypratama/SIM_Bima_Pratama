@@ -11,6 +11,7 @@ class Stok extends Model
         'user_id',
         'tanggal',
         'barang_id',
+        'status',
         'tambah',
         'kurang',
         'kotor',

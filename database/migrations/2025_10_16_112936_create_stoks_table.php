@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained();
             $table->dateTime('tanggal');
             $table->foreignId('barang_id')->constrained();
+            $table->enum('status', ['Perbaikan', 'Selesai', 'Batal'])->default('Perbaikan');
             $table->decimal('tambah')->default(0);
             $table->decimal('kurang')->default(0);
             $table->decimal('kotor')->default(0);

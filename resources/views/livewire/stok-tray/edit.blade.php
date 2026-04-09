@@ -111,141 +111,6 @@ new class extends Component {
         }
     }
 
-    /* =========================
-        FIFO UNIVERSAL
-    ========================== */
-    private function fifo(
-        int $barangId,
-        float $qty,
-        string $mode = 'out', // out = kurangi, in = kembalikan
-        bool $withHpp = false,
-    ): float {
-        $totalHpp = 0;
-
-        $query = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->lockForUpdate();
-
-        $query = $mode === 'out' ? $query->orderBy('tanggal') : $query->orderByDesc('tanggal');
-
-        foreach ($query->get() as $batch) {
-            if ($qty <= 0) {
-                break;
-            }
-
-            $ambil = min($batch->qty_sisa, $qty);
-
-            $mode === 'out' ? $batch->decrement('qty_sisa', $ambil) : $batch->increment('qty_sisa', $ambil);
-
-            if ($withHpp) {
-                $totalHpp += $ambil * $batch->harga;
-            }
-
-            $qty -= $ambil;
-        }
-
-        return $totalHpp;
-    }
-
-    /* =========================
-        SYNC TRANSAKSI HPP
-    ========================== */
-    private function syncTransaksi(string $kode1, string $kode2, string $nama, float $totalHpp, float $qty): void
-    {
-        $inv = substr($this->stokModel->invoice, -4);
-        $tgl = explode('-', $this->stokModel->invoice)[1];
-        $kateTelur = Kategori::where('name', 'like', '%Stok Tray%')->first();
-
-        if ($qty > 0) {
-            $trx = Transaksi::firstOrCreate(
-                ['invoice' => "INV-$tgl-$kode1-$inv"],
-                [
-                    'name' => "$nama " . Barang::find($this->barang_id)->name,
-                    'user_id' => $this->user_id,
-                    'tanggal' => $this->tanggal,
-                    'type' => 'Debit',
-                    'total' => $totalHpp,
-                ],
-            );
-
-            DetailTransaksi::updateOrCreate(
-                ['transaksi_id' => $trx->id],
-                [
-                    'barang_id' => $this->barang_id,
-                    'kategori_id' => Kategori::where('name', 'like', "%$nama%")->first()->id,
-                    'value' => $totalHpp / $qty,
-                    'kuantitas' => $qty,
-                    'sub_total' => $totalHpp,
-                ],
-            );
-
-            $tlr = Transaksi::firstOrCreate(
-                ['invoice' => "INV-$tgl-$kode2-$inv"],
-                [
-                    'name' => "$nama " . Barang::find($this->barang_id)->name,
-                    'user_id' => $this->user_id,
-                    'tanggal' => $this->tanggal,
-                    'type' => 'Kredit',
-                    'total' => $totalHpp,
-                ],
-            );
-
-            DetailTransaksi::updateOrCreate(
-                ['transaksi_id' => $tlr->id],
-                [
-                    'barang_id' => $this->barang_id,
-                    'kategori_id' => $kateTelur->id,
-                    'value' => $totalHpp / $qty,
-                    'kuantitas' => $qty,
-                    'sub_total' => $totalHpp,
-                ],
-            );
-        }
-        if ($qty < 0) {
-            $trx = Transaksi::firstOrCreate(
-                ['invoice' => "INV-$tgl-$kode1-$inv"],
-                [
-                    'name' => "$nama " . Barang::find($this->barang_id)->name,
-                    'user_id' => $this->user_id,
-                    'tanggal' => $this->tanggal,
-                    'type' => 'Kredit',
-                    'total' => $totalHpp,
-                ],
-            );
-
-            DetailTransaksi::updateOrCreate(
-                ['transaksi_id' => $trx->id],
-                [
-                    'barang_id' => $this->barang_id,
-                    'kategori_id' => Kategori::where('name', 'like', "%$nama%")->first()->id,
-                    'value' => $totalHpp / abs($qty),
-                    'kuantitas' => abs($qty),
-                    'sub_total' => $totalHpp,
-                ],
-            );
-
-            $tlr = Transaksi::firstOrCreate(
-                ['invoice' => "INV-$tgl-$kode2-$inv"],
-                [
-                    'name' => "$nama " . Barang::find($this->barang_id)->name,
-                    'user_id' => $this->user_id,
-                    'tanggal' => $this->tanggal,
-                    'type' => 'Debit',
-                    'total' => $totalHpp,
-                ],
-            );
-
-            DetailTransaksi::updateOrCreate(
-                ['transaksi_id' => $tlr->id],
-                [
-                    'barang_id' => $this->barang_id,
-                    'kategori_id' => $kateTelur->id,
-                    'value' => $totalHpp / abs($qty),
-                    'kuantitas' => abs($qty),
-                    'sub_total' => $totalHpp,
-                ],
-            );
-        }
-    }
-
     public function update(): void
     {
         $this->validate();
@@ -255,50 +120,72 @@ new class extends Component {
             return;
         }
 
-        DB::transaction(function () {
-            $stok = Stok::findOrFail($this->stokModel->id);
-            $barang = Barang::findOrFail($stok->barang_id);
-            /* =========================
-                1️⃣ ROLLBACK TRANSAKSI LAMA
-            ========================== */
-            $this->fifo($stok->barang_id, $stok->tambah, 'out');
-            $this->fifo($stok->barang_id, $stok->kurang, 'in');
-            $this->fifo($stok->barang_id, $stok->rusak, 'in');
+        if ($this->stokModel->status == 'Selesai') {
+            DB::transaction(function () {
+                $this->stokModel->update([
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                ]);
 
-            // === 3. Update stok model ===
-            $stok->update([
-                'user_id' => $this->user_id,
-                'barang_id' => $this->barang_id,
-                'tanggal' => $this->tanggal,
-                'tambah' => $this->tambah,
-                'kurang' => $this->kurang,
-                'rusak' => $this->pakai,
-            ]);
+                $str = substr($this->stokModel->invoice, -4);
+                $part = explode('-', $this->stokModel->invoice);
+                $tanggal = $part[1];
 
-            /* =========================
-                3️⃣ APPLY TRANSAKSI BARU
-            ========================== */
-            if ($this->tambah > 0) {
-                $hpp = $this->fifo($this->barang_id, $this->tambah, 'in', true);
+                $tambah = Transaksi::where('invoice', 'like', "%$tanggal-TBH-$str")->first();
+                $kurang = Transaksi::where('invoice', 'like', "%$tanggal-KRG-$str")->first();
+                $pakai = Transaksi::where('invoice', 'like', "%$tanggal-PKI-$str")->first();
+                $tray1 = Transaksi::where('invoice', 'like', "%$tanggal-TRY1-$str")->first();
+                $tray2 = Transaksi::where('invoice', 'like', "%$tanggal-TRY2-$str")->first();
+                $tray3 = Transaksi::where('invoice', 'like', "%$tanggal-TRY3-$str")->first();
 
-                $trx = $this->syncTransaksi('TBH', 'TRY2', 'Penyesuaian Stok', $hpp, $this->tambah);
-            }
+                if ($tambah) {
+                    $tambah->update([
+                        'user_id' => $this->user_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
 
-            if ($this->kurang > 0) {
-                $hpp = $this->fifo($this->barang_id, $this->kurang, 'out', true);
+                    $tray2->update([
+                        'user_id' => $this->user_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
+                }
 
-                $trx = $this->syncTransaksi('KRG', 'TRY3', 'Penyesuaian Stok', $hpp, $this->kurang * -1);
-            }
+                if ($kurang) {
+                    $kurang->update([
+                        'user_id' => $this->user_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
 
-            /* =========================
-            TELUR BENTES
-            ========================== */
-            if ($this->pakai > 0) {
-                $hpp = $this->fifo($this->barang_id, $this->pakai, 'out', true);
+                    $tray3->update([
+                        'user_id' => $this->user_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
+                }
 
-                $trx = $this->syncTransaksi('PKI', 'TRY1', 'Tray Terpakai', $hpp, $this->pakai);
-            }
-        });
+                if ($pakai) {
+                    $pakai->update([
+                        'user_id' => $this->user_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
+
+                    $tray1->update([
+                        'user_id' => $this->user_id,
+                        'tanggal' => $this->tanggal,
+                    ]);
+                }
+            });
+        } elseif ($this->stokModel->status == 'Perbaikan') {
+            DB::transaction(function () {
+                $this->stokModel->update([
+                    'user_id' => $this->user_id,
+                    'barang_id' => $this->barang_id,
+                    'tanggal' => $this->tanggal,
+                    'tambah' => $this->tambah,
+                    'kurang' => $this->kurang,
+                    'rusak' => $this->pakai,
+                ]);
+            });
+        }
 
         $this->success('Stok tray berhasil diperbarui!', redirectTo: '/stok-tray');
     }
@@ -322,8 +209,13 @@ new class extends Component {
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div class="col-span-2">
-                            <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id" :options="$barangs"
-                                single searchable clearable label="Barang" />
+                            @if ($this->stokModel->status == 'Perbaikan')
+                                <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id"
+                                    :options="$barangs" single searchable clearable label="Barang" />
+                            @else
+                                <x-choices-offline placeholder="Pilih Barang" wire:model.live="barang_id"
+                                    :options="$barangs" single searchable clearable label="Barang" readonly />
+                            @endif
                         </div>
                         <x-input label="Stok Awal" wire:model.live="stokAsli" type="number" step="0.01" readonly />
                         <x-input label="Stok Sekarang" wire:model.live="stok" type="number" step="0.01" readonly />
@@ -338,13 +230,25 @@ new class extends Component {
                     <x-header title="Detail Items" subtitle="Perbarui detail stok" size="text-2xl" />
                 </div>
                 <div class="col-span-6 grid gap-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-3 rounded-xl">
-                        <x-input label="Tray Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
-                            min="0" />
-                        <x-input label="Tray Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
-                            min="0" />
-                        <x-input label="Tray Dipakai" wire:model.lazy="pakai" type="number" step="0.01"
-                            min="0" />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 rounded-xl">
+                        @if ($this->stokModel->status == 'Perbaikan')
+                            <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                                min="0" />
+                            <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                                min="0" />
+                            <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01" />
+                            <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
+                                min="0" />
+                        @else
+                            <x-input label="Obat Bertambah" wire:model.lazy="tambah" type="number" step="0.01"
+                                min="0" readonly />
+                            <x-input label="Obat Berkurang" wire:model.lazy="kurang" type="number" step="0.01"
+                                min="0" readonly />
+                            <x-input label="Obat Return" wire:model.lazy="kotor" type="number" step="0.01"
+                                readonly />
+                            <x-input label="Obat Kadaluarsa" wire:model.lazy="pecah" type="number" step="0.01"
+                                min="0" readonly />
+                        @endif
                     </div>
                 </div>
             </div>
