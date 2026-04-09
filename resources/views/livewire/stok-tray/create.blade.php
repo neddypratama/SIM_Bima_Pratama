@@ -115,6 +115,7 @@ new class extends Component {
                 'invoice' => $this->invoice,
                 'user_id' => $this->user_id,
                 'barang_id' => $this->barang_id,
+                'status' => 'Perbaikan',
                 'tanggal' => $this->tanggal,
                 'tambah' => $this->tambah,
                 'kurang' => $this->kurang,
