@@ -330,14 +330,14 @@ new class extends Component {
                         'sub_total' => 0,
                     ]);
 
-                    $hppKotor = $this->kurangiStokFifoDanHitungHpp($stok->barang_id, $stok->kurang, $detail->id);
+                    $hppKotor = $this->kurangiStokFifoDanHitungHpp($stok->barang_id, $stok->kotor, $detail->id);
 
                     $detail->update([
-                        'value' => $hppKotor / $stok->kurang,
+                        'value' => $hppKotor / $stok->kotor,
                         'sub_total' => $hppKotor,
                     ]);
 
-                    $kurang->update(['total' => $hppKotor]);
+                    $kotor->update(['total' => $hppKotor]);
 
                     // TELUR KOTOR - Kredit
                     $telur1 = Transaksi::create([
@@ -521,7 +521,7 @@ new class extends Component {
                         'total' => 0,
                     ]);
 
-                    DetailTransaksi::create([
+                    $detail = DetailTransaksi::create([
                         'transaksi_id' => $prok->id,
                         'kategori_id' => $kateProk->id ?? null,
                         'value' => 0,
