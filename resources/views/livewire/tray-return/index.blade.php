@@ -358,11 +358,11 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Transaksi Return Telur" separator progress-indicator>
+    <x-header title="Transaksi Return Tray" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-                <x-button label="Create" link="/telur-return/create" responsive icon="o-plus" class="btn-primary" />
+                <x-button label="Create" link="/tray-return/create" responsive icon="o-plus" class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-header>
@@ -383,7 +383,7 @@ new class extends Component {
 
     <x-card class="overflow-x-auto">
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
-            link="telur-return/{id}/show?invoice={invoice}">
+            link="tray-return/{id}/show?invoice={invoice}">
             @scope('cell-kategori.name', $transaksi)
                 {{ $transaksi->kategori?->name ?? '-' }}
             @endscope
@@ -408,7 +408,7 @@ new class extends Component {
                                 $transaksi->user_id == Auth::user()->id &&
                                 $transaksi->status == 'Perbaikan'))
                         <x-button icon="o-pencil"
-                            link="/telur-return/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                            link="/tray-return/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                     @if ($transaksi->status == 'Perbaikan')

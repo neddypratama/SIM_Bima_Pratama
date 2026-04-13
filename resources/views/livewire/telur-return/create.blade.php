@@ -210,7 +210,7 @@ new class extends Component {
                             <x-input label="Harga" :value="number_format($item['value'], 0, ',', '.')" prefix="Rp" readonly />
 
                             <x-input label="Qty (max {{ $item['max_qty'] }})"
-                                wire:model.lazy="details.{{ $i }}.kuantitas" type="number" min="0.01"
+                                wire:model.lazy="details.{{ $i }}.kuantitas" type="number" min="0.00"
                                 step="0.01" />
 
                             <x-input label="Total" :value="number_format($item['value'] * $item['kuantitas'], 0, ',', '.')" prefix="Rp" readonly />
