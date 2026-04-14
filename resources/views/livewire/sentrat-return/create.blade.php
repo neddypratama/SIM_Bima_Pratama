@@ -151,7 +151,7 @@ new class extends Component {
             ]);
         }
 
-        $this->success('Retur berhasil dibuat!', redirectTo: '/telur-return');
+        $this->success('Retur berhasil dibuat!', redirectTo: '/sentrat-return');
     }
 };
 ?>
@@ -226,7 +226,7 @@ new class extends Component {
         </x-card>
 
         <x-slot:actions>
-            <x-button label="Cancel" link="/telur-return" />
+            <x-button label="Cancel" link="/sentrat-return" />
             <x-button label="Save" type="submit" class="btn-primary" />
         </x-slot:actions>
 

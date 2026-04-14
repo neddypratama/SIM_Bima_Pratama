@@ -366,6 +366,6 @@ new class extends Component {
     @endif
 
     <div class="mt-6">
-        <x-button label="Kembali" link="/telur-return" />
+        <x-button label="Kembali" link="/obat-return" />
     </div>
 </div>

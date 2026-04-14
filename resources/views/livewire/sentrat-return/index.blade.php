@@ -358,7 +358,7 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Transaksi Return Telur" separator progress-indicator>
+    <x-header title="Transaksi Return Pakan" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" disabled primary>Export Excel</x-button>
