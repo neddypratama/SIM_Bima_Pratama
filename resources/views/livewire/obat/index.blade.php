@@ -57,7 +57,7 @@ new class extends Component {
             ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
 
             // 🔹 Group & Sort
-            ->groupBy('barang.name')
+            ->groupBy('barang.id', 'barang.name')
             ->orderBy('barang.name', 'asc')
             ->paginate($this->perPage);
     }

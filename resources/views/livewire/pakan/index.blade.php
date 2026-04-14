@@ -36,28 +36,30 @@ new class extends Component {
     public function pembelianTelur(): LengthAwarePaginator
     {
         return DB::table('barangs as barang')
-            ->select('barang.name as nama_barang', DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
+            ->select('barang.id', 'barang.name as nama_barang', DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
             ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
 
-            // 🔹 Logika otomatis tergantung filterType
             ->when($this->filterType === 'Debit', function ($q) {
-                // Jika Pembelian (stok masuk)
-                $q->where('kategori.name', 'like', '%Stok Pakan%')->where('transaksi.type', 'Debit')->where('transaksi.invoice', 'like', '%-STR-%');
-            })
-            ->when($this->filterType === 'Kredit', function ($q) {
-                // Jika Penjualan (stok keluar)
-                $q->where('kategori.name', 'like', '%Penjualan Pakan%');
+                $q->where(function ($sub) {
+                    $sub->where('kategori.name', 'like', '%Stok Pakan%')->where('transaksi.type', 'Debit')->where('transaksi.invoice', 'like', '%-STR-%');
+                });
             })
 
-            // 🔍 Filter tambahan
+            ->when($this->filterType === 'Kredit', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('kategori.name', 'like', '%Penjualan Pakan%')->where('transaksi.type', 'Kredit');
+                });
+            })
+
             ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
+
             ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
+
             ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
 
-            // 🔹 Group & Sort
-            ->groupBy('barang.name')
+            ->groupBy('barang.id', 'barang.name')
             ->orderBy('barang.name', 'asc')
             ->paginate($this->perPage);
     }
