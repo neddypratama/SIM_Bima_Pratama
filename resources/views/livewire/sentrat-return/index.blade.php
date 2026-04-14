@@ -238,11 +238,12 @@ new class extends Component {
                 ]);
 
                 foreach ($hppPerBarang as $barangId => $data) {
+                    dd( $data['total'], $data['qty']);
                     DetailTransaksi::create([
                         'transaksi_id' => $hpp->id,
                         'barang_id' => $barangId,
                         'kategori_id' => $kategoriHpp->id,
-                        'value' => $data['total'] / $data['qty'],
+                        'value' => $data['qty'] ? $data['total'] / $data['qty'] : 0,
                         'kuantitas' => $data['qty'],
                         'sub_total' => $data['total'],
                     ]);
@@ -267,7 +268,7 @@ new class extends Component {
                         'transaksi_id' => $stok->id,
                         'barang_id' => $barangId,
                         'kategori_id' => $kategoriStok->id,
-                        'value' => $data['total'] / $data['qty'],
+                        'value' => $data['qty'] ? $data['total'] / $data['qty'] : 0,
                         'kuantitas' => $data['qty'],
                         'sub_total' => $data['total'],
                     ]);
