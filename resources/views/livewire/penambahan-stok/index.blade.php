@@ -24,7 +24,7 @@ new class extends Component {
 
     public string $search = '';
     public bool $drawer = false;
-    public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
+    public array $sortBy = ['column' => 'tanggal', 'direction' => 'desc'];
     public int $filter = 0;
     public int $barang_id = 0;
 
@@ -72,6 +72,63 @@ new class extends Component {
         $this->warning("Stok $id berhasil dihapus", position: 'toast-top');
     }
 
+    public function syncTanggalDenganTransaksi(): void
+    {
+        $batches = StokBatch::with('details.transaksi')->get();
+
+        foreach ($batches as $batch) {
+            if ($batch->details && $batch->details->transaksi) {
+                $batch->update([
+                    'tanggal' => $batch->details->transaksi->tanggal,
+                ]);
+            }
+        }
+
+        $this->success('Tanggal stok berhasil disesuaikan dengan transaksi!', position: 'toast-top');
+    }
+
+    public function rebaseStok(): void
+    {
+        $barangs = StokBatch::select('barang_id')->groupBy('barang_id')->pluck('barang_id');
+
+        foreach ($barangs as $barangId) {
+            // 1. Hitung total stok dari semua batch
+            $total = StokBatch::where('barang_id', $barangId)->sum('qty_sisa');
+            dd($total, $barangId);
+
+            if ($total <= 0) {
+                continue;
+            }
+
+            // 2. Ambil batch dari TERBARU ke TERLAMA
+            $batches = StokBatch::where('barang_id', $barangId)->orderByDesc('tanggal')->get();
+
+            // 3. Reset semua qty_sisa jadi 0
+            StokBatch::where('barang_id', $barangId)->update([
+                'qty_sisa' => 0,
+            ]);
+
+            // 4. Distribusi ulang stok (reverse FIFO)
+            foreach ($batches as $batch) {
+                if ($total <= 0) {
+                    break;
+                }
+
+                // Ambil maksimal sesuai kapasitas batch
+                $ambil = min($batch->qty_masuk, $total);
+
+                // Update batch
+                $batch->update([
+                    'qty_sisa' => $ambil,
+                ]);
+
+                // Kurangi total
+                $total -= $ambil;
+            }
+        }
+
+        $this->success('Rebase stok (reverse dari terbaru) berhasil!', position: 'toast-top');
+    }
     public function headers(): array
     {
         return [['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-24'], ['key' => 'user.name', 'label' => 'Pembuat', 'class' => 'w-24'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-36'], ['key' => 'harga', 'label' => ' HPP', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'qty_masuk', 'label' => ' Stok', 'class' => 'w-8'], ['key' => 'qty_sisa', 'label' => ' Sisa', 'class' => 'w-8']];
@@ -93,11 +150,11 @@ new class extends Component {
                 !empty($this->sortBy),
                 function (Builder $q) {
                     $sortBy = $this->sortBy;
-                    $column = $sortBy['column'] ?? 'created_at';
+                    $column = $sortBy['column'] ?? 'tanggal';
                     $direction = $sortBy['direction'] ?? 'desc';
                     $q->orderBy($column, $direction);
                 },
-                fn(Builder $q) => $q->orderBy('created_at', 'desc'),
+                fn(Builder $q) => $q->orderBy('tanggal', 'desc'),
             )
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
@@ -141,8 +198,25 @@ new class extends Component {
     <x-header title="Penambahan Stok" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
-                <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-                <x-button label="Create" link="/penambahan-stok/create" responsive icon="o-plus" class="btn-primary" />
+                <div class="flex flex-row sm:flex-row gap-2">
+                    <x-button wire:click="openExportModal" icon="fas.download" primary>
+                        Export Excel
+                    </x-button>
+
+                    <!-- 🔥 BUTTON REBASE -->
+                    <x-button icon="o-arrow-path" class="btn-warning" wire:click="rebaseStok"
+                        wire:confirm="⚠️ Semua stok lama akan dijadikan 0 dan digabung ke stok baru. Lanjutkan?" spinner>
+                        Rebase Stok
+                    </x-button>
+
+                    <x-button icon="o-calendar-days" class="btn-info" wire:click="syncTanggalDenganTransaksi"
+                        wire:confirm="Tanggal stok akan disamakan dengan tanggal transaksi. Lanjutkan?" spinner>
+                        Sinkron Tanggal
+                    </x-button>
+
+                    <x-button label="Create" link="/penambahan-stok/create" responsive icon="o-plus"
+                        class="btn-primary" />
+                </div>
             </div>
         </x-slot:actions>
     </x-header>

@@ -79,6 +79,7 @@ new class extends Component {
             ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
             ->select(DB::raw("CONCAT('HPP ', jb.name) AS hpp_name"), 'jb.name as jenis_name', DB::raw('SUM(td.sub_total) AS total_hpp'))
             ->where('k.name', 'HPP')
+            ->where('t.status', 'Selesai')
             ->whereBetween('t.tanggal', [$start, $end])
             ->groupBy('jb.name')
             ->orderBy('jb.name')
@@ -128,6 +129,7 @@ new class extends Component {
             ->join('transaksis as t', 't.id', '=', 'dt.transaksi_id')
             ->whereBetween('t.tanggal', [$start, $end])
             ->where('k.name', 'not like', '% Pakan Curah')
+            ->where('t.status', 'Selesai')
             ->select('dk.name as laporan', 'dk.type', 'k.name as kategori', DB::raw('SUM(dt.sub_total) as total'))
             ->groupBy('dk.name', 'dk.type', 'k.name')
             ->get();

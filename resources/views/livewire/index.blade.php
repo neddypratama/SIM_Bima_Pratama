@@ -124,6 +124,7 @@ new class extends Component {
         $end = Carbon::parse($this->endDate);
 
         $query = Transaksi::with(['details.kategori'])
+            ->where('status', 'Selesai')
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pendapatan'));
 
@@ -182,6 +183,7 @@ new class extends Component {
         $end = Carbon::parse($this->endDate);
 
         $query = Transaksi::with(['details.kategori'])
+            ->where('status', 'Selesai')
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pengeluaran'));
 
@@ -414,6 +416,7 @@ new class extends Component {
     public function incomeTotal(): int
     {
         $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pendapatan'))
+            ->where('status', 'Selesai')
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -426,6 +429,7 @@ new class extends Component {
     public function expenseTotal(): int
     {
         $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pengeluaran'))
+            ->where('status', 'Selesai')
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -438,6 +442,7 @@ new class extends Component {
     public function assetTotal(): int
     {
         $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Aset'))
+            ->where('status', 'Selesai')
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 
@@ -450,6 +455,7 @@ new class extends Component {
     public function liabiliatsTotal(): int
     {
         $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Liabilitas'))
+            ->where('status', 'Selesai')
             ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
             ->get();
 

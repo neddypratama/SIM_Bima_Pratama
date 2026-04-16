@@ -18,7 +18,7 @@ class StokBatch extends Model
 
     public function details()
     {
-        return $this->belongsTo(DetailTransaksi::class);
+        return $this->belongsTo(DetailTransaksi::class, 'detail_transaksi_id');
     }
 
     public function barang()

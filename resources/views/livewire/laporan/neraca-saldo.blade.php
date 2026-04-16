@@ -93,18 +93,9 @@ new class extends Component {
 
     public function generateNeraca()
     {
-        // Ambil tanggal paling awal dan paling akhir di tabel transaksi
         $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
         $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
 
-        // Jika tidak ada data sama sekali
-        if (!$firstTransaction || !$lastTransaction) {
-            $this->asetData = [];
-            $this->liabilitasData = [];
-            return;
-        }
-
-        // Gunakan tanggal transaksi pertama & terakhir jika tanggal tidak diisi
         $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
 
         $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
@@ -115,46 +106,82 @@ new class extends Component {
         $this->neracaLiabilitas = [];
         $this->neracaEkuitas = [];
 
-        // Ambil transaksi dengan details & kategori
-        $transaksis = Transaksi::with(['details.kategori', 'details.kategori.detailKategori'])
+        $transaksis = Transaksi::with(['details.kategori.detailKategori', 'details.barang.jenis'])
             ->whereBetween('tanggal', [$start, $end])
+            ->where('status', 'Selesai')
             ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
             ->get();
 
-        // Flatten semua detail
+        // 🔥 FLATTEN + SPLIT PENYESUAIAN
         $details = $transaksis
-            ->flatMap(
-                fn($trx) => $trx->details->map(
-                    fn($d) => [
-                        'kategori' => $d->kategori?->name,
-                        'type_kategori' => $d->kategori?->detailKategori->type,
+            ->flatMap(function ($trx) {
+                return $trx->details->map(function ($d) use ($trx) {
+                    $kategori = $d->kategori?->name;
+                    $typeKategori = $d->kategori?->detailKategori?->type;
+                    $jenis = strtolower($d->barang?->jenis?->name ?? '');
+
+                    // 🔥 SPLIT PENYESUAIAN STOK → MASUK KE ASET
+                    if ($kategori === 'Penyesuaian Stok') {
+                        if (str_contains($jenis, 'telur')) {
+                            $kategori = 'Stok Telur';
+                            $typeKategori = 'Aset';
+                        } elseif (str_contains($jenis, 'pakan')) {
+                            $kategori = 'Stok Pakan';
+                            $typeKategori = 'Aset';
+                        } elseif (str_contains($jenis, 'obat')) {
+                            $kategori = 'Stok Obat-Obatan';
+                            $typeKategori = 'Aset';
+                        } elseif (str_contains($jenis, 'tray')) {
+                            $kategori = 'Stok Tray';
+                            $typeKategori = 'Aset';
+                        } else {
+                            $kategori = null; // ❌ buang kalau tidak jelas
+                        }
+                    }
+
+                    return [
+                        'kategori' => $kategori,
+                        'type_kategori' => $typeKategori,
                         'type_transaksi' => strtolower($trx->type),
                         'sub_total' => $d->sub_total ?? 0,
-                    ],
-                ),
-            )
+                    ];
+                });
+            })
             ->filter(fn($d) => $d['kategori']);
 
-        $allKategoris = Kategori::with([
-            'detailKategori' => function ($query) {
-                $query->select('id', 'type');
-            },
-        ])->get(['id', 'name', 'detail_kategori_id']); // ADD THE FOREIGN KEY HERE
+        // 🔥 AMBIL SEMUA KATEGORI DARI DB
+        $allKategoris = Kategori::with('detailKategori')->get();
 
-        $complete = $allKategoris->map(function ($kategori) use ($details) {
-            // Access the nested type from the relationship
-            $type = $kategori->detailKategori?->type;
-
+        $allKategoris = $allKategoris->map(function ($k) {
             return [
-                'kategori' => $kategori->name,
-                'type' => $type,
-                'debit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $type && $d['type_transaksi'] == 'debit')->sum('sub_total'),
-                'kredit' => $details->filter(fn($d) => $d['kategori'] == $kategori->name && $d['type_kategori'] == $type && $d['type_transaksi'] == 'kredit')->sum('sub_total'),
+                'kategori' => $k->name,
+                'type' => $k->detailKategori?->type,
             ];
         });
 
+        // 🔥 TAMBAHKAN KATEGORI HASIL SPLIT
+        $extraKategoris = collect([['kategori' => 'Stok Telur', 'type' => 'Aset'], ['kategori' => 'Stok Pakan', 'type' => 'Aset'], ['kategori' => 'Stok Obat-Obatan', 'type' => 'Aset'], ['kategori' => 'Stok Tray', 'type' => 'Aset']]);
+
+        // 🔥 HAPUS PENYESUAIAN STOK + GABUNG
+        $allKategoris = $allKategoris->reject(fn($k) => $k['kategori'] === 'Penyesuaian Stok')->merge($extraKategoris)->unique('kategori')->values();
+
+        // 🔥 HITUNG DEBIT KREDIT
+        $complete = collect($allKategoris)->map(function ($kategori) use ($details) {
+            $nama = $kategori['kategori'];
+            $type = $kategori['type'];
+
+            return [
+                'kategori' => $nama,
+                'type' => $type,
+                'debit' => $details->where('kategori', $nama)->where('type_kategori', $type)->where('type_transaksi', 'debit')->sum('sub_total'),
+                'kredit' => $details->where('kategori', $nama)->where('type_kategori', $type)->where('type_transaksi', 'kredit')->sum('sub_total'),
+            ];
+        });
+
+        // 🔥 MAPPING KE HIERARKI
         $mapHierarki = function ($mapping, $type) use ($complete) {
             $result = [];
+
             foreach ($mapping as $group => $categories) {
                 $sub = [];
                 $totalDebit = 0;
@@ -162,6 +189,7 @@ new class extends Component {
 
                 foreach ($categories as $cat) {
                     $row = $complete->first(fn($r) => $r['kategori'] == $cat && $r['type'] == $type);
+
                     if ($row) {
                         $sub[] = $row;
                         $totalDebit += $row['debit'];
@@ -176,6 +204,7 @@ new class extends Component {
                     'details' => $sub,
                 ];
             }
+
             return $result;
         };
 

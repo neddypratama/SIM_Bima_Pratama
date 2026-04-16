@@ -81,6 +81,7 @@ new class extends Component {
             })
             ->whereHas('details.barang.jenis', fn($q) => $q->where('name', 'Pakan Curah'))
             ->whereBetween('tanggal', [Carbon::parse('2025-10-31')->startOfDay(), $end])
+            ->where('status', 'Selesai')
             ->get()
             ->flatMap(fn($trx) => $trx->details)
             // Filter manual untuk memastikan relasi tersedia
