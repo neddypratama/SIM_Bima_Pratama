@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('qty_masuk', 10, 2);
             $table->decimal('qty_sisa', 10, 2);
             $table->decimal('harga', 15, 2);
-            $table->timestamp('tanggal');
+            $table->datetime('tanggal');
             $table->timestamps();
         });
     }

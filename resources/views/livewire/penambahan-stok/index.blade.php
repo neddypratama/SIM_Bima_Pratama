@@ -74,61 +74,60 @@ new class extends Component {
 
     public function syncTanggalDenganTransaksi(): void
     {
-        $batches = StokBatch::with('details.transaksi')->get();
+        DB::transaction(function () {
+            $batches = StokBatch::with('details.transaksi')->get();
 
-        foreach ($batches as $batch) {
-            if ($batch->details && $batch->details->transaksi) {
-                $batch->update([
-                    'tanggal' => $batch->details->transaksi->tanggal,
-                ]);
+            foreach ($batches as $batch) {
+                if ($batch->details && $batch->details->transaksi) {
+                    $batch->update([
+                        'tanggal' => $batch->details->transaksi->tanggal,
+                    ]);
+                }
             }
-        }
+        });
 
         $this->success('Tanggal stok berhasil disesuaikan dengan transaksi!', position: 'toast-top');
     }
 
     public function rebaseStok(): void
     {
-        $barangs = StokBatch::select('barang_id')->groupBy('barang_id')->pluck('barang_id');
+        DB::transaction(function () {
+            $barangs = StokBatch::select('barang_id')->groupBy('barang_id')->pluck('barang_id');
 
-        foreach ($barangs as $barangId) {
-            // 1. Hitung total stok dari semua batch
-            $total = StokBatch::where('barang_id', $barangId)->sum('qty_sisa');
-            dd($total, $barangId);
+            foreach ($barangs as $barangId) {
+                // 1. Hitung total stok
+                $total = StokBatch::where('barang_id', $barangId)->sum('qty_sisa');
 
-            if ($total <= 0) {
-                continue;
-            }
-
-            // 2. Ambil batch dari TERBARU ke TERLAMA
-            $batches = StokBatch::where('barang_id', $barangId)->orderByDesc('tanggal')->get();
-
-            // 3. Reset semua qty_sisa jadi 0
-            StokBatch::where('barang_id', $barangId)->update([
-                'qty_sisa' => 0,
-            ]);
-
-            // 4. Distribusi ulang stok (reverse FIFO)
-            foreach ($batches as $batch) {
                 if ($total <= 0) {
-                    break;
+                    continue;
                 }
 
-                // Ambil maksimal sesuai kapasitas batch
-                $ambil = min($batch->qty_masuk, $total);
+                // 2. Ambil batch terakhir (berdasarkan ID, bukan tanggal)
+                $lastBatch = StokBatch::where('barang_id', $barangId)->orderByDesc('id')->first();
 
-                // Update batch
-                $batch->update([
-                    'qty_sisa' => $ambil,
-                ]);
+                if (!$lastBatch) {
+                    continue;
+                }
 
-                // Kurangi total
-                $total -= $ambil;
+                // 3. Nolkan semua batch
+                $batches = StokBatch::where('barang_id', $barangId)->get();
+
+                foreach ($batches as $batch) {
+                    $batch->qty_sisa = 0;
+                    $batch->update(); // 🔥 biar tanggal tidak berubah
+                }
+
+                // 4. Isi ulang ke batch terakhir
+                $lastBatch->qty_masuk = $total;
+                $lastBatch->qty_sisa = $total;
+                // harga tetap (pakai harga terakhir)
+                $lastBatch->update();
             }
-        }
+        });
 
-        $this->success('Rebase stok (reverse dari terbaru) berhasil!', position: 'toast-top');
+        $this->success('Rebase stok tanpa create berhasil (pakai batch terakhir) ✅', position: 'toast-top');
     }
+
     public function headers(): array
     {
         return [['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-24'], ['key' => 'user.name', 'label' => 'Pembuat', 'class' => 'w-24'], ['key' => 'barang.name', 'label' => 'Barang', 'class' => 'w-36'], ['key' => 'harga', 'label' => ' HPP', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'qty_masuk', 'label' => ' Stok', 'class' => 'w-8'], ['key' => 'qty_sisa', 'label' => ' Sisa', 'class' => 'w-8']];
