@@ -25,7 +25,7 @@ class PiutangExport implements FromCollection, WithHeadings, ShouldAutoSize, Wit
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name, keterangan', 'details.kategori:id,name,type'])
+        return Transaksi::with(['client:id,name, keterangan', 'details.kategori:id,name'])
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', 'Piutang%');
             })

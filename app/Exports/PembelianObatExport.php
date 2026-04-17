@@ -25,9 +25,11 @@ class PembelianObatExport implements FromCollection, WithHeadings, ShouldAutoSiz
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name'])
             ->where('invoice', 'like', '%-OBT-%')
-            ->where('type', 'Debit')
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Debit%');
+            })
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Obat%'))
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))

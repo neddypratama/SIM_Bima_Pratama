@@ -27,7 +27,9 @@ class PembelianTrayExport implements FromCollection, WithHeadings, ShouldAutoSiz
     {
         return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
             ->where('invoice', 'like', '%-TRY-%')
-            ->where('type', 'Debit')
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Debit%');
+            })
             ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Tray%'))
             ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))

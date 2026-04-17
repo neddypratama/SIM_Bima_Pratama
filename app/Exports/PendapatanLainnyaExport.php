@@ -25,8 +25,10 @@ class PendapatanLainnyaExport implements FromCollection, WithHeadings, ShouldAut
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
-            ->where('type', 'Kredit')
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name'])
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Kredit%');
+            })
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'not like', '%Telur%')->where('name', 'not like', '%Pakan%')->where('name', 'not like', '%Obat-Obatan%')->where('name', 'not like', '%EggTray%')->where('type', 'Pendapatan');
             })

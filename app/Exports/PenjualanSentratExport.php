@@ -26,8 +26,10 @@ class PenjualanSentratExport implements FromCollection, WithHeadings, ShouldAuto
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name,keterangan', 'details.kategori:id,name,type'])
-            ->where('type', 'Kredit')
+        return Transaksi::with(['client:id,name,keterangan', 'details.kategori:id,name'])
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Kredit%');
+            })
             ->whereHas('details.kategori', callback: function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Pakan%');
             })

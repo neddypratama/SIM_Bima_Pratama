@@ -25,8 +25,10 @@ class PenjualanTelurExport implements FromCollection, WithHeadings, ShouldAutoSi
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
-            ->where('type', 'Kredit')
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name'])
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Kredit%');
+            })
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Telur%');
             })

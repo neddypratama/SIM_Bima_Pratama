@@ -25,7 +25,7 @@ class BankTransferExport implements FromCollection, WithHeadings, ShouldAutoSize
      */
     public function collection()
     {
-        return Transaksi::with(['client:id,name', 'details.kategori:id,name,type'])
+        return Transaksi::with(['client:id,name', 'details.kategori:id,name'])
             ->whereHas('details.kategori', function ($q) {
                 $q->where('name', 'like', 'Bank %');
             })
