@@ -212,13 +212,15 @@ Route::middleware('auth')->group(function () {
     | Kas Bank & Penjualan Telur/Tray (Role 8,1,6)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:8,1,6')->group(function () {
+    Route::middleware('role:8,1,6,5')->group(function () {
         // Kas Bank (Transfer)
         Volt::route('/transfer', 'transfer.index');
         Volt::route('/transfer/create', 'transfer.create');
         Volt::route('/transfer/{transaksi}/edit', 'transfer.edit');
         Volt::route('/transfer/{transaksi}/show', 'transfer.show');
+    });
 
+    Route::middleware('role:8,1,6')->group(function () {
         // Telur Keluar
         Volt::route('/telur-keluar', 'telur-keluar.index');
         Volt::route('/telur-keluar/create', 'telur-keluar.create');

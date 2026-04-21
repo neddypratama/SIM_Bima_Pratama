@@ -162,7 +162,7 @@
                     @if (in_array(auth()->user()->role_id, [1, 8, 5]))
                         <x-menu-item title="Transaksi Kas Tunai" icon="fas.money-bill-wave" link="/tunai" />
                     @endif
-                    @if (in_array(auth()->user()->role_id, [1, 8, 6]))
+                    @if (in_array(auth()->user()->role_id, [1, 8, 5, 6]))
                         <x-menu-item title="Transaksi Bank Transfer" icon="fas.credit-card" link="/transfer" />
                     @endif
                 </x-menu-sub>
