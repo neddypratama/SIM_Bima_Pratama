@@ -2,7 +2,7 @@
 
 use App\Models\Transaksi;
 use App\Models\TransaksiLink;
-use App\Models\Kategori;
+use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\User;
 use App\Models\Client;
@@ -20,6 +20,7 @@ new class extends Component {
     use WithPagination;
 
     public $today;
+
     public function mount(): void
     {
         $this->today = \Carbon\Carbon::today();
@@ -30,7 +31,6 @@ new class extends Component {
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $client_id = 0;
-    public int $kategori_id = 0;
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -42,7 +42,7 @@ new class extends Component {
     public int $perPage = 25; // Default jumlah data per halaman
     public function clear(): void
     {
-        $this->reset(['search', 'client_id', 'kategori_id', 'filter']);
+        $this->reset(['search', 'client_id', 'filter', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -64,23 +64,23 @@ new class extends Component {
         $this->exportModal = false;
         $this->success('Export dimulai...', position: 'toast-top');
 
-        return Excel::download(new BankTransferExport($this->startDate, $this->endDate), 'kas-bank-transfer.xlsx');
+        return Excel::download(new BankTransferExport($this->startDate, $this->endDate), 'bank-transfer.xlsx');
     }
 
     public function delete($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
-
         $suffix = substr($transaksi->invoice, -4);
         $tunai = Transaksi::where('invoice', 'like', "%-MDL-$suffix")->first();
         
         $tunai->details()->delete();
         $tunai->delete();
-        
-        $transaksi->details()->delete(); // Hapus detail transaksi terkait
+
+        $transaksi->details()->delete();
         $transaksi->delete();
 
-        $this->warning("Relasi link transaksi $id berhasil dihapus", position: 'toast-top');
+
+        $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
     public function headers(): array
@@ -95,17 +95,14 @@ new class extends Component {
             ->whereHas('details.kategori', function ($q) {
                 $q->where('name', 'like', 'Bank %');
             })
-            ->when($this->kategori_id, function (Builder $q) {
-                $q->whereHas('details', function ($query) {
-                    $query->where('kategori_id', $this->kategori_id);
-                });
-            })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -120,11 +117,13 @@ new class extends Component {
             if ($this->client_id != 0) {
                 $this->filter++;
             }
+            if ($this->startDate != null) {
+                $this->filter++;
+            }
         }
         return [
             'transaksi' => $this->transaksi(),
             'client' => Client::all(),
-            'kategori' => Kategori::where('name', 'like', 'Bank%')->get(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -165,13 +164,9 @@ new class extends Component {
         </div>
     </div>
 
-    <!-- TABLE -->
     <x-card class="overflow-x-auto">
         <x-table :headers="$headers" :rows="$transaksi" :sort-by="$sortBy" with-pagination
             link="transfer/{id}/show?invoice={invoice}">
-            @scope('cell-kategori.name', $transaksi)
-                {{ $transaksi->kategori?->name ?? '-' }}
-            @endscope
 
             @scope('actions', $transaksi)
                 <div class="flex">
@@ -182,8 +177,7 @@ new class extends Component {
                     @endif
                     @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
-                        <x-button icon="o-pencil"
-                            link="/transfer/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                        <x-button icon="o-pencil" link="/transfer/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                 </div>
@@ -201,7 +195,9 @@ new class extends Component {
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
                 single searchable />
 
-            <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" icon="o-flag" />
+            <!-- ✅ Tambahkan Filter Tanggal -->
+            <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
+            <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />
         </div>
 
         <x-slot:actions>
@@ -222,3 +218,5 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 </div>
+
+
