@@ -5,6 +5,7 @@ use App\Models\TransaksiLink;
 use App\Models\DetailTransaksi;
 use App\Models\Barang;
 use App\Models\User;
+use App\Models\Kategori;
 use App\Models\Client;
 use Livewire\Volt\Component;
 use Mary\Traits\Toast;
@@ -31,6 +32,7 @@ new class extends Component {
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
     public int $client_id = 0;
+    public int $kategori_id = 0;
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -72,20 +74,19 @@ new class extends Component {
         $transaksi = Transaksi::findOrFail($id);
         $suffix = substr($transaksi->invoice, -4);
         $tunai = Transaksi::where('invoice', 'like', "%-MDL-$suffix")->first();
-        
+
         $tunai->details()->delete();
         $tunai->delete();
 
         $transaksi->details()->delete();
         $transaksi->delete();
 
-
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']],['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
     }
 
     public function transaksi(): LengthAwarePaginator
@@ -94,6 +95,11 @@ new class extends Component {
             ->with(['client:id,name', 'details.kategori:id,name'])
             ->whereHas('details.kategori', function ($q) {
                 $q->where('name', 'like', 'Bank %');
+            })
+            ->when($this->kategori_id, function (Builder $q) {
+                $q->whereHas('details', function ($query) {
+                    $query->where('kategori_id', $this->kategori_id);
+                });
             })
             ->when($this->search, function (Builder $q) {
                 $q->where(function ($query) {
@@ -127,6 +133,7 @@ new class extends Component {
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
+            'kategori' => Kategori::where('name', 'like', 'Bank%')->get(),
         ];
     }
 
@@ -177,7 +184,8 @@ new class extends Component {
                     @endif
                     @if (Auth::user()->role_id == 1 ||
                             (Carbon::parse($transaksi->tanggal)->isSameDay($this->today) && $transaksi->user_id == Auth::user()->id))
-                        <x-button icon="o-pencil" link="/transfer/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
+                        <x-button icon="o-pencil"
+                            link="/transfer/{{ $transaksi->id }}/edit?invoice={{ $transaksi->invoice }}"
                             class="btn-ghost btn-sm text-yellow-500" />
                     @endif
                 </div>
@@ -194,6 +202,8 @@ new class extends Component {
             {{-- ✅ Filter User --}}
             <x-choices-offline placeholder="Pilih Client" wire:model.live="client_id" :options="$client" icon="o-user"
                 single searchable />
+
+            <x-select placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori" icon="o-flag" />
 
             <!-- ✅ Tambahkan Filter Tanggal -->
             <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
@@ -218,5 +228,3 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 </div>
-
-
