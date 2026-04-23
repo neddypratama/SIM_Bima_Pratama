@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Transaksi;
 use App\Models\Barang;
 use App\Models\Client;
+use App\Models\StokBatch;
 use Livewire\Volt\Component;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -72,49 +73,6 @@ new class extends Component {
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total'))
             ->toArray();
-
-        /* =====================================================
-     | 🔥 PENYESUAIAN STOK → PECAH JENIS
-     ===================================================== */
-        $penyesuaianStok = Transaksi::with('details.barang.jenis', 'details.kategori')
-            ->whereBetween('tanggal', [$start, $end])
-            ->where('status', 'Selesai')
-            ->whereHas('details.kategori', function ($q) {
-                $q->where('name', 'Penyesuaian Stok');
-            })
-            ->get()
-            ->flatMap->details->groupBy(function ($d) {
-                $jenis = strtolower($d->barang->jenis->name ?? '');
-
-                if (str_contains($jenis, 'telur')) {
-                    return 'Stok Telur';
-                }
-                if (str_contains($jenis, 'pakan')) {
-                    return 'Stok Pakan';
-                }
-                if (str_contains($jenis, 'obat')) {
-                    return 'Stok Obat-Obatan';
-                }
-                if (str_contains($jenis, 'tray')) {
-                    return 'Stok Tray';
-                }
-
-                return 'Lainnya';
-            })
-            ->map(function ($group) {
-                return $group->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total') - $group->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total');
-            })
-            ->toArray();
-
-        /* =====================================================
-     | GABUNG KE ASET
-     ===================================================== */
-        foreach ($penyesuaianStok as $akun => $nilai) {
-            if (!isset($asetFlat[$akun])) {
-                $asetFlat[$akun] = 0;
-            }
-            $asetFlat[$akun] += $nilai;
-        }
 
         $liabilitasFlat = Transaksi::with('details.kategori.detailKategori')
             ->whereBetween('tanggal', [$start, $end])
@@ -323,8 +281,66 @@ new class extends Component {
         }
 
         /* =====================================================
+        | AMBIL STOK + HPP DARI BATCH (SEPERTI HALAMAN BARANG)
+        ===================================================== */
+
+        $barangWithStok = Barang::query()
+            ->withAggregate('jenis', 'name')
+
+            // 🔹 STOK = SUM(qty_sisa > 0)
+            ->selectSub(StokBatch::query()->selectRaw('COALESCE(SUM(qty_sisa), 0)')->whereColumn('stok_batches.barang_id', 'barangs.id')->where('qty_sisa', '>', 0), 'stok')
+
+            // 🔹 HPP = batch terbaru
+            ->selectSub(StokBatch::query()->select('harga')->whereColumn('stok_batches.barang_id', 'barangs.id')->orderByDesc('tanggal')->limit(1), 'hpp')
+
+            ->get();
+
+        /* =====================================================
+        | KELOMPOKKAN NILAI PERSEDIAAN
+        ===================================================== */
+
+        $stokTelur = 0;
+        $stokPakan = 0;
+        $stokObat = 0;
+        $stokTray = 0;
+
+        foreach ($barangWithStok as $barang) {
+            $stok = $barang->stok ?? 0;
+            $hpp = $barang->hpp ?? 0;
+
+            if ($stok <= 0 || $hpp <= 0) {
+                continue;
+            }
+
+            $nilai = $stok * $hpp;
+
+            $jenis = strtolower($barang->jenis?->name ?? '');
+
+            if (str_contains($jenis, 'telur')) {
+                $stokTelur += $nilai;
+            } elseif (str_contains($jenis, 'pakan')) {
+                $stokPakan += $nilai;
+            } elseif (str_contains($jenis, 'obat')) {
+                $stokObat += $nilai;
+            } elseif (str_contains($jenis, 'tray')) {
+                $stokTray += $nilai;
+            }
+        }
+
+        /* =====================================================
+        | MASUKKAN KE ASET
+        ===================================================== */
+        
+        $asetFlat['Stok Telur'] = $stokTelur;
+        $asetFlat['Stok Pakan'] = $stokPakan;
+        $asetFlat['Stok Obat-Obatan'] = $stokObat;
+        $asetFlat['Stok Tray'] = $stokTray;
+        $asetFlat['Penyesuaian Stok'] = 0;
+
+        /* =====================================================
         | INJECT NILAI ASET
         ===================================================== */
+
         foreach ($asetFlat as $akun => $nilai) {
             foreach ($this->asetData as $laporan => &$data) {
                 if (array_key_exists($akun, $data['detail'])) {
