@@ -68,11 +68,18 @@ new class extends Component {
     public function clients(): LengthAwarePaginator
     {
         return Client::query()
+
             /* ================= PIUTANG ================= */
             ->withSum(
                 [
                     'transaksi as piutang_debit' => function ($q) {
-                        $q->where('type', 'debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
+                        $q->where('type', 'Debit')
+                            ->whereHas('details.kategori.detailKategori', function ($q) {
+                                $q->where('type', 'Aset');
+                            })
+                            ->whereHas('details.kategori', function (Builder $q) {
+                                $q->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
+                            });
                     },
                 ],
                 'total',
@@ -81,7 +88,13 @@ new class extends Component {
             ->withSum(
                 [
                     'transaksi as piutang_kredit' => function ($q) {
-                        $q->where('type', 'kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
+                        $q->where('type', 'Kredit')
+                            ->whereHas('details.kategori.detailKategori', function ($q) {
+                                $q->where('type', 'Aset');
+                            })
+                            ->whereHas('details.kategori', function (Builder $q) {
+                                $q->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
+                            });
                     },
                 ],
                 'total',
@@ -91,7 +104,9 @@ new class extends Component {
             ->withSum(
                 [
                     'transaksi as hutang_kredit' => function ($q) {
-                        $q->where('type', 'kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                        $q->where('type', 'Kredit')->whereHas('details.kategori.detailKategori', function ($q) {
+                            $q->where('type', 'Liabilitas');
+                        });
                     },
                 ],
                 'total',
@@ -100,7 +115,9 @@ new class extends Component {
             ->withSum(
                 [
                     'transaksi as hutang_debit' => function ($q) {
-                        $q->where('type', 'debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                        $q->where('type', 'Debit')->whereHas('details.kategori.detailKategori', function ($q) {
+                            $q->where('type', 'Liabilitas');
+                        });
                     },
                 ],
                 'total',
@@ -127,21 +144,53 @@ new class extends Component {
             $count++;
         }
         $this->filter = $count;
-        $this->curah = Transaksi::with('details.kategori', 'details.barang')
-            ->whereHas('details.kategori.detailKategori', function ($q) {
-                // Mencari type di tabel detail_kategoris
-                $q->where('type', 'Pendapatan');
-            })
-            ->whereHas('details.kategori', function ($q) {
-                // Mencari name di tabel kategoris
-                $q->where('name', 'Penjualan Pakan Curah');
-            })
-            ->sum('total');
+        
+        $curah =
+            DB::table('detail_transaksis as td')
+                ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+                ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+                ->where('k.name', 'Penjualan Pakan Curah')
+                ->selectRaw(
+                    "
+            SUM(
+                CASE 
+                    WHEN LOWER(t.type) = 'kredit' THEN td.sub_total
+                    WHEN LOWER(t.type) = 'debit' THEN -td.sub_total
+                    ELSE 0
+                END
+            ) as total_pendapatan
+        ",
+                )
+                ->value('total_pendapatan') ?? 0;
+
+        // ✅ HPP (SUDAH BENAR)
+        $hpp =
+            DB::table('detail_transaksis as td')
+                ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+                ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+                ->join('barangs as b', 'b.id', '=', 'td.barang_id')
+                ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
+                ->where('k.name', 'HPP')
+                ->where('jb.name', 'Pakan Curah')
+                ->selectRaw(
+                    "
+            SUM(
+                CASE 
+                    WHEN LOWER(t.type) = 'debit' THEN td.sub_total
+                    WHEN LOWER(t.type) = 'kredit' THEN -td.sub_total
+                    ELSE 0
+                END
+            ) as total_hpp
+        ",
+                )
+                ->value('total_hpp') ?? 0;
+
+        $this->curah = $curah - $hpp;
+        // dd($this->curah, $this->hpp, $this->curah - $this->hpp);
 
         return [
             'clients' => $this->clients(),
             'headers' => $this->headers(),
-            'curah' => $this->curah,
         ];
     }
 
@@ -210,7 +259,7 @@ new class extends Component {
                     } else {
                         $titipan = ($client->hutang_kredit ?? 0) - ($client->hutang_debit ?? 0);
                     }
-                    
+
                     $sisa = $bon - $titipan;
                     $warna = $sisa > 0 ? 'text-green-600' : ($sisa < 0 ? 'text-yellow-600' : 'text-gray-600');
                 @endphp

@@ -116,38 +116,15 @@ new class extends Component {
         $details = $transaksis
             ->flatMap(function ($trx) {
                 return $trx->details->map(function ($d) use ($trx) {
-                    $kategori = $d->kategori?->name;
-                    $typeKategori = $d->kategori?->detailKategori?->type;
-                    $jenis = strtolower($d->barang?->jenis?->name ?? '');
-
-                    // 🔥 SPLIT PENYESUAIAN STOK → MASUK KE ASET
-                    if ($kategori === 'Penyesuaian Stok') {
-                        if (str_contains($jenis, 'telur')) {
-                            $kategori = 'Stok Telur';
-                            $typeKategori = 'Aset';
-                        } elseif (str_contains($jenis, 'pakan')) {
-                            $kategori = 'Stok Pakan';
-                            $typeKategori = 'Aset';
-                        } elseif (str_contains($jenis, 'obat')) {
-                            $kategori = 'Stok Obat-Obatan';
-                            $typeKategori = 'Aset';
-                        } elseif (str_contains($jenis, 'tray')) {
-                            $kategori = 'Stok Tray';
-                            $typeKategori = 'Aset';
-                        } else {
-                            $kategori = null; // ❌ buang kalau tidak jelas
-                        }
-                    }
-
                     return [
-                        'kategori' => $kategori,
-                        'type_kategori' => $typeKategori,
-                        'type_transaksi' => strtolower($trx->type),
+                        'kategori' => $d->kategori?->name,
+                        'type_kategori' => $d->kategori?->detailKategori?->type,
+                        'type_transaksi' => strtolower($trx->type ?? ''),
                         'sub_total' => $d->sub_total ?? 0,
                     ];
                 });
             })
-            ->filter(fn($d) => $d['kategori']);
+            ->filter(fn($d) => !empty($d['kategori']));
 
         // 🔥 AMBIL SEMUA KATEGORI DARI DB
         $allKategoris = Kategori::with('detailKategori')->get();
@@ -163,7 +140,7 @@ new class extends Component {
         $extraKategoris = collect([['kategori' => 'Stok Telur', 'type' => 'Aset'], ['kategori' => 'Stok Pakan', 'type' => 'Aset'], ['kategori' => 'Stok Obat-Obatan', 'type' => 'Aset'], ['kategori' => 'Stok Tray', 'type' => 'Aset']]);
 
         // 🔥 HAPUS PENYESUAIAN STOK + GABUNG
-        $allKategoris = $allKategoris->reject(fn($k) => $k['kategori'] === 'Penyesuaian Stok')->merge($extraKategoris)->unique('kategori')->values();
+        // $allKategoris = $allKategoris->reject(fn($k) => $k['kategori'] === 'Penyesuaian Stok')->merge($extraKategoris)->unique('kategori')->values();
 
         // 🔥 HITUNG DEBIT KREDIT
         $complete = collect($allKategoris)->map(function ($kategori) use ($details) {
@@ -273,15 +250,15 @@ new class extends Component {
                             <tr class="cursor-pointer" wire:click="$toggle('expanded.{{ $group['group'] }}')">
                             <tr class="cursor-pointer" wire:click="$toggle('expanded.{{ $group['group'] }}')">
                                 <td>
-                                    <i class="fas fa-chevron-right mr-2"
-                                        :class="{ 'fa-chevron-down': $expanded['{{ $group['group'] }}'] ?? false }"></i>
+                                    <i
+                                        class="fas mr-2 {{ $expanded[$group['group']] ?? false ? 'fa-chevron-down' : 'fa-chevron-right' }}"></i>
                                     {{ $group['group'] }}
                                 </td>
                                 <td class="text-center text-blue-600">
-                                    {{ 'Rp ' . number_format($group['debit'], 0, ',', '.') }}
+                                    Rp {{ number_format($group['debit'], 0, ',', '.') }}
                                 </td>
                                 <td class="text-center text-green-600">
-                                    {{ 'Rp ' . number_format($group['kredit'], 0, ',', '.') }}
+                                    Rp {{ number_format($group['kredit'], 0, ',', '.') }}
                                 </td>
                             </tr>
 
@@ -316,8 +293,7 @@ new class extends Component {
 
                 </tbody>
             </table>
-            @if ($totalDebit != $totalKredit && $totalDebit - $totalKredit == 0)
-                {{-- @dd($totalDebit, $totalKredit) --}}
+            @if ($totalDebit != $totalKredit && Auth()->user()->role_id == 8)
                 <div class="mt-4 p-3 text-yellow-800 rounded bg-yellow-100 flex items-center">
                     <i class="fas fa-exclamation-triangle mr-3"></i>
                     <span>

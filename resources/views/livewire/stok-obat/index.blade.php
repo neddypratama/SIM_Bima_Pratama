@@ -202,7 +202,7 @@ new class extends Component {
 
                     $detail = DetailTransaksi::create([
                         'transaksi_id' => $trx->id,
-                        'kategori_id' => $kateStok->id,
+                        'kategori_id' => $kateTelur->id,
                         'barang_id' => $stok->barang_id,
                         'value' => $harga,
                         'kuantitas' => $stok->tambah,
@@ -232,7 +232,7 @@ new class extends Component {
 
                     DetailTransaksi::create([
                         'transaksi_id' => $telur2->id,
-                        'kategori_id' => $kateTelur->id ?? null,
+                        'kategori_id' => $kateStok->id ?? null,
                         'value' => $harga,
                         'barang_id' => $stok->barang_id,
                         'kuantitas' => $stok->tambah,
@@ -255,7 +255,7 @@ new class extends Component {
 
                     $detail = DetailTransaksi::create([
                         'transaksi_id' => $trx->id,
-                        'kategori_id' => $kateStok->id,
+                        'kategori_id' => $kateTelur->id,
                         'barang_id' => $stok->barang_id,
                         'value' => 0,
                         'kuantitas' => $stok->kurang,
@@ -283,7 +283,7 @@ new class extends Component {
 
                     DetailTransaksi::create([
                         'transaksi_id' => $telur2->id,
-                        'kategori_id' => $kateTelur->id ?? null,
+                        'kategori_id' => $kateStok->id ?? null,
                         'value' => $hpp / $stok->kurang,
                         'barang_id' => $stok->barang_id,
                         'kuantitas' => $stok->kurang,

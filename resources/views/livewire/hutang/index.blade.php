@@ -26,6 +26,7 @@ new class extends Component {
     public int $filter = 0;
     public int $client_id = 0;
     public int $kategori_id = 0;
+    public string $type = '';
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -42,7 +43,7 @@ new class extends Component {
     public $page = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
 
     public int $perPage = 25; // Default jumlah data per halaman
-    
+
     public function clear(): void
     {
         $this->reset(['search', 'client_id', 'kategori_id', 'filter', 'startDate', 'endDate']);
@@ -97,7 +98,7 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']],['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'client.name', 'label' => 'Client', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
     }
 
     public function transaksi(): LengthAwarePaginator
@@ -118,10 +119,31 @@ new class extends Component {
                 });
             })
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->type, fn(Builder $q) => $q->where('type', $this->type))
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
+    }
+
+    public function totalKeseluruhan(): int
+    {
+        return Transaksi::query()
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Liabilitas%');
+            })
+            ->when($this->kategori_id, fn($q) => $q->whereHas('details', fn($qq) => $qq->where('kategori_id', $this->kategori_id)))
+            ->when(
+                $this->search,
+                fn($q) => $q->where(function ($qq) {
+                    $qq->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
+                }),
+            )
+            ->when($this->client_id, fn($q) => $q->where('client_id', $this->client_id))
+            ->when($this->type, fn(Builder $q) => $q->where('type', $this->type))
+            ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
+            ->sum('total');
     }
 
     public function with(): array
@@ -153,6 +175,7 @@ new class extends Component {
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
+            'totalKeseluruhan' => $this->totalKeseluruhan(),
         ];
     }
 
@@ -212,6 +235,19 @@ new class extends Component {
                     @endif
                 </div>
             @endscope
+
+            {{-- ✅ FOOTER TOTAL --}}
+            <x-slot:footer class="font-bold">
+                <tr>
+                    <td colspan="4" class="text-right px-4 py-2">
+                        Total Keseluruhan
+                    </td>
+                    <td class="px-4 py-2 text-green-700">
+                        Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                    </td>
+                    <td></td>
+                </tr>
+            </x-slot:footer>
         </x-table>
     </x-card>
 
@@ -227,6 +263,15 @@ new class extends Component {
 
             <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori"
                 icon="o-flag" single searchable />
+
+            @php
+                $type = [
+                    ['id' => 'Debit', 'name' => 'Debit'],
+                    ['id' => 'Kredit', 'name' => 'Kredit'], // <-- this
+                ];
+            @endphp
+
+            <x-select :options="$type" wire:model.live="type" placeholder="Pilih Type"/>
 
             <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
             <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />

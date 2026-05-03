@@ -1,247 +1,184 @@
 <?php
 
-use Livewire\Volt\Component;
-use Livewire\WithPagination;
-use Mary\Traits\Toast;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
+use App\Models\User;
+use App\Models\Client;
+use App\Models\Kategori;
+use Livewire\Volt\Component;
+use Mary\Traits\Toast;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\WithPagination;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Carbon\Carbon;
+use App\Exports\TransaksiExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 new class extends Component {
-    use WithPagination, Toast;
+    use Toast;
+    use WithPagination;
 
     public string $search = '';
-    public string $startDate = '';
-    public string $endDate = '';
+    public bool $drawer = false;
 
-    public int $perPage = 25;
+    public array $sortBy = ['column' => 'tanggal', 'direction' => 'asc'];
 
-    public array $pages = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
+    public ?string $validStatus = null; // 🔥 valid / invalid
+
+    public int $filter = 0;
+    public $pages = [['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100'], ['id' => 500, 'name' => '500']];
+
+    public int $perPage = 25; // Default jumlah data per halaman
+
+    public ?string $startDate = null;
+    public ?string $endDate = null;
 
     public function clear(): void
     {
-        $this->reset(['search', 'startDate', 'endDate']);
+        $this->reset(['search', 'validStatus']);
+        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
+        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
         $this->resetPage();
-        $this->success('Filter berhasil dibersihkan');
+        $this->success('Filters cleared.', position: 'toast-top');
     }
 
     public function headers(): array
     {
-        return [
-            ['key' => 'nama_barang', 'label' => 'Nama Barang'],
-            ['key' => 'stok_masuk', 'label' => 'Stok Masuk'],
-            ['key' => 'stok_keluar', 'label' => 'Stok Keluar'],
-            ['key' => 'sisa_stok', 'label' => 'Sisa Stok (Transaksi)'],
-            ['key' => 'qty_sisa_batch', 'label' => 'Qty Sisa (Stok Batch)'],
-            ['key' => 'status', 'label' => 'Status'], // ✅ tambahan
-        ];
+        return [['key' => 'kode', 'label' => 'Kode Invoice'], ['key' => 'tanggal', 'label' => 'Tanggal'], ['key' => 'total_debit', 'label' => 'Total Debit'], ['key' => 'total_kredit', 'label' => 'Total Kredit'], ['key' => 'status', 'label' => 'Status']];
     }
 
-    public function perbandinganStok(): LengthAwarePaginator
+    public function transaksis(): LengthAwarePaginator
     {
-        return DB::table('barangs as barang')
-            ->select(
-                'barang.id',
-                'barang.name as nama_barang',
+        $data = DB::table('transaksis as t')
+            ->join('detail_transaksis as d', 'd.transaksi_id', '=', 't.id')
+            ->selectRaw(
+            "
+                SUBSTRING_INDEX(t.invoice, '-', -1) as kode,
+                SUBSTRING_INDEX(SUBSTRING_INDEX(t.invoice, '-', 2), '-', -1) as tanggal_invoice,
 
-                // STOK MASUK
-                DB::raw("
-                    SUM(
-                        CASE
-                            WHEN transaksi.type = 'Debit'
-                            AND kategori.name LIKE 'Stok%'
-                            THEN detail_transaksis.kuantitas
-                            ELSE 0
-                        END
-                    ) as stok_masuk
-                "),
+                MIN(t.tanggal) as tanggal,
 
-                // STOK KELUAR
-                DB::raw("
-                    SUM(
-                        CASE
-                            WHEN transaksi.type = 'Kredit'
-                            AND kategori.name LIKE 'Stok%'
-                            THEN detail_transaksis.kuantitas
-                            ELSE 0
-                        END
-                    ) as stok_keluar
-                "),
-
-                // SISA TRANSAKSI
-                DB::raw("
-                    (
-                        SUM(
-                            CASE
-                                WHEN transaksi.type = 'Debit'
-                                AND kategori.name LIKE 'Stok%'
-                                THEN detail_transaksis.kuantitas
-                                ELSE 0
-                            END
-                        )
-                        -
-                        SUM(
-                            CASE
-                                WHEN transaksi.type = 'Kredit'
-                                AND kategori.name LIKE 'Stok%'
-                                THEN detail_transaksis.kuantitas
-                                ELSE 0
-                            END
-                        )
-                    ) as sisa_stok
-                "),
-
-                // QTY SISA BATCH
-                DB::raw("
-                    (
-                        SELECT COALESCE(SUM(sb.qty_sisa),0)
-                        FROM stok_batches sb
-                        WHERE sb.barang_id = barang.id
-                    ) as qty_sisa_batch
-                "),
-
-                // FINAL SISA (UNTUK STATUS)
-                DB::raw("
-                    (
-                        (
-                            SUM(
-                                CASE
-                                    WHEN transaksi.type = 'Debit'
-                                    AND kategori.name LIKE 'Stok%'
-                                    THEN detail_transaksis.kuantitas
-                                    ELSE 0
-                                END
-                            )
-                            -
-                            SUM(
-                                CASE
-                                    WHEN transaksi.type = 'Kredit'
-                                    AND kategori.name LIKE 'Stok%'
-                                    THEN detail_transaksis.kuantitas
-                                    ELSE 0
-                                END
-                            )
-                        )
-                        -
-                        (
-                            SELECT COALESCE(SUM(sb.qty_sisa),0)
-                            FROM stok_batches sb
-                            WHERE sb.barang_id = barang.id
-                        )
-                    ) as final_sisa
-                "),
+                SUM(CASE WHEN t.type = 'Debit' THEN d.sub_total ELSE 0 END) as total_debit,
+                SUM(CASE WHEN t.type = 'Kredit' THEN d.sub_total ELSE 0 END) as total_kredit
+            ",
             )
+            ->groupBy('kode', 'tanggal_invoice');
 
-            ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
-            ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
-            ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
+        // 🔥 FILTER VALID / TIDAK
+        if ($this->validStatus === 'valid') {
+            $data->havingRaw('ABS(total_debit - total_kredit) < 0.01');
+        } elseif ($this->validStatus === 'invalid') {
+            $data->havingRaw('ABS(total_debit - total_kredit) >= 0.01');
+        }
 
-            ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
-            ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
-            ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
-
-            ->groupBy('barang.id', 'barang.name')
-            ->orderBy('barang.name')
+        $result = $data
+        ->where('status', 'like', 'Selesai')
+            ->when($this->startDate && $this->endDate, function (Builder $q) {
+                $q->whereBetween('tanggal', [$this->startDate, $this->endDate]);
+            })
+            ->orderBy($this->sortBy['column'], $this->sortBy['direction'])
             ->paginate($this->perPage);
+
+        return $result;
     }
 
     public function with(): array
     {
-        // dd(
-        //     DetailTransaksi::with(['kategori', 'transaksi'])
-        //         ->where('barang_id', 29)
-        //         ->whereHas('kategori', function ($q) {
-        //             $q->where('name', 'like', 'Stok%');
-        //         })
-        //         ->whereHas('transaksi', function ($q) {
-        //             $q->where('type', 'Debit');
-        //         })
-        //         ->get(),
-        // );
-
         return [
-            'stokData' => $this->perbandinganStok(),
-            'headers' => $this->headers(),
-            'pages' => $this->pages,
+            'transaksis' => $this->transaksis(),
+            'headers' => $this->headers(), // 🔥 WAJIB
         ];
     }
 
-    public function updated(): void
+    public function updated($property): void
     {
-        $this->resetPage();
+        if (!is_array($property) && $property != '') {
+            $this->resetPage();
+        }
     }
 };
-
 ?>
 
 <div>
-    <x-header title="Laporan Perbandingan Stok" separator progress-indicator />
+    <!-- HEADER -->
+    <x-header title="Daftar Transaksi" separator progress-indicator>
+        <x-slot:actions>
+            <div class="flex flex-row sm:flex-row gap-2">
 
-    <div class="grid grid-cols-1 md:grid-cols-10 gap-4 items-end mb-4">
-        <div class="md:col-span-2">
+            </div>
+        </x-slot:actions>
+    </x-header>
+
+    <!-- FILTERS -->
+    <div class="grid grid-cols-1 md:grid-cols-8 gap-4 items-end mb-4">
+        <div class="md:col-span-1">
             <x-select label="Show entries" :options="$pages" wire:model.live="perPage" />
         </div>
-
-        <div class="md:col-span-2">
-            <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
+        <div class="md:col-span-6">
+            <x-input placeholder="Cari Nama / Invoice..." wire:model.live.debounce="search" clearable
+                icon="o-magnifying-glass" />
         </div>
-
-        <div class="md:col-span-2">
-            <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />
-        </div>
-
-        <div class="md:col-span-2">
-            <x-input placeholder="Cari nama barang..." wire:model.live.debounce="search" icon="o-magnifying-glass"
-                clearable />
-        </div>
-
-        <div class="md:col-span-2">
-            <x-button label="Reset" icon="o-x-mark" class="btn-outline" wire:click="clear" />
+        <div class="md:col-span-1">
+            <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel"
+                badge="{{ $this->filter }}" badge-classes="badge-primary" />
         </div>
     </div>
 
     <x-card>
-        <x-table :headers="$headers" :rows="$stokData" with-pagination>
+        <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination>
 
-            @scope('cell_stok_masuk', $row)
-                <span class="font-bold text-green-600">
-                    {{ number_format($row->stok_masuk ?? 0, 2, ',', '.') }}
-                </span>
+            {{-- KODE --}}
+            @scope('cell_kode', $row)
+                <b>{{ $row->kode }}</b>
             @endscope
 
-            @scope('cell_stok_keluar', $row)
-                <span class="font-bold text-red-600">
-                    {{ number_format($row->stok_keluar ?? 0, 2, ',', '.') }}
-                </span>
+            {{-- TANGGAL --}}
+            @scope('cell_tanggal', $row)
+                {{ \Carbon\Carbon::parse($row->tanggal)->format('d-m-Y') }}
             @endscope
 
-            @scope('cell_sisa_stok', $row)
-                <span class="font-bold text-blue-600">
-                    {{ number_format($row->sisa_stok ?? 0, 2, ',', '.') }}
-                </span>
+            {{-- TOTAL DEBIT --}}
+            @scope('cell_total_debit', $row)
+                Rp {{ number_format($row->total_debit, 0, ',', '.') }}
             @endscope
 
-            @scope('cell_qty_sisa_batch', $row)
-                <span class="font-bold text-purple-600">
-                    {{ number_format($row->qty_sisa_batch ?? 0, 2, ',', '.') }}
-                </span>
+            {{-- TOTAL KREDIT --}}
+            @scope('cell_total_kredit', $row)
+                Rp {{ number_format($row->total_kredit, 0, ',', '.') }}
             @endscope
 
             {{-- STATUS --}}
             @scope('cell_status', $row)
                 @php
-                    $sisa = $row->final_sisa ?? 0;
+                    $isValid = abs($row->total_debit - $row->total_kredit) < 0.01;
                 @endphp
 
-                @if ($sisa < 0)
-                    <span class="badge badge-error">Habis</span>
-                @elseif ($sisa > 0)
-                    <span class="badge badge-warning">Menipis</span>
+                @if ($isValid)
+                    <span class="badge badge-success">Balance</span>
                 @else
-                    <span class="badge badge-success">Aman</span>
+                    <span class="badge badge-error">Tidak Balance</span>
                 @endif
             @endscope
 
         </x-table>
     </x-card>
+
+    <!-- FILTER DRAWER -->
+    <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="lg:w-1/3">
+        <div class="grid gap-5">
+            <x-input placeholder="Cari Nama / Invoice..." wire:model.live.debounce="search" clearable
+                icon="o-magnifying-glass" />
+
+            {{-- 🔥 FILTER VALID --}}
+            <x-select label="Status" wire:model.live="validStatus" :options="[['id' => 'valid', 'name' => 'Balance'], ['id' => 'invalid', 'name' => 'Tidak Balance']]" placeholder="Semua" />
+            <!-- ✅ Tambahan filter tanggal -->
+            <x-input type="date" label="Dari Tanggal" wire:model.live="startDate" />
+            <x-input type="date" label="Sampai Tanggal" wire:model.live="endDate" />
+        </div>
+
+        <x-slot:actions>
+            <x-button label="Reset" icon="o-x-mark" wire:click="clear" spinner />
+            <x-button label="Done" icon="o-check" class="btn-primary" @click="$wire.drawer=false" />
+        </x-slot:actions>
+    </x-drawer>
 </div>

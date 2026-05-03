@@ -25,6 +25,7 @@ new class extends Component {
     public bool $drawer = false;
     public array $sortBy = ['column' => 'id', 'direction' => 'desc'];
     public int $filter = 0;
+    public string $type = '';
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -66,20 +67,19 @@ new class extends Component {
         $transaksi = Transaksi::findOrFail($id);
         $suffix = substr($transaksi->invoice, -4);
         $tunai = Transaksi::where('invoice', 'like', "%-MDL-$suffix")->first();
-        
+
         $tunai->details()->delete();
         $tunai->delete();
 
         $transaksi->details()->delete();
         $transaksi->delete();
 
-
         $this->warning("Transaksi $id dan semua detailnya berhasil dihapus", position: 'toast-top');
     }
 
     public function headers(): array
     {
-        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']],['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
+        return [['key' => 'invoice', 'label' => 'Invoice', 'class' => 'w-24'], ['key' => 'name', 'label' => 'Rincian', 'class' => 'w-48'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-16'], ['key' => 'total', 'label' => 'Total', 'class' => 'w-24', 'format' => ['currency', 0, 'Rp']], ['key' => 'type', 'label' => 'Tipe', 'class' => 'w-16']];
     }
 
     public function transaksi(): LengthAwarePaginator
@@ -94,10 +94,28 @@ new class extends Component {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
                 });
             })
+            ->when($this->type, fn(Builder $q) => $q->where('type', $this->type))
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
+    }
+
+    public function totalKeseluruhan(): int
+    {
+        return Transaksi::query()
+            ->whereHas('details.kategori', function ($q) {
+                $q->where('name', 'like', 'Kas Deby');
+            })
+            ->when($this->search, function (Builder $q) {
+                $q->where(function ($query) {
+                    $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
+                });
+            })
+            ->when($this->type, fn(Builder $q) => $q->where('type', $this->type))
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
+            ->sum('total');
     }
 
     public function with(): array
@@ -116,6 +134,7 @@ new class extends Component {
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
+            'totalKeseluruhan' => $this->totalKeseluruhan(),
         ];
     }
 
@@ -171,6 +190,19 @@ new class extends Component {
                     @endif
                 </div>
             @endscope
+
+            {{-- ✅ FOOTER TOTAL --}}
+            <x-slot:footer class="font-bold">
+                <tr>
+                    <td colspan="4" class="text-right px-4 py-2">
+                        Total Keseluruhan
+                    </td>
+                    <td class="px-4 py-2 text-green-700">
+                        Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                    </td>
+                    <td></td>
+                </tr>
+            </x-slot:footer>
         </x-table>
     </x-card>
 
@@ -194,6 +226,16 @@ new class extends Component {
     <!-- ✅ MODAL EXPORT -->
     <x-modal wire:model="exportModal" title="Export Data" separator>
         <div class="grid gap-4">
+
+            @php
+                $type = [
+                    ['id' => 'Debit', 'name' => 'Debit'],
+                    ['id' => 'Kredit', 'name' => 'Kredit'], // <-- this
+                ];
+            @endphp
+
+            <x-select :options="$type" wire:model.live="type" placeholder="Pilih Type" />
+
             <x-input label="Start Date" type="date" wire:model="startDate" />
             <x-input label="End Date" type="date" wire:model="endDate" />
         </div>

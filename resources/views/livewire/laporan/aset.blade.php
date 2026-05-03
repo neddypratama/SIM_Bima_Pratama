@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Models\Transaksi;
 use App\Models\Barang;
 use App\Models\Client;
-use App\Models\StokBatch;
 use Livewire\Volt\Component;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -69,7 +68,7 @@ new class extends Component {
         $asetFlat = Transaksi::with('details.kategori.detailKategori')
             ->whereBetween('tanggal', [$start, $end])
             ->get()
-            ->flatMap->details->filter(fn($d) => $d->kategori->detailKategori?->type === 'Aset')
+            ->flatMap->details->filter(fn($d) => $d->kategori->detailKategori?->type === 'Aset' && $d->kategori?->name !== 'Penyesuaian Stok')
             ->groupBy(fn($d) => $d->kategori->name)
             ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total'))
             ->toArray();
@@ -90,10 +89,12 @@ new class extends Component {
             /* ================= PIUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as piutang_debit' => function ($q) {
-                        $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
-                            $q->where('name', 'like', 'Piutang%');
-                        });
+                    'transaksi as piutang_debit' => function ($q) use ($start, $end) {
+                        $q->where('type', 'debit')
+                            ->whereBetween('tanggal', [$start, $end])
+                            ->whereHas('details.kategori', function ($q) {
+                                $q->where('name', 'like', 'Piutang%');
+                            });
                     },
                 ],
                 'total',
@@ -101,10 +102,12 @@ new class extends Component {
 
             ->withSum(
                 [
-                    'transaksi as piutang_kredit' => function ($q) {
-                        $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
-                            $q->where('name', 'like', 'Piutang%');
-                        });
+                    'transaksi as piutang_kredit' => function ($q) use ($start, $end) {
+                        $q->where('type', 'kredit')
+                            ->whereBetween('tanggal', [$start, $end])
+                            ->whereHas('details.kategori', function ($q) {
+                                $q->where('name', 'like', 'Piutang%');
+                            });
                     },
                 ],
                 'total',
@@ -113,10 +116,12 @@ new class extends Component {
             /* ================= HUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as hutang_kredit' => function ($q) {
-                        $q->where('type', 'kredit')->whereHas('details.kategori', function ($q) {
-                            $q->where('name', 'like', 'Hutang%');
-                        });
+                    'transaksi as hutang_kredit' => function ($q) use ($start, $end) {
+                        $q->where('type', 'kredit')
+                            ->whereBetween('tanggal', [$start, $end])
+                            ->whereHas('details.kategori', function ($q) {
+                                $q->where('name', 'like', 'Hutang%');
+                            });
                     },
                 ],
                 'total',
@@ -124,10 +129,12 @@ new class extends Component {
 
             ->withSum(
                 [
-                    'transaksi as hutang_debit' => function ($q) {
-                        $q->where('type', 'debit')->whereHas('details.kategori', function ($q) {
-                            $q->where('name', 'like', 'Hutang%');
-                        });
+                    'transaksi as hutang_debit' => function ($q) use ($start, $end) {
+                        $q->where('type', 'debit')
+                            ->whereBetween('tanggal', [$start, $end])
+                            ->whereHas('details.kategori', function ($q) {
+                                $q->where('name', 'like', 'Hutang%');
+                            });
                     },
                 ],
                 'total',
@@ -220,39 +227,51 @@ new class extends Component {
             }
         }
 
-        $barangCurahMaster = Barang::whereHas('jenis', fn($q) => $q->where('name', 'Pakan Curah'))->pluck('name')->toArray();
+        // ✅ PENDAPATAN (BENAR)
+        $curah =
+            DB::table('detail_transaksis as td')
+                ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+                ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+                ->where('k.name', 'Penjualan Pakan Curah')
+                ->whereBetween('t.tanggal', [$start, $end])
+                ->selectRaw(
+                    "
+            SUM(
+                CASE 
+                    WHEN LOWER(t.type) = 'kredit' THEN td.sub_total
+                    WHEN LOWER(t.type) = 'debit' THEN -td.sub_total
+                    ELSE 0
+                END
+            ) as total_pendapatan
+        ",
+                )
+                ->value('total_pendapatan') ?? 0;
 
-        // ✅ Pendapatan sudah bersih (Kredit - Debit) per barang
-        $pendapatanFlat = Transaksi::with('details.kategori', 'details.barang')
-            ->whereHas('details.kategori.detailKategori', function ($q) {
-                // Mencari type di tabel detail_kategoris
-                $q->where('type', 'Pendapatan');
-            })
-            ->whereHas('details.kategori', function ($q) {
-                // Mencari name di tabel kategoris
-                $q->where('name', 'Penjualan Pakan Curah');
-            })
-            ->whereBetween('tanggal', [$start, $end])
-            ->get()
-            ->flatMap(fn($trx) => $trx->details)
-            ->groupBy(fn($d) => $d->barang->name)
-            ->map(fn($group) => $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'kredit')->sum('sub_total') - $group->filter(fn($d) => strtolower($d->transaksi->type ?? '') === 'debit')->sum('sub_total'))
-            ->toArray();
+        // ✅ HPP (SUDAH BENAR)
+        $hpp =
+            DB::table('detail_transaksis as td')
+                ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+                ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+                ->join('barangs as b', 'b.id', '=', 'td.barang_id')
+                ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
+                ->where('k.name', 'HPP')
+                ->where('jb.name', 'Pakan Curah')
+                ->whereBetween('t.tanggal', [$start, $end])
+                ->selectRaw(
+                    "
+            SUM(
+                CASE 
+                    WHEN LOWER(t.type) = 'debit' THEN td.sub_total
+                    WHEN LOWER(t.type) = 'kredit' THEN -td.sub_total
+                    ELSE 0
+                END
+            ) as total_hpp
+        ",
+                )
+                ->value('total_hpp') ?? 0;
 
-        // ✅ Urutkan detail pendapatan berdasarkan master barang
-        $pendapatanDetailFinal = [];
-        $totalPendapatan = 0;
-
-        foreach ($barangCurahMaster as $barang) {
-            $nilai = $pendapatanFlat[$barang] ?? 0;
-            $pendapatanDetailFinal[$barang] = $nilai;
-            $totalPendapatan += $nilai;
-        }
-
-        $curah = $totalPendapatan;
-
-        $hutang['Saldo Bp.Supriyadi'] = $hutang['Saldo Bp.Supriyadi'] * -1;
-        $hutang['Saldo Bp.Supriyadi'] += $curah;
+        $saldo = $hutang['Saldo Bp.Supriyadi'] + ($curah - $hpp);
+        $hutang['Saldo Bp.Supriyadi'] = $saldo;
 
         /* =====================================================
         | INJECT KE LAPORAN
@@ -281,66 +300,8 @@ new class extends Component {
         }
 
         /* =====================================================
-        | AMBIL STOK + HPP DARI BATCH (SEPERTI HALAMAN BARANG)
-        ===================================================== */
-
-        $barangWithStok = Barang::query()
-            ->withAggregate('jenis', 'name')
-
-            // 🔹 STOK = SUM(qty_sisa > 0)
-            ->selectSub(StokBatch::query()->selectRaw('COALESCE(SUM(qty_sisa), 0)')->whereColumn('stok_batches.barang_id', 'barangs.id')->where('qty_sisa', '>', 0), 'stok')
-
-            // 🔹 HPP = batch terbaru
-            ->selectSub(StokBatch::query()->select('harga')->whereColumn('stok_batches.barang_id', 'barangs.id')->orderByDesc('tanggal')->limit(1), 'hpp')
-
-            ->get();
-
-        /* =====================================================
-        | KELOMPOKKAN NILAI PERSEDIAAN
-        ===================================================== */
-
-        $stokTelur = 0;
-        $stokPakan = 0;
-        $stokObat = 0;
-        $stokTray = 0;
-
-        foreach ($barangWithStok as $barang) {
-            $stok = $barang->stok ?? 0;
-            $hpp = $barang->hpp ?? 0;
-
-            if ($stok <= 0 || $hpp <= 0) {
-                continue;
-            }
-
-            $nilai = $stok * $hpp;
-
-            $jenis = strtolower($barang->jenis?->name ?? '');
-
-            if (str_contains($jenis, 'telur')) {
-                $stokTelur += $nilai;
-            } elseif (str_contains($jenis, 'pakan')) {
-                $stokPakan += $nilai;
-            } elseif (str_contains($jenis, 'obat')) {
-                $stokObat += $nilai;
-            } elseif (str_contains($jenis, 'tray')) {
-                $stokTray += $nilai;
-            }
-        }
-
-        /* =====================================================
-        | MASUKKAN KE ASET
-        ===================================================== */
-        
-        $asetFlat['Stok Telur'] = $stokTelur;
-        $asetFlat['Stok Pakan'] = $stokPakan;
-        $asetFlat['Stok Obat-Obatan'] = $stokObat;
-        $asetFlat['Stok Tray'] = $stokTray;
-        $asetFlat['Penyesuaian Stok'] = 0;
-
-        /* =====================================================
         | INJECT NILAI ASET
         ===================================================== */
-
         foreach ($asetFlat as $akun => $nilai) {
             foreach ($this->asetData as $laporan => &$data) {
                 if (array_key_exists($akun, $data['detail'])) {

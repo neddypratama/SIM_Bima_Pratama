@@ -41,6 +41,7 @@ class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, W
             'Invoice',
             'Rincian',
             'Tanggal',
+            'Tipe',
             'Client',
             'Kategori',
             'Barang',
@@ -48,7 +49,8 @@ class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, W
             'Harga Satuan',
             'Subtotal',
             'Total',
-            'Pembuat'
+            'Pembuat',
+            'Status'
         ];
     }
 
@@ -65,6 +67,7 @@ class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, W
                 $transaksi->invoice,
                 $transaksi->name,
                 $transaksi->tanggal,
+                $transaksi->type,
                 $transaksi->client?->name ?? '-',
                 $detail->kategori?->name ?? '-',
                 $detail->barang?->name ?? '-',
@@ -72,7 +75,8 @@ class TransaksiExport implements FromCollection, WithHeadings, ShouldAutoSize, W
                 $detail->value ?? 0,
                 $detail->kuantitas * ($detail->value ?? 0),
                 $transaksi->total,
-                $transaksi->user->name
+                $transaksi->user->name,
+                $transaksi->status
             ];
         }
 

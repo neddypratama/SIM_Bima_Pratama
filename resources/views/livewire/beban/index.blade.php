@@ -26,6 +26,7 @@ new class extends Component {
     public int $filter = 0;
     public int $client_id = 0;
     public int $kategori_id = 0;
+    public string $type = '';
 
     public bool $exportModal = false; // ✅ Modal export
     // ✅ Tambah tanggal untuk filter export
@@ -114,11 +115,38 @@ new class extends Component {
                     $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
                 });
             })
+            ->when($this->type, fn(Builder $q) => $q->where('type', $this->type))
             ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
             ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
             ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
+    }
+
+    public function totalKeseluruhan(): int
+    {
+        return Transaksi::query()
+            ->whereHas('details.kategori', function (Builder $q) {
+                $q->where('name', 'not like', '%HPP%');
+            })
+            ->whereHas('details.kategori.detailKategori', function (Builder $q) {
+                $q->where('type', 'like', '%Pengeluaran%');
+            })
+            ->when($this->kategori_id, function (Builder $q) {
+                $q->whereHas('details', function ($query) {
+                    $query->where('kategori_id', $this->kategori_id);
+                });
+            })
+            ->when($this->search, function (Builder $q) {
+                $q->where(function ($query) {
+                    $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%");
+                });
+            })
+            ->when($this->type, fn(Builder $q) => $q->where('type', $this->type))
+            ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
+            ->sum('total');
     }
 
     public function with(): array
@@ -152,6 +180,7 @@ new class extends Component {
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
+            'totalKeseluruhan' => $this->totalKeseluruhan(),
         ];
     }
 
@@ -212,6 +241,19 @@ new class extends Component {
                 </div>
             @endscope
 
+            {{-- ✅ FOOTER TOTAL --}}
+            <x-slot:footer class="font-bold">
+                <tr>
+                    <td colspan="4" class="text-right px-4 py-2">
+                        Total Keseluruhan
+                    </td>
+                    <td class="px-4 py-2 text-green-700">
+                        Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                    </td>
+                    <td></td>
+                </tr>
+            </x-slot:footer>
+
         </x-table>
     </x-card>
 
@@ -224,6 +266,15 @@ new class extends Component {
 
             <x-choices-offline placeholder="Pilih Kategori" wire:model.live="kategori_id" :options="$kategori"
                 icon="o-flag" single searchable />
+
+            @php
+                $type = [
+                    ['id' => 'Debit', 'name' => 'Debit'],
+                    ['id' => 'Kredit', 'name' => 'Kredit'], // <-- this
+                ];
+            @endphp
+
+            <x-select :options="$type" wire:model.live="type" placeholder="Pilih Type" />
 
             <x-input label="Tanggal Awal" type="date" wire:model.live="startDate" />
             <x-input label="Tanggal Akhir" type="date" wire:model.live="endDate" />

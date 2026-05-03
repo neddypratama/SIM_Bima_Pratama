@@ -175,6 +175,30 @@ new class extends Component {
             ->paginate($this->perPage);
     }
 
+    public function totalKeseluruhan(): int
+    {
+        return Transaksi::query()
+            ->where('invoice', 'like', '%-TLR-%')
+            ->where('type', 'Debit')
+            ->whereHas('details.kategori', fn(Builder $q) => $q->where('name', 'like', '%Stok Telur%'))
+            ->when($this->tipePeternak, function (Builder $q) {
+                $q->whereHas('client', function ($query) {
+                    $query->where('keterangan', $this->tipePeternak);
+                });
+            })
+            // 📦 FILTER BARANG (BENAR)
+            ->when($this->barang_id, function (Builder $q) {
+                $q->whereHas('details', function ($q2) {
+                    $q2->where('barang_id', $this->barang_id);
+                });
+            })
+            ->when($this->search, fn(Builder $q) => $q->where(fn($query) => $query->where('name', 'like', "%{$this->search}%")->orWhere('invoice', 'like', "%{$this->search}%")))
+            ->when($this->client_id, fn(Builder $q) => $q->where('client_id', $this->client_id))
+            ->when($this->startDate, fn($q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn($q) => $q->whereDate('tanggal', '<=', $this->endDate))
+            ->sum('total');
+    }
+
     public function with(): array
     {
         if ($this->filter >= 0 && $this->filter < 5) {
@@ -207,6 +231,7 @@ new class extends Component {
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
+            'totalKeseluruhan' => $this->totalKeseluruhan(),
         ];
     }
 
@@ -284,6 +309,19 @@ new class extends Component {
                     @endif
                 </div>
             @endscope
+
+            {{-- ✅ FOOTER TOTAL --}}
+            <x-slot:footer class="font-bold">
+                <tr>
+                    <td colspan="4" class="text-right px-4 py-2">
+                        Total Keseluruhan
+                    </td>
+                    <td class="px-4 py-2 text-green-700">
+                        Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                    </td>
+                    <td></td>
+                </tr>
+            </x-slot:footer>
         </x-table>
     </x-card>
 
