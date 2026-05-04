@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\DB;
 use App\Exports\AsetExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Database\Eloquent\Builder;
 
 new class extends Component {
     public $startDate;
@@ -89,11 +90,13 @@ new class extends Component {
             /* ================= PIUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as piutang_debit' => function ($q) use ($start, $end) {
-                        $q->where('type', 'debit')
-                            ->whereBetween('tanggal', [$start, $end])
-                            ->whereHas('details.kategori', function ($q) {
-                                $q->where('name', 'like', 'Piutang%');
+                    'transaksi as piutang_debit' => function ($q) {
+                        $q->where('type', 'Debit')
+                            ->whereHas('details.kategori.detailKategori', function ($q) {
+                                $q->where('type', 'Aset');
+                            })
+                            ->whereHas('details.kategori', function (Builder $q) {
+                                $q->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
                             });
                     },
                 ],
@@ -102,11 +105,13 @@ new class extends Component {
 
             ->withSum(
                 [
-                    'transaksi as piutang_kredit' => function ($q) use ($start, $end) {
-                        $q->where('type', 'kredit')
-                            ->whereBetween('tanggal', [$start, $end])
-                            ->whereHas('details.kategori', function ($q) {
-                                $q->where('name', 'like', 'Piutang%');
+                    'transaksi as piutang_kredit' => function ($q) {
+                        $q->where('type', 'Kredit')
+                            ->whereHas('details.kategori.detailKategori', function ($q) {
+                                $q->where('type', 'Aset');
+                            })
+                            ->whereHas('details.kategori', function (Builder $q) {
+                                $q->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
                             });
                     },
                 ],
@@ -116,12 +121,10 @@ new class extends Component {
             /* ================= HUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as hutang_kredit' => function ($q) use ($start, $end) {
-                        $q->where('type', 'kredit')
-                            ->whereBetween('tanggal', [$start, $end])
-                            ->whereHas('details.kategori', function ($q) {
-                                $q->where('name', 'like', 'Hutang%');
-                            });
+                    'transaksi as hutang_kredit' => function ($q) {
+                        $q->where('type', 'Kredit')->whereHas('details.kategori.detailKategori', function ($q) {
+                            $q->where('type', 'Liabilitas');
+                        });
                     },
                 ],
                 'total',
@@ -129,17 +132,14 @@ new class extends Component {
 
             ->withSum(
                 [
-                    'transaksi as hutang_debit' => function ($q) use ($start, $end) {
-                        $q->where('type', 'debit')
-                            ->whereBetween('tanggal', [$start, $end])
-                            ->whereHas('details.kategori', function ($q) {
-                                $q->where('name', 'like', 'Hutang%');
-                            });
+                    'transaksi as hutang_debit' => function ($q) {
+                        $q->where('type', 'Debit')->whereHas('details.kategori.detailKategori', function ($q) {
+                            $q->where('type', 'Liabilitas');
+                        });
                     },
                 ],
                 'total',
             )
-
             ->get()
             ->map(function ($client) {
                 // 🔥 ASET → Debit - Kredit
@@ -185,9 +185,6 @@ new class extends Component {
 
         foreach ($clients as $c) {
             $saldo = $c->saldo_piutang - $c->saldo_hutang;
-            if ($c->name == 'Bp.Supriyadi') {
-                $saldo = $saldo * -1;
-            }
 
             if ($saldo === 0) {
                 continue;
@@ -211,6 +208,7 @@ new class extends Component {
 
             if ($saldo < 0) {
                 $nilai = abs($saldo);
+
                 if ($c->type === 'Peternak') {
                     $hutang['Hutang Peternak'] += $nilai;
                 } elseif ($c->type === 'Pedagang') {
