@@ -74,6 +74,7 @@ new class extends Component {
                 [
                     'transaksi as piutang_debit' => function ($q) {
                         $q->where('type', 'Debit')
+                        ->where('status', 'Selesai')
                             ->whereHas('details.kategori.detailKategori', function ($q) {
                                 $q->where('type', 'Aset');
                             })
@@ -89,6 +90,7 @@ new class extends Component {
                 [
                     'transaksi as piutang_kredit' => function ($q) {
                         $q->where('type', 'Kredit')
+                        ->where('status', 'Selesai')
                             ->whereHas('details.kategori.detailKategori', function ($q) {
                                 $q->where('type', 'Aset');
                             })
@@ -104,7 +106,8 @@ new class extends Component {
             ->withSum(
                 [
                     'transaksi as hutang_kredit' => function ($q) {
-                        $q->where('type', 'Kredit')->whereHas('details.kategori.detailKategori', function ($q) {
+                        $q->where('type', 'Kredit')
+                        ->where('status', 'Selesai')->whereHas('details.kategori.detailKategori', function ($q) {
                             $q->where('type', 'Liabilitas');
                         });
                     },
@@ -115,7 +118,8 @@ new class extends Component {
             ->withSum(
                 [
                     'transaksi as hutang_debit' => function ($q) {
-                        $q->where('type', 'Debit')->whereHas('details.kategori.detailKategori', function ($q) {
+                        $q->where('type', 'Debit')
+                        ->where('status', 'Selesai')->whereHas('details.kategori.detailKategori', function ($q) {
                             $q->where('type', 'Liabilitas');
                         });
                     },
@@ -150,6 +154,7 @@ new class extends Component {
                 ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
                 ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
                 ->where('k.name', 'Penjualan Pakan Curah')
+                ->where('t.status', 'Selesai')
                 ->selectRaw(
                     "
             SUM(
@@ -172,6 +177,7 @@ new class extends Component {
                 ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
                 ->where('k.name', 'HPP')
                 ->where('jb.name', 'Pakan Curah')
+                ->where('t.status', 'Selesai')
                 ->selectRaw(
                     "
             SUM(
