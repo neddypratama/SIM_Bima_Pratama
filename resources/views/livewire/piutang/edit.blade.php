@@ -52,16 +52,31 @@ new class extends Component {
             'clients' => Client::query()
                 ->withSum(
                     [
-                        'transaksi as piutang_kredit' => function ($q) {
-                            $q->where('type', 'Kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
+                        'transaksi as piutang_debit' => function ($q) {
+                            $q->where('type', 'Debit')
+                                ->where('status', 'Selesai')
+                                ->whereHas('details.kategori.detailKategori', function ($q) {
+                                    $q->where('type', 'Aset');
+                                })
+                                ->whereHas('details.kategori', function (Builder $q) {
+                                    $q->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
+                                });
                         },
                     ],
                     'total',
                 )
+
                 ->withSum(
                     [
-                        'transaksi as piutang_debit' => function ($q) {
-                            $q->where('type', 'Debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Piutang%'));
+                        'transaksi as piutang_kredit' => function ($q) {
+                            $q->where('type', 'Kredit')
+                                ->where('status', 'Selesai')
+                                ->whereHas('details.kategori.detailKategori', function ($q) {
+                                    $q->where('type', 'Aset');
+                                })
+                                ->whereHas('details.kategori', function (Builder $q) {
+                                    $q->where('name', 'not like', '%Stok%')->where('name', 'not like', '%Kas%')->where('name', 'not like', '%Bank%');
+                                });
                         },
                     ],
                     'total',
@@ -142,7 +157,7 @@ new class extends Component {
 
             // Ambil kategori pembayaran
             $kategoriBayar = Kategori::find($this->bayar_id);
-            
+
             $inv = substr($this->invoice, -4);
             $part = explode('-', $this->piutang->invoice);
             $tanggal = $part[1];
@@ -225,7 +240,8 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <x-input label="Invoice" wire:model="invoice" readonly />
                         <x-input label="User" :value="auth()->user()->name" readonly />
-                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local" step="1"/>
+                        <x-datetime label="Date + Time" wire:model="tanggal" icon="o-calendar" type="datetime-local"
+                            step="1" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-input label="Rincian" wire:model="name" placeholder="Contoh: Bon Pak Agus" />

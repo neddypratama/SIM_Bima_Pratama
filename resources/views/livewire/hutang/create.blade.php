@@ -46,27 +46,81 @@ new class extends Component {
     public ?string $tanggal = null;
 
     public array $details = [];
+    public float $curah = 0;
 
     public $barangs;
     public array $filteredBarangs = [];
 
     public function with(): array
     {
+        $curah =
+            DB::table('detail_transaksis as td')
+                ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+                ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+                ->where('k.name', 'Penjualan Pakan Curah')
+                ->where('t.status', 'Selesai')
+                ->selectRaw(
+                    "
+            SUM(
+                CASE 
+                    WHEN LOWER(t.type) = 'kredit' THEN td.sub_total
+                    WHEN LOWER(t.type) = 'debit' THEN -td.sub_total
+                    ELSE 0
+                END
+            ) as total_pendapatan
+        ",
+                )
+                ->value('total_pendapatan') ?? 0;
+
+        // ✅ HPP (SUDAH BENAR)
+        $hpp =
+            DB::table('detail_transaksis as td')
+                ->join('kategoris as k', 'k.id', '=', 'td.kategori_id')
+                ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
+                ->join('barangs as b', 'b.id', '=', 'td.barang_id')
+                ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
+                ->where('k.name', 'HPP')
+                ->where('jb.name', 'Pakan Curah')
+                ->where('t.status', 'Selesai')
+                ->selectRaw(
+                    "
+            SUM(
+                CASE 
+                    WHEN LOWER(t.type) = 'debit' THEN td.sub_total
+                    WHEN LOWER(t.type) = 'kredit' THEN -td.sub_total
+                    ELSE 0
+                END
+            ) as total_hpp
+        ",
+                )
+                ->value('total_hpp') ?? 0;
+
+        $this->curah = $curah - $hpp;
+
         return [
             'users' => User::all(),
             'clients' => Client::query()
                 ->withSum(
                     [
                         'transaksi as hutang_kredit' => function ($q) {
-                            $q->where('type', 'Kredit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                            $q->where('type', 'Kredit')
+                                ->where('status', 'Selesai')
+                                ->whereHas('details.kategori.detailKategori', function ($q) {
+                                    $q->where('type', 'Liabilitas');
+                                });
                         },
                     ],
                     'total',
                 )
+
                 ->withSum(
                     [
                         'transaksi as hutang_debit' => function ($q) {
-                            $q->where('type', 'Debit')->whereHas('details.kategori', fn($q) => $q->where('name', 'like', 'Hutang%'));
+                            $q->where('type', 'Debit')
+                                ->where('status', 'Selesai')
+                                ->whereHas('details.kategori.detailKategori', function ($q) {
+                                    $q->where('type', 'Liabilitas');
+                                });
                         },
                     ],
                     'total',
@@ -212,7 +266,11 @@ new class extends Component {
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->hutang_kredit - $clients->hutang_debit, 0, ',', '.') }}
+                                @if ($clients->name == '%Supriyadi%')
+                                    {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->hutang_kredit - $clients->hutang_debit + $this->curah, 0, ',', '.') }}
+                                @else
+                                    {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->hutang_kredit - $clients->hutang_debit + $this->total, 0, ',', '.') }}
+                                @endif
                             @endscope
                         </x-choices-offline>
                     </div>
