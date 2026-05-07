@@ -297,7 +297,7 @@ new class extends Component {
 
                             {{-- Tampilan ketika sudah dipilih --}}
                             @scope('selection', $clients)
-                                @if ($clients->name == '%Supriyadi%')
+                                @if ($clients->name == 'Bp.Supriyadi')
                                     {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->hutang_kredit - $clients->hutang_debit + $this->curah, 0, ',', '.') }}
                                 @else
                                     {{ $clients->name . ' | ' . $clients->type . ' | ' . 'Rp ' . number_format($clients->hutang_kredit - $clients->hutang_debit + $this->total, 0, ',', '.') }}
