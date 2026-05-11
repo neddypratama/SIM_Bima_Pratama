@@ -68,20 +68,20 @@ new class extends Component {
     public function adjustHppFromPenjualan(): void
     {
         DB::transaction(function () {
-            // 🔥 Ambil kategori_id (lebih aman)
-            $KAT_PENJUALAN = DB::table('kategoris')->where('name', 'like', 'Penjualan Telur %')->value('id');
             $KAT_HPP = DB::table('kategoris')->where('name', 'HPP')->value('id');
 
-            if (!$KAT_PENJUALAN || !$KAT_HPP) {
+            $KAT_STOK = DB::table('kategoris')->where('name', 'Stok Telur')->value('id');
+
+            $KAT_PENJUALAN = DB::table('kategoris')->where('name', 'like', 'Penjualan Telur Bebek%')->value('id');
+
+            if (!$KAT_HPP || !$KAT_STOK || !$KAT_PENJUALAN) {
                 $this->error('Kategori tidak ditemukan!');
                 return;
             }
 
-            // Ambil transaksi penjualan
             $penjualans = DB::table('transaksis as t')->join('detail_transaksis as dt', 'dt.transaksi_id', '=', 't.id')->where('dt.kategori_id', $KAT_PENJUALAN)->select('t.id', 't.invoice')->distinct()->get();
 
             foreach ($penjualans as $penjualan) {
-                // 🔥 parsing invoice
                 $parts = explode('-', $penjualan->invoice);
 
                 if (count($parts) < 4) {
@@ -91,63 +91,116 @@ new class extends Component {
                 $tanggal = $parts[1];
                 $kode = $parts[3];
 
-                // cari transaksi HPP
                 $hpp = DB::table('transaksis')
                     ->where('invoice', 'like', "%-$tanggal-HPP-$kode")
                     ->first();
 
-                if (!$hpp) {
+                $stok = DB::table('transaksis')
+                    ->where('invoice', 'like', "%-$tanggal-TLR-$kode")
+                    ->first();
+
+                if (!$hpp || !$stok) {
                     continue;
                 }
 
-                // ambil detail penjualan
                 $detailsPenjualan = DB::table('detail_transaksis')->where('transaksi_id', $penjualan->id)->where('kategori_id', $KAT_PENJUALAN)->get();
 
-                $totalHpp = 0;
+                $totalBaru = 0;
 
                 foreach ($detailsPenjualan as $dp) {
-                    // ambil detail HPP berdasarkan barang_id
                     $detailHpp = DB::table('detail_transaksis')->where('transaksi_id', $hpp->id)->where('kategori_id', $KAT_HPP)->where('barang_id', $dp->barang_id)->first();
 
-                    if (!$detailHpp) {
+                    $detailStok = DB::table('detail_transaksis')->where('transaksi_id', $stok->id)->where('kategori_id', $KAT_STOK)->where('barang_id', $dp->barang_id)->first();
+
+                    if (!$detailHpp || !$detailStok) {
                         continue;
                     }
 
-                    $hargaPenjualan = $dp->value;
+                    $qty = $detailHpp->kuantitas;
+
+                    $hargaJual = $dp->value;
+                    $subtotalJual = $dp->sub_total;
+
                     $hargaHpp = $detailHpp->value;
 
-                    // 🔥 LOGIC UTAMA
-                    if ($hargaHpp > $hargaPenjualan) {
-                        $hargaHpp = $hargaPenjualan - 100;
+                    /*
+                |--------------------------------------------------------------------------
+                | VALIDASI HPP
+                |--------------------------------------------------------------------------
+                */
+
+                    // HPP per unit tidak boleh >= harga jual
+                    if ($hargaHpp >= $hargaJual) {
+                        $hargaHpp = $hargaJual - 100;
                     }
 
                     $hargaHpp = max($hargaHpp, 0);
 
-                    $subtotal = $hargaHpp * $detailHpp->kuantitas;
+                    $subtotalHpp = $hargaHpp * $qty;
 
-                    // update detail HPP
+                    // Jika subtotal masih lebih besar
+                    if ($subtotalHpp >= $subtotalJual) {
+                        $subtotalHpp = $subtotalJual - 100;
+
+                        $hargaHpp = $subtotalHpp / max($qty, 1);
+                    }
+
+                    $subtotalHpp = max($subtotalHpp, 0);
+
+                    /*
+                |--------------------------------------------------------------------------
+                | UPDATE HPP
+                |--------------------------------------------------------------------------
+                */
+
                     DB::table('detail_transaksis')
                         ->where('id', $detailHpp->id)
                         ->update([
-                            'value' => $hargaHpp,
-                            'sub_total' => $subtotal,
+                            'value' => round($hargaHpp, 2),
+                            'sub_total' => round($subtotalHpp, 2),
                             'updated_at' => now(),
                         ]);
 
-                    $totalHpp += $subtotal;
+                    /*
+                |--------------------------------------------------------------------------
+                | UPDATE STOK
+                |--------------------------------------------------------------------------
+                */
+
+                    DB::table('detail_transaksis')
+                        ->where('id', $detailStok->id)
+                        ->update([
+                            'value' => round($hargaHpp, 2),
+                            'sub_total' => round($subtotalHpp, 2),
+                            'updated_at' => now(),
+                        ]);
+
+                    $totalBaru += $subtotalHpp;
                 }
 
-                // update total transaksi HPP
+                /*
+            |--------------------------------------------------------------------------
+            | UPDATE TOTAL TRANSAKSI
+            |--------------------------------------------------------------------------
+            */
+
                 DB::table('transaksis')
                     ->where('id', $hpp->id)
                     ->update([
-                        'total' => $totalHpp,
+                        'total' => round($totalBaru, 2),
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('transaksis')
+                    ->where('id', $stok->id)
+                    ->update([
+                        'total' => round($totalBaru, 2),
                         'updated_at' => now(),
                     ]);
             }
         });
 
-        $this->success('Penyesuaian HPP berhasil 🔥', position: 'toast-top');
+        $this->success('Penyesuaian HPP & Stok berhasil 🔥', position: 'toast-top');
     }
 
     public function with(): array

@@ -97,8 +97,8 @@
                 @if (in_array(auth()->user()->role_id, [8]))
                     <x-menu-sub title="Fix Data" icon="fas.gear">
                         <x-menu-item title="Fix1 Stok" icon="fas.file" link="/fix1" />
-                        <x-menu-item title="Fix2 Stok" icon="fas.file" link="/fix2" />
-                        <x-menu-item title="Fix3 Transaksi" icon="fas.file" link="/fix3" />
+                        <x-menu-item title="Fix2 Transaksi" icon="fas.file" link="/fix2" />
+                        <x-menu-item title="Fix3 Detail" icon="fas.file" link="/fix3" />
                     </x-menu-sub>
                 @endif
 
