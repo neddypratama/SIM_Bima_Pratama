@@ -72,7 +72,7 @@ new class extends Component {
 
             $KAT_STOK = DB::table('kategoris')->where('name', 'Stok Telur')->value('id');
 
-            $KAT_PENJUALAN = DB::table('kategoris')->where('name', 'like', 'Penjualan Telur %')->value('id');
+            $KAT_PENJUALAN = DB::table('kategoris')->where('name', 'like', 'Penjualan Telur Bebek%')->value('id');
 
             if (!$KAT_HPP || !$KAT_STOK || !$KAT_PENJUALAN) {
                 $this->error('Kategori tidak ditemukan!');
