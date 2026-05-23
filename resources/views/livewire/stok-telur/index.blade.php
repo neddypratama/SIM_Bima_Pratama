@@ -297,7 +297,7 @@ new class extends Component {
                         'user_id' => $stok->user_id,
                         'tanggal' => $stok->tanggal,
                         'type' => 'Debit',
-                        'total' => 0,
+                        'total' => $hppKurang,
                     ]);
 
                     DetailTransaksi::create([
