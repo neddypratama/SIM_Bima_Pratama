@@ -102,9 +102,9 @@ Route::middleware('auth')->group(function () {
     */
 
     Route::middleware('role:8')->group(function () {
-        Volt::route('/fix1', 'kotor.fix1');
-        Volt::route('/fix2', 'kotor.fix2');
-        Volt::route('/fix3', 'kotor.fix3');
+        Volt::route('/fix1', 'fix.fix1');
+        Volt::route('/fix2', 'fix.fix2');
+        Volt::route('/fix3', 'fix.fix3');
 
         // Stok
         Volt::route('/penambahan-stok', 'penambahan-stok.index');
