@@ -526,7 +526,7 @@ new class extends Component {
                         'kategori_id' => $kateProk->id ?? null,
                         'value' => 0,
                         'barang_id' => $stok->barang_id,
-                        'kuantitas' => $stok->prok,
+                        'kuantitas' => $stok->rusak,
                         'sub_total' => 0,
                     ]);
 
@@ -571,7 +571,7 @@ new class extends Component {
                         'total' => 0,
                     ]);
 
-                    DetailTransaksi::create([
+                    $detail = DetailTransaksi::create([
                         'transaksi_id' => $jumbo->id,
                         'kategori_id' => $kateJumbo->id ?? null,
                         'value' => 0,
