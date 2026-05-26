@@ -119,7 +119,7 @@ new class extends Component {
                 // =============================
                 // KATEGORI
                 // =============================
-                $kategoriStok = Kategori::where('name', 'Stok Obat')->first();
+                $kategoriStok = Kategori::where('name', 'Stok Obat-Obatan')->first();
                 $kategoriHpp = Kategori::where('name', 'HPP')->first();
                 $kategoriBon = Kategori::where('name', 'like', 'Piutang Peternak')->first();
 
