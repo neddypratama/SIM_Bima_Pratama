@@ -84,9 +84,8 @@ new class extends Component {
 
     public function totalKeseluruhan(): int
     {
-        return Barang::query()
-            ->withAggregate('jenis', 'name')
-
+        // Kita bungkus query utama sebagai subquery agar kolom 'stok' dan 'hpp' bisa diakses oleh SUM()
+        $subQuery = Barang::query()
             // 🔹 STOK = SUM(qty_sisa)
             ->selectSub(StokBatch::query()->selectRaw('COALESCE(SUM(qty_sisa), 0)')->whereColumn('stok_batches.barang_id', 'barangs.id'), 'stok')
 
@@ -97,8 +96,10 @@ new class extends Component {
             ->when($this->search, fn(Builder $q) => $q->where('barangs.name', 'like', "%{$this->search}%"))
 
             // 🔍 FILTER JENIS
-            ->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))
-            ->sum('stok * hpp');
+            ->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id));
+
+        // Ambil sum dari tabel virtual hasil subquery di atas
+        return Illuminate\Support\Facades\DB::table($subQuery, 'sub')->sum(Illuminate\Support\Facades\DB::raw('stok * hpp'));
     }
 
     public function with(): array
