@@ -43,8 +43,6 @@ new class extends Component {
     public function clear(): void
     {
         $this->reset(['search', 'user_id', 'kategori_id', 'client_id']);
-        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
