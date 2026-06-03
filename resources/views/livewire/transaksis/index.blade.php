@@ -71,13 +71,46 @@ new class extends Component {
     {
         $transaksi = Transaksi::findOrFail($id);
 
-        if ($transaksi->type == "Kredit") {
+        if ($transaksi->type == 'Kredit') {
             $transaksi->update(['type' => 'Debit']);
         } else {
             $transaksi->update(['type' => 'Kredit']);
         }
 
         $this->warning("Transaksi $transaksi->name akan diubah", position: 'toast-top');
+    }
+
+    public function fixTelurKeluar(): void
+    {
+        $kredit = 0;
+        $debit = 0;
+
+        $transaksis = Transaksi::query()->where('name', 'like', 'Telur Keluar %')->get();
+
+        foreach ($transaksis as $transaksi) {
+            $parts = explode('-', $transaksi->invoice);
+
+            // INV-20260203-TLR-52XP
+            $kode = $parts[2] ?? null;
+
+            if ($kode === 'TLR') {
+                $transaksi->update([
+                    'type' => 'Kredit',
+                ]);
+
+                $kredit++;
+            }
+
+            if ($kode === 'KRG') {
+                $transaksi->update([
+                    'type' => 'Debit',
+                ]);
+
+                $debit++;
+            }
+        }
+
+        $this->success("Berhasil memperbaiki {$kredit} transaksi Kredit dan {$debit} transaksi Debit", position: 'toast-top');
     }
 
     public function headers(): array
@@ -106,9 +139,8 @@ new class extends Component {
                     $query->where('keterangan', $this->tipePeternak);
                 });
             })
-            ->when($this->startDate && $this->endDate, function (Builder $q) {
-                $q->whereBetween('tanggal', [$this->startDate, $this->endDate]);
-            })
+            ->when($this->startDate, fn(Builder $q) => $q->whereDate('tanggal', '>=', $this->startDate))
+            ->when($this->endDate, fn(Builder $q) => $q->whereDate('tanggal', '<=', $this->endDate))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -163,6 +195,10 @@ new class extends Component {
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
+                <x-button wire:click="fixTelurKeluar" wire:confirm="Yakin ingin memperbaiki transaksi Telur Keluar?"
+                    icon="o-wrench-screwdriver" class="btn-warning">
+                    Fix Telur Keluar
+                </x-button>
             </div>
         </x-slot:actions>
     </x-header>
