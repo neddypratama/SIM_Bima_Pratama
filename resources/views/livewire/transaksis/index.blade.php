@@ -42,7 +42,7 @@ new class extends Component {
 
     public function clear(): void
     {
-        $this->reset(['search', 'user_id', 'kategori_id', 'client_id']);
+        $this->reset(['search', 'user_id', 'kategori_id', 'client_id', 'startDate', 'endDate']);
         $this->resetPage();
         $this->success('Filters cleared.', position: 'toast-top');
     }
@@ -85,15 +85,15 @@ new class extends Component {
         $kredit = 0;
         $debit = 0;
 
-        $transaksis = Transaksi::query()->where('name', 'like', 'Telur Keluar %')->get();
+        $transaksis = Transaksi::query()->where('name', 'like', 'Telur Kurang %')->get();
 
         foreach ($transaksis as $transaksi) {
             $parts = explode('-', $transaksi->invoice);
 
             // INV-20260203-TLR-52XP
             $kode = $parts[2] ?? null;
-
-            if ($kode === 'TLR') {
+            
+            if ($kode === 'TLR7') {
                 $transaksi->update([
                     'type' => 'Kredit',
                 ]);
