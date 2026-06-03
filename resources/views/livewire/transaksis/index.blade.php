@@ -69,14 +69,17 @@ new class extends Component {
         return Excel::download(new TransaksiExport($this->startDate, $this->endDate), 'transaksi.xlsx');
     }
 
-    public function delete($id): void
+    public function ubah($id): void
     {
         $transaksi = Transaksi::findOrFail($id);
-        $transaksi->delete();
 
-        DetailTransaksi::where('transaksi_id', $id)->delete();
+        if ($transaksi->type == "Kredit") {
+            $transaksi->update(['type' => 'Debit']);
+        } else {
+            $transaksi->update(['type' => 'Kredit']);
+        }
 
-        $this->warning("Transaksi $transaksi->name akan dihapus", position: 'toast-top');
+        $this->warning("Transaksi $transaksi->name akan diubah", position: 'toast-top');
     }
 
     public function headers(): array
@@ -183,7 +186,18 @@ new class extends Component {
 
     <x-card>
         <x-table :headers="$headers" :rows="$transaksis" :sort-by="$sortBy" with-pagination
-            link="transaksis/{id}/show?invoice={invoice}" />
+            link="transaksis/{id}/show?invoice={invoice}">
+
+            @scope('actions', $transaksi)
+                <div class="flex">
+                    @if (Auth::user()->role_id == 8)
+                        <x-button icon="o-pencil" wire:click="ubah({{ $transaksi->id }})"
+                            wire:confirm="Yakin ingin mengubah transaksi {{ $transaksi->invoice }} ini?" spinner
+                            class="btn-ghost btn-sm text-red-500" />
+                    @endif
+                </div>
+            @endscope
+        </x-table>
     </x-card>
 
     <!-- FILTER DRAWER -->
