@@ -82,6 +82,25 @@ new class extends Component {
             ->paginate($this->perPage);
     }
 
+    public function totalKeseluruhan(): int
+    {
+        return Barang::query()
+            ->withAggregate('jenis', 'name')
+
+            // 🔹 STOK = SUM(qty_sisa)
+            ->selectSub(StokBatch::query()->selectRaw('COALESCE(SUM(qty_sisa), 0)')->whereColumn('stok_batches.barang_id', 'barangs.id'), 'stok')
+
+            // 🔹 HPP = harga batch TERBARU
+            ->selectSub(StokBatch::query()->select('harga')->whereColumn('stok_batches.barang_id', 'barangs.id')->orderByDesc('tanggal')->limit(1), 'hpp')
+
+            // 🔍 SEARCH
+            ->when($this->search, fn(Builder $q) => $q->where('barangs.name', 'like', "%{$this->search}%"))
+
+            // 🔍 FILTER JENIS
+            ->when($this->jenis_id, fn(Builder $q) => $q->where('jenis_id', $this->jenis_id))
+            ->sum('stok * hpp');
+    }
+
     public function with(): array
     {
         if ($this->filter >= 0 && $this->filter < 2) {
@@ -100,6 +119,7 @@ new class extends Component {
             'jenisbarangs' => JenisBarang::all(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
+            'totalKeseluruhan' => $this->totalKeseluruhan(),
         ];
     }
 
@@ -157,6 +177,18 @@ new class extends Component {
                         class="btn-ghost btn-sm text-red-500" />
                 </div>
             @endscope
+            {{-- ✅ FOOTER TOTAL --}}
+            <x-slot:footer class="font-bold">
+                <tr>
+                    <td colspan="4" class="text-right px-4 py-2">
+                        Total Keseluruhan
+                    </td>
+                    <td class="px-4 py-2 text-green-700">
+                        Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                    </td>
+                    <td></td>
+                </tr>
+            </x-slot:footer>
         </x-table>
     </x-card>
 
