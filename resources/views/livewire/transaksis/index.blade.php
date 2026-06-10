@@ -195,9 +195,9 @@ new class extends Component {
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-                <x-button wire:click="fixTelurKeluar" wire:confirm="Yakin ingin memperbaiki transaksi Telur Keluar?"
+                <x-button wire:click="fixTelurKeluar" wire:confirm="Yakin ingin memperbaiki transaksi Pakan Kurang?"
                     icon="o-wrench-screwdriver" class="btn-warning">
-                    Fix Telur Keluar
+                    Fix Pakan Kurang
                 </x-button>
             </div>
         </x-slot:actions>
