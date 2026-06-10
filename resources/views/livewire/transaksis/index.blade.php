@@ -85,7 +85,7 @@ new class extends Component {
         $kredit = 0;
         $debit = 0;
 
-        $transaksis = Transaksi::query()->where('name', 'like', 'Telur Kurang %')->get();
+        $transaksis = Transaksi::query()->where('name', 'like', 'Pakan Kurang %')->get();
 
         foreach ($transaksis as $transaksi) {
             $parts = explode('-', $transaksi->invoice);
