@@ -85,7 +85,7 @@ new class extends Component {
         $kredit = 0;
         $debit = 0;
 
-        $transaksis = Transaksi::query()->where('name', 'like', 'Pakan Kurang %')->get();
+        $transaksis = Transaksi::query()->where('name', 'like', 'Obat Kurang %')->get();
 
         foreach ($transaksis as $transaksi) {
             $parts = explode('-', $transaksi->invoice);
@@ -93,7 +93,7 @@ new class extends Component {
             // INV-20260203-TLR-52XP
             $kode = $parts[2] ?? null;
             
-            if ($kode === 'STR4') {
+            if ($kode === 'OBT4') {
                 $transaksi->update([
                     'type' => 'Kredit',
                 ]);
@@ -195,9 +195,9 @@ new class extends Component {
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
                 <x-button wire:click="openExportModal" icon="fas.download" primary>Export Excel</x-button>
-                <x-button wire:click="fixTelurKeluar" wire:confirm="Yakin ingin memperbaiki transaksi Pakan Kurang?"
+                <x-button wire:click="fixTelurKeluar" wire:confirm="Yakin ingin memperbaiki transaksi Obat Kurang?"
                     icon="o-wrench-screwdriver" class="btn-warning">
-                    Fix Pakan Kurang
+                    Fix Obat Kurang
                 </x-button>
             </div>
         </x-slot:actions>
