@@ -93,7 +93,7 @@ new class extends Component {
             // INV-20260203-TLR-52XP
             $kode = $parts[2] ?? null;
             
-            if ($kode === 'TLR7') {
+            if ($kode === 'STR4') {
                 $transaksi->update([
                     'type' => 'Kredit',
                 ]);
