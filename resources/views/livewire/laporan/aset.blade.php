@@ -92,9 +92,10 @@ new class extends Component {
             /* ================= PIUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as piutang_debit' => function ($q) {
+                    'transaksi as piutang_debit' => function ($q) use ($start, $end) {
                         $q->where('type', 'Debit')
                             ->where('status', 'Selesai')
+                            ->whereBetween('tanggal', [$start, $end])
                             ->whereHas('details.kategori.detailKategori', function ($q) {
                                 $q->where('type', 'Aset');
                             })
@@ -108,9 +109,10 @@ new class extends Component {
 
             ->withSum(
                 [
-                    'transaksi as piutang_kredit' => function ($q) {
+                    'transaksi as piutang_kredit' => function ($q) use ($start, $end) {
                         $q->where('type', 'Kredit')
                             ->where('status', 'Selesai')
+                            ->whereBetween('tanggal', [$start, $end])
                             ->whereHas('details.kategori.detailKategori', function ($q) {
                                 $q->where('type', 'Aset');
                             })
@@ -125,9 +127,10 @@ new class extends Component {
             /* ================= HUTANG ================= */
             ->withSum(
                 [
-                    'transaksi as hutang_kredit' => function ($q) {
+                    'transaksi as hutang_kredit' => function ($q) use ($start, $end) {
                         $q->where('type', 'Kredit')
                             ->where('status', 'Selesai')
+                            ->whereBetween('tanggal', [$start, $end])
                             ->whereHas('details.kategori.detailKategori', function ($q) {
                                 $q->where('type', 'Liabilitas');
                             });
@@ -138,9 +141,10 @@ new class extends Component {
 
             ->withSum(
                 [
-                    'transaksi as hutang_debit' => function ($q) {
+                    'transaksi as hutang_debit' => function ($q) use ($start, $end) {
                         $q->where('type', 'Debit')
                             ->where('status', 'Selesai')
+                            ->whereBetween('tanggal', [$start, $end])
                             ->whereHas('details.kategori.detailKategori', function ($q) {
                                 $q->where('type', 'Liabilitas');
                             });
