@@ -117,7 +117,7 @@ new class extends Component {
             }
         }
 
-        // dd($laporans); 
+        // dd($laporans);
 
         /* =====================================================
             2. ISI DATA TRANSAKSI
@@ -130,7 +130,32 @@ new class extends Component {
             ->whereBetween('t.tanggal', [$start, $end])
             ->where('k.name', 'not like', '% Pakan Curah')
             ->where('t.status', 'Selesai')
-            ->select('dk.name as laporan', 'dk.type', 'k.name as kategori', DB::raw('SUM(dt.sub_total) as total'))
+            ->select(
+                'dk.name as laporan',
+                'dk.type',
+                'k.name as kategori',
+                DB::raw("
+            SUM(
+                CASE
+                    WHEN dk.type = 'Pendapatan' THEN
+                        CASE
+                            WHEN LOWER(t.type) = 'kredit' THEN dt.sub_total
+                            WHEN LOWER(t.type) = 'debit' THEN -dt.sub_total
+                            ELSE 0
+                        END
+
+                    WHEN dk.type = 'Pengeluaran' THEN
+                        CASE
+                            WHEN LOWER(t.type) = 'debit' THEN dt.sub_total
+                            WHEN LOWER(t.type) = 'kredit' THEN -dt.sub_total
+                            ELSE 0
+                        END
+
+                    ELSE 0
+                END
+            ) as total
+        "),
+            )
             ->groupBy('dk.name', 'dk.type', 'k.name')
             ->get();
 
