@@ -53,7 +53,7 @@ new class extends Component {
         $total = 0;
 
         // AMBIL SEMUA BATCH (TANPA FILTER qty_sisa)
-        $batches = StokBatch::where('barang_id', $barangId)->orderBy('tanggal')->orderBy('id')->get();
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->get();
 
         foreach ($batches as $batch) {
             if ($sisa <= 0) {

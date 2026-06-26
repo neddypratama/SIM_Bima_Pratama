@@ -53,7 +53,7 @@ new class extends Component {
         $total = 0;
 
         // AMBIL SEMUA BATCH (TANPA FILTER qty_sisa)
-        $batches = StokBatch::where('barang_id', $barangId)->orderBy('tanggal')->orderBy('id')->get();
+        $batches = StokBatch::where('barang_id', $barangId)->where('qty_sisa', '>', 0)->orderBy('tanggal')->orderBy('id')->get();
 
         foreach ($batches as $batch) {
             if ($sisa <= 0) {
@@ -185,6 +185,7 @@ new class extends Component {
             $this->details[$index]['kuantitas'] = $qty;
 
             if (!empty($this->details[$index]['barang_id'])) {
+                dd($this->hitungHppFifoEdit($this->details[$index]['barang_id'], $qty));
                 $this->details[$index]['hpp'] = $this->hitungHppFifoEdit($this->details[$index]['barang_id'], $qty);
             }
         }

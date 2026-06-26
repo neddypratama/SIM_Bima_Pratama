@@ -147,20 +147,19 @@ new class extends Component {
                 $detailJuals = DetailTransaksi::where('transaksi_id', $transaksiJual->id)->get();
 
                 $totalHPP = 0;
-                $hppPerBarang = [];
+                $hppPerDetail = [];
 
                 // =============================
                 // LOOP RETUR
                 // =============================
-                foreach ($detailJuals as $item) {
-                    $barang = Barang::find($item->barang_id);
+                foreach ($detailRetur as $returItem) {
+                    $item = $detailJuals->where('barang_id', $returItem->barang_id)->where('value', $returItem->value)->first();
 
-                    // 🔥 ambil qty dari RETUR
-                    $returItem = $detailRetur->firstWhere('barang_id', $item->barang_id);
-
-                    if (!$returItem) {
+                    if (!$item) {
                         continue;
                     }
+
+                    $barang = Barang::find($item->barang_id);
 
                     $qtyRetur = $returItem->kuantitas;
 
@@ -217,9 +216,11 @@ new class extends Component {
                         throw new \Exception("Qty retur {$barang->name} melebihi penjualan");
                     }
 
-                    $hppPerBarang[$barang->id] = [
-                        'total' => $hppBarang,
+                    $hppPerDetail[] = [
+                        'barang_id' => $barang->id,
+                        'kategori_id' => $kategoriHpp->id,
                         'qty' => $qtyRetur,
+                        'total' => $hppBarang,
                     ];
                 }
 
@@ -237,14 +238,14 @@ new class extends Component {
                     'status' => 'Selesai',
                 ]);
 
-                foreach ($hppPerBarang as $barangId => $data) {
+                foreach ($hppPerDetail as $detail) {
                     DetailTransaksi::create([
                         'transaksi_id' => $hpp->id,
-                        'barang_id' => $barangId,
-                        'kategori_id' => $kategoriHpp->id,
-                        'value' => (float) $data['qty'] > 0 ? (float) $data['total'] / (float) $data['qty'] : 0,
-                        'kuantitas' => $data['qty'],
-                        'sub_total' => $data['total'],
+                        'barang_id' => $detail['barang_id'],
+                        'kategori_id' => $detail['kategori_id'],
+                        'value' => $detail['qty'] > 0 ? $detail['total'] / $detail['qty'] : 0,
+                        'kuantitas' => $detail['qty'],
+                        'sub_total' => $detail['total'],
                     ]);
                 }
 
@@ -262,14 +263,14 @@ new class extends Component {
                     'status' => 'Selesai',
                 ]);
 
-                foreach ($hppPerBarang as $barangId => $data) {
+                foreach ($hppPerDetail as $detail) {
                     DetailTransaksi::create([
                         'transaksi_id' => $stok->id,
-                        'barang_id' => $barangId,
+                        'barang_id' => $detail['barang_id'],
                         'kategori_id' => $kategoriStok->id,
-                        'value' => (float) $data['qty'] > 0 ? (float) $data['total'] / (float) $data['qty'] : 0,
-                        'kuantitas' => $data['qty'],
-                        'sub_total' => $data['total'],
+                        'value' => $detail['qty'] > 0 ? $detail['total'] / $detail['qty'] : 0,
+                        'kuantitas' => $detail['qty'],
+                        'sub_total' => $detail['total'],
                     ]);
                 }
 
@@ -318,7 +319,7 @@ new class extends Component {
     public function totalKeseluruhan(): int
     {
         return Transaksi::query()
-             ->where('type', 'Debit')
+            ->where('type', 'Debit')
             ->whereHas('details.kategori', function (Builder $q) {
                 $q->where('name', 'like', 'Penjualan Telur%');
             })
@@ -423,12 +424,12 @@ new class extends Component {
             @endscope
             @scope('actions', $transaksi)
                 <div class="flex">
-                    @if (Auth::user()->role_id == 1)
+                    @if (in_array(Auth::user()->role_id, [1, 8]))
                         <x-button icon="o-trash" wire:click="delete({{ $transaksi->id }})"
                             wire:confirm="Yakin ingin menghapus transaksi {{ $transaksi->invoice }} ini?" spinner
                             class="btn-ghost btn-sm text-red-500" />
                     @endif
-                    @if (Auth::user()->role_id == 1 ||
+                    @if (in_array(Auth::user()->role_id, [1, 8]) ||
                             (Carbon::parse($transaksi->created_at)->isSameDay($this->today) &&
                                 $transaksi->user_id == Auth::user()->id &&
                                 $transaksi->status == 'Perbaikan'))
@@ -443,7 +444,7 @@ new class extends Component {
                 </div>
             @endscope
 
-             {{-- ✅ FOOTER TOTAL --}}
+            {{-- ✅ FOOTER TOTAL --}}
             <x-slot:footer class="font-bold">
                 <tr>
                     <td colspan="4" class="text-right px-4 py-2">
