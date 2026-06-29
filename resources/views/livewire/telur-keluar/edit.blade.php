@@ -185,7 +185,6 @@ new class extends Component {
             $this->details[$index]['kuantitas'] = $qty;
 
             if (!empty($this->details[$index]['barang_id'])) {
-                dd($this->hitungHppFifoEdit($this->details[$index]['barang_id'], $qty));
                 $this->details[$index]['hpp'] = $this->hitungHppFifoEdit($this->details[$index]['barang_id'], $qty);
             }
         }
