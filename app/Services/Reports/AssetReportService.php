@@ -55,118 +55,117 @@ class AssetReportService
          | ASET
          ===================================================== */
 
-        $asetFlat = Transaksi::with('details.kategori.detailKategori')
-            ->whereBetween('tanggal', [$start, $end])
-            ->where('status', 'Selesai')
-            ->get()
-            ->flatMap->details
-            ->filter(fn($d) =>
-                $d->kategori->detailKategori?->type === 'Aset'
-                && $d->kategori?->name !== 'Penyesuaian Stok'
-            )
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($g) =>
-                $g->where(fn($i) => strtolower($i->transaksi->type) == 'debit')->sum('sub_total')
-                -
-                $g->where(fn($i) => strtolower($i->transaksi->type) == 'kredit')->sum('sub_total')
-            )
+        $asetFlat = DB::table('detail_transaksis as dt')
+            ->join('transaksis as t','t.id','=','dt.transaksi_id')
+            ->join('kategoris as k','k.id','=','dt.kategori_id')
+            ->join('detail_kategoris as dk','dk.id','=','k.detail_kategori_id')
+
+            ->whereBetween('t.tanggal',[$start,$end])
+            ->where('t.status','Selesai')
+            ->where('dk.type','Aset')
+            ->where('k.name','!=','Penyesuaian Stok')
+
+            ->selectRaw("
+                k.name kategori,
+                SUM(
+                    CASE
+                        WHEN LOWER(t.type)='debit'
+                        THEN dt.sub_total
+                        ELSE -dt.sub_total
+                    END
+                ) total
+            ")
+            ->groupBy('k.name')
+            ->pluck('total','kategori')
             ->toArray();
 
         /* =====================================================
          | LIABILITAS
          ===================================================== */
 
-        $liabilitasFlat = Transaksi::with('details.kategori.detailKategori')
-            ->whereBetween('tanggal', [$start, $end])
-            ->where('status', 'Selesai')
-            ->get()
-            ->flatMap->details
-            ->filter(fn($d) =>
-                $d->kategori->detailKategori?->type === 'Liabilitas'
-            )
-            ->groupBy(fn($d) => $d->kategori->name)
-            ->map(fn($g) =>
-                $g->where(fn($i) => strtolower($i->transaksi->type) == 'kredit')->sum('sub_total')
-                -
-                $g->where(fn($i) => strtolower($i->transaksi->type) == 'debit')->sum('sub_total')
-            )
+        $liabilitasFlat = DB::table('detail_transaksis as dt')
+            ->join('transaksis as t','t.id','=','dt.transaksi_id')
+            ->join('kategoris as k','k.id','=','dt.kategori_id')
+            ->join('detail_kategoris as dk','dk.id','=','k.detail_kategori_id')
+
+            ->whereBetween('t.tanggal',[$start,$end])
+            ->where('t.status','Selesai')
+            ->where('dk.type','Liabilitas')
+
+            ->selectRaw("
+                k.name kategori,
+                SUM(
+                    CASE
+                        WHEN LOWER(t.type)='kredit'
+                        THEN dt.sub_total
+                        ELSE -dt.sub_total
+                    END
+                ) total
+            ")
+            ->groupBy('k.name')
+            ->pluck('total','kategori')
             ->toArray();
 
         /* =====================================================
          | PIUTANG & HUTANG
          ===================================================== */
 
-        $clients = Client::query()
+        $clients = DB::table('transaksis as t')
+            ->join('clients as c', 'c.id', '=', 't.client_id')
+            ->join('detail_transaksis as dt', 'dt.transaksi_id', '=', 't.id')
+            ->join('kategoris as k', 'k.id', '=', 'dt.kategori_id')
+            ->join('detail_kategoris as dk', 'dk.id', '=', 'k.detail_kategori_id')
+            ->where('t.status', 'Selesai')
+            ->whereBetween('t.tanggal', [$start, $end])
+            ->groupBy('c.id', 'c.name', 'c.type')
+            ->selectRaw("
+                c.id,
+                c.name,
+                c.type,
 
-            ->withSum([
-                'transaksi as piutang_debit' => function ($q) use ($start, $end) {
-                    $q->where('type', 'Debit')
-                        ->where('status', 'Selesai')
-                        ->whereBetween('tanggal', [$start, $end])
-                        ->whereHas('details.kategori.detailKategori', function ($q) {
-                            $q->where('type', 'Aset');
-                        })
-                        ->whereHas('details.kategori', function (Builder $q) {
-                            $q->where('name', 'not like', '%Stok%')
-                                ->where('name', 'not like', '%Kas%')
-                                ->where('name', 'not like', '%Bank%');
-                        });
-                }
-            ], 'total')
+                SUM(
+                    CASE
+                        WHEN dk.type='Aset'
+                            AND t.type='Debit'
+                            AND k.name NOT LIKE '%Stok%'
+                            AND k.name NOT LIKE '%Kas%'
+                            AND k.name NOT LIKE '%Bank%'
+                        THEN t.total
+                        ELSE 0
+                    END
+                ) AS piutang_debit,
 
-            ->withSum([
-                'transaksi as piutang_kredit' => function ($q) use ($start, $end) {
-                    $q->where('type', 'Kredit')
-                        ->where('status', 'Selesai')
-                        ->whereBetween('tanggal', [$start, $end])
-                        ->whereHas('details.kategori.detailKategori', function ($q) {
-                            $q->where('type', 'Aset');
-                        })
-                        ->whereHas('details.kategori', function (Builder $q) {
-                            $q->where('name', 'not like', '%Stok%')
-                                ->where('name', 'not like', '%Kas%')
-                                ->where('name', 'not like', '%Bank%');
-                        });
-                }
-            ], 'total')
+                SUM(
+                    CASE
+                        WHEN dk.type='Aset'
+                            AND t.type='Kredit'
+                            AND k.name NOT LIKE '%Stok%'
+                            AND k.name NOT LIKE '%Kas%'
+                            AND k.name NOT LIKE '%Bank%'
+                        THEN t.total
+                        ELSE 0
+                    END
+                ) AS piutang_kredit,
 
-            ->withSum([
-                'transaksi as hutang_kredit' => function ($q) use ($start, $end) {
-                    $q->where('type', 'Kredit')
-                        ->where('status', 'Selesai')
-                        ->whereBetween('tanggal', [$start, $end])
-                        ->whereHas('details.kategori.detailKategori', function ($q) {
-                            $q->where('type', 'Liabilitas');
-                        });
-                }
-            ], 'total')
+                SUM(
+                    CASE
+                        WHEN dk.type='Liabilitas'
+                            AND t.type='Kredit'
+                        THEN t.total
+                        ELSE 0
+                    END
+                ) AS hutang_kredit,
 
-            ->withSum([
-                'transaksi as hutang_debit' => function ($q) use ($start, $end) {
-                    $q->where('type', 'Debit')
-                        ->where('status', 'Selesai')
-                        ->whereBetween('tanggal', [$start, $end])
-                        ->whereHas('details.kategori.detailKategori', function ($q) {
-                            $q->where('type', 'Liabilitas');
-                        });
-                }
-            ], 'total')
-
-            ->get()
-            ->map(function ($client) {
-
-                $client->saldo_piutang =
-                    ($client->piutang_debit ?? 0)
-                    -
-                    ($client->piutang_kredit ?? 0);
-
-                $client->saldo_hutang =
-                    ($client->hutang_kredit ?? 0)
-                    -
-                    ($client->hutang_debit ?? 0);
-
-                return $client;
-            });
+                SUM(
+                    CASE
+                        WHEN dk.type='Liabilitas'
+                            AND t.type='Debit'
+                        THEN t.total
+                        ELSE 0
+                    END
+                ) AS hutang_debit
+            ")
+            ->get();
 
         $piutang = [
             'Piutang Peternak' => 0,
