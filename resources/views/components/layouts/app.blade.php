@@ -123,14 +123,16 @@
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 3]))
                         <x-menu-item title="Pembelian Telur" icon="fas.cart-plus" link="/telur-masuk" />
+                        <x-menu-item title="Retur Pembelian Telur" icon="fas.arrow-rotate-right" link="/telur-kembali" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 6]))
                         <x-menu-item title="Penjualan Telur" icon="fas.file-invoice-dollar" link="/telur-keluar" />
-                        <x-menu-item title="Return Telur" icon="fas.arrow-rotate-left" link="/telur-return" />
+                        <x-menu-item title="Retur Penjualan Telur" icon="fas.arrow-rotate-left" link="/telur-return" />
                         <x-menu-item title="Laporan Tray" icon="fas.store" link="/laporan-tray" />
                         <x-menu-item title="Pembelian Tray" icon="fas.cart-plus" link="/tray-masuk" />
+                        <x-menu-item title="Retur Pembelian Tray" icon="fas.arrow-rotate-right" link="/tray-kembali" />
                         <x-menu-item title="Penjualan Tray" icon="fas.file-invoice-dollar" link="/tray-keluar" />
-                        <x-menu-item title="Return Tray" icon="fas.arrow-rotate-left" link="/tray-return" />
+                        <x-menu-item title="Retur Penjualan Tray" icon="fas.arrow-rotate-left" link="/tray-return" />
                     @endif
                 </x-menu-sub>
 
@@ -138,18 +140,20 @@
                     @if (in_array(auth()->user()->role_id, [1, 8, 4, 6]))
                         <x-menu-item title="Laporan Pakan" icon="fas.store" link="/laporan-pakan" />
                         <x-menu-item title="Pembelian Pakan" icon="fas.cart-plus" link="/sentrat-masuk" />
+                        <x-menu-item title="Retur Pembelian Pakan" icon="fas.arrow-rotate-right" link="/sentrat-kembali" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 4]))
                         <x-menu-item title="Penjualan Pakan" icon="fas.file-invoice-dollar" link="/sentrat-keluar" />
-                        <x-menu-item title="Return Pakan" icon="fas.arrow-rotate-left" link="/sentrat-return" />
+                        <x-menu-item title="Retur Penjualan Pakan" icon="fas.arrow-rotate-left" link="/sentrat-return" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 4, 6]))
                         <x-menu-item title="Laporan Obat" icon="fas.store" link="/laporan-obat" />
                         <x-menu-item title="Pembelian Obat" icon="fas.cart-plus" link="/obat-masuk" />
+                        <x-menu-item title="Retur Pembelian Obat" icon="fas.arrow-rotate-right" link="/obat-kembali" />
                     @endif
                     @if (in_array(auth()->user()->role_id, [1, 8, 4]))
                         <x-menu-item title="Penjualan Obat" icon="fas.file-invoice-dollar" link="/obat-keluar" />
-                        <x-menu-item title="Return Obat" icon="fas.arrow-rotate-left" link="/obat-return" />
+                        <x-menu-item title="Retur Penjualan Obat" icon="fas.arrow-rotate-left" link="/obat-return" />
                     @endif
                 </x-menu-sub>
 

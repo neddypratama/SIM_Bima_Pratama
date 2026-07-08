@@ -131,6 +131,11 @@ Route::middleware('auth')->group(function () {
         Volt::route('/telur-masuk/create', 'telur-masuk.create');
         Volt::route('/telur-masuk/{transaksi}/edit', 'telur-masuk.edit');
         Volt::route('/telur-masuk/{transaksi}/show', 'telur-masuk.show');
+
+        Volt::route('/telur-kembali', 'telur-kembali.index');
+        Volt::route('/telur-kembali/create', 'telur-kembali.create');
+        Volt::route('/telur-kembali/{transaksi}/edit', 'telur-kembali.edit');
+        Volt::route('/telur-kembali/{transaksi}/show', 'telur-kembali.show');
     });
 
     /*
@@ -239,6 +244,11 @@ Route::middleware('auth')->group(function () {
         Volt::route('/tray-masuk/{transaksi}/edit', 'tray-masuk.edit');
         Volt::route('/tray-masuk/{transaksi}/show', 'tray-masuk.show');
 
+        Volt::route('/tray-kembali', 'tray-kembali.index');
+        Volt::route('/tray-kembali/create', 'tray-kembali.create');
+        Volt::route('/tray-kembali/{transaksi}/edit', 'tray-kembali.edit');
+        Volt::route('/tray-kembali/{transaksi}/show', 'tray-kembali.show');
+
         Volt::route('/tray-keluar', 'tray-keluar.index');
         Volt::route('/tray-keluar/create', 'tray-keluar.create');
         Volt::route('/tray-keluar/{transaksi}/edit', 'tray-keluar.edit');
@@ -262,11 +272,21 @@ Route::middleware('auth')->group(function () {
         Volt::route('/sentrat-masuk/{transaksi}/edit', 'sentrat-masuk.edit');
         Volt::route('/sentrat-masuk/{transaksi}/show', 'sentrat-masuk.show');
 
+        Volt::route('/sentrat-kembali', 'sentrat-kembali.index');
+        Volt::route('/sentrat-kembali/create', 'sentrat-kembali.create');
+        Volt::route('/sentrat-kembali/{transaksi}/edit', 'sentrat-kembali.edit');
+        Volt::route('/sentrat-kembali/{transaksi}/show', 'sentrat-kembali.show');
+
         // Obat
         Volt::route('/obat-masuk', 'obat-masuk.index');
         Volt::route('/obat-masuk/create', 'obat-masuk.create');
         Volt::route('/obat-masuk/{transaksi}/edit', 'obat-masuk.edit');
         Volt::route('/obat-masuk/{transaksi}/show', 'obat-masuk.show');
+
+        Volt::route('/obat-kembali', 'obat-kembali.index');
+        Volt::route('/obat-kembali/create', 'obat-kembali.create');
+        Volt::route('/obat-kembali/{transaksi}/edit', 'obat-kembali.edit');
+        Volt::route('/obat-kembali/{transaksi}/show', 'obat-kembali.show');
     });
 
     /*

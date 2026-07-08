@@ -70,7 +70,7 @@ new class extends Component {
                 'kuantitas' => $detail->kuantitas,
 
                 // batas dari transaksi asal
-                'max_qty' => $detail->kuantitas == 0 ? $parentDetail?->kuantitas ?? 0 : $detail->kuantitas,
+                'max_qty' => $parentDetail?->kuantitas ?? 0,
             ];
         }
 

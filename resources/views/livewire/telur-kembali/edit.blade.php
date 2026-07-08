@@ -155,45 +155,11 @@ new class extends Component {
                 $part = explode('-', $this->transaksi->invoice);
                 $tanggal = $part[1];
 
-                $bon = Transaksi::where('invoice', 'like', "%$tanggal-BON-$str")->first();
-                $aset = Transaksi::where('invoice', 'like', "%$tanggal-TRY-$str")->first();
-                $hpp = Transaksi::where('invoice', 'like', "%$tanggal-HPP-$str")->first();
-                // dd($bon, $aset, $hpp);
+                $bon = Transaksi::where('invoice', 'like', "%$tanggal-UTG-$str")->first();
+
                 $bon->update([
                     'name' => $this->name,
                     'user_id' => $this->user_id,
-                    'client_id' => $this->client_id,
-                    'tanggal' => $this->tanggal,
-                    'total' => $this->total,
-                ]);
-
-                $detailBon = $bon->details()->get();
-                foreach ($detailBon as $index => $d) {
-                    if (!isset($this->details[$index])) {
-                        continue;
-                    }
-
-                    $value = $this->details[$index]['value'] ?? $d->value;
-                    $qty = $this->details[$index]['kuantitas'] ?? $d->kuantitas;
-
-                    $d->update([
-                        'value' => $value,
-                        'kuantitas' => $qty,
-                        'sub_total' => $value * $qty,
-                    ]);
-                }
-
-                $aset->update([
-                    'name' => $this->name,
-                    'user_id' => $this->user_id,
-                    'client_id' => $this->client_id,
-                    'tanggal' => $this->tanggal,
-                ]);
-
-                $hpp->update([
-                    'name' => $this->name,
-                    'user_id' => $this->user_id,
-                    'client_id' => $this->client_id,
                     'tanggal' => $this->tanggal,
                 ]);
             });
@@ -205,7 +171,7 @@ new class extends Component {
                     'client_id' => $this->client_id,
                     'tanggal' => $this->tanggal,
                     'total' => $this->total,
-                    'type' => 'Debit',
+                    'type' => 'Kredit',
                 ]);
 
                 $this->transaksi->details()->delete();
@@ -222,14 +188,14 @@ new class extends Component {
             });
         }
 
-        $this->success('Retur berhasil diupdate!', redirectTo: '/tray-return');
+        $this->success('Retur berhasil diupdate!', redirectTo: '/telur-kembali');
     }
 };
 ?>
 
 <div class="p-4 space-y-6">
 
-    <x-header title="Edit Retur Penjualan" separator />
+    <x-header title="Edit Retur Pembelian" separator />
 
     <x-form wire:submit="save">
 
@@ -274,7 +240,7 @@ new class extends Component {
         </x-card>
 
         <x-slot:actions>
-            <x-button label="Cancel" link="/tray-return" />
+            <x-button label="Cancel" link="/telur-kembali" />
             <x-button label="Update Retur" type="submit" class="btn-primary" />
         </x-slot:actions>
 
