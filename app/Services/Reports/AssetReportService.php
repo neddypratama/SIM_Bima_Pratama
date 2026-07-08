@@ -201,7 +201,15 @@ class AssetReportService
 
         foreach ($clients as $c) {
 
-            $saldo = $c->saldo_piutang - $c->saldo_hutang;
+            $saldoPiutang =
+                ($c->piutang_debit ?? 0)
+                - ($c->piutang_kredit ?? 0);
+
+            $saldoHutang =
+                ($c->hutang_kredit ?? 0)
+                - ($c->hutang_debit ?? 0);
+
+            $saldo = $saldoPiutang - $saldoHutang;
 
             if ($saldo == 0) {
                 continue;
@@ -209,21 +217,16 @@ class AssetReportService
 
             if ($saldo > 0) {
 
-                if ($c->type == 'Peternak')
+                if ($c->type == 'Peternak') {
                     $piutang['Piutang Peternak'] += $saldo;
-
-                elseif ($c->type == 'Pedagang')
+                } elseif ($c->type == 'Pedagang') {
                     $piutang['Piutang Pedagang'] += $saldo;
-
-                elseif ($c->type == 'Karyawan')
+                } elseif ($c->type == 'Karyawan') {
                     $piutang['Piutang Karyawan'] += $saldo;
-
-                elseif ($c->type == 'Supplier') {
+                } elseif ($c->type == 'Supplier') {
 
                     foreach ($piutang as $akun => $_) {
-
                         if (str_contains($akun, $c->name)) {
-
                             $piutang[$akun] += $saldo;
                         }
                     }
@@ -234,21 +237,16 @@ class AssetReportService
 
                 $nilai = abs($saldo);
 
-                if ($c->type == 'Peternak')
+                if ($c->type == 'Peternak') {
                     $hutang['Hutang Peternak'] += $nilai;
-
-                elseif ($c->type == 'Pedagang')
+                } elseif ($c->type == 'Pedagang') {
                     $hutang['Hutang Pedagang'] += $nilai;
-
-                elseif ($c->type == 'Karyawan')
+                } elseif ($c->type == 'Karyawan') {
                     $hutang['Hutang Karyawan'] += $nilai;
-
-                elseif ($c->type == 'Supplier') {
+                } elseif ($c->type == 'Supplier') {
 
                     foreach ($hutang as $akun => $_) {
-
                         if (str_contains($akun, $c->name)) {
-
                             $hutang[$akun] += $nilai;
                         }
                     }
