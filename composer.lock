@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2066a9e69b04ca9c72bd966b9aa3d390",
+    "content-hash": "93b6a6a19bc9e99850dd8daa853bbd0e",
     "packages": [
         {
             "name": "blade-ui-kit/blade-heroicons",
@@ -7556,6 +7556,53 @@
             "time": "2025-04-30T06:54:44+00:00"
         },
         {
+            "name": "iqbalatma/laravel-service-repo",
+            "version": "5.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/iqbalatma/laravel-service-repo.git",
+                "reference": "8314847e033c7695b30bcd57573739183cddb355"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/iqbalatma/laravel-service-repo/zipball/8314847e033c7695b30bcd57573739183cddb355",
+                "reference": "8314847e033c7695b30bcd57573739183cddb355",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Iqbalatma\\LaravelServiceRepo\\ServiceRepoProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helper.php"
+                ],
+                "psr-4": {
+                    "Iqbalatma\\LaravelServiceRepo\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "iqbalatma",
+                    "email": "iqbalatma@gmail.com"
+                }
+            ],
+            "description": "Project for extend base class on laravel with service repo pattern",
+            "support": {
+                "issues": "https://github.com/iqbalatma/laravel-service-repo/issues",
+                "source": "https://github.com/iqbalatma/laravel-service-repo/tree/5.0.0"
+            },
+            "time": "2025-04-09T13:52:29+00:00"
+        },
+        {
             "name": "laravel/pail",
             "version": "v1.2.3",
             "source": {
@@ -9734,12 +9781,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": [],
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "plugin-api-version": "2.6.0"
 }
