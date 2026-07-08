@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Reports;
+namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Transaksi;
@@ -10,8 +10,18 @@ use Illuminate\Support\Facades\DB;
 
 class AssetReportService
 {
-    public function generate($startDate = null, $endDate = null): array
+    /**
+     * Proses generate laporan aset dan liabilitas
+     *
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    public function generate(?string $startDate = null, ?string $endDate = null): array
     {
+        /* =====================================================
+         | RANGE TANGGAL
+         ===================================================== */
         $first = Transaksi::orderBy('tanggal')->first();
         $last = Transaksi::orderByDesc('tanggal')->first();
 
@@ -41,51 +51,22 @@ class AssetReportService
         /* =====================================================
          | ASET & LIABILITAS DARI TRANSAKSI
          ===================================================== */
-        $asetFlat = DB::table('detail_transaksis as dt')
-            ->join('transaksis as t','t.id','=','dt.transaksi_id')
-            ->join('kategoris as k','k.id','=','dt.kategori_id')
-            ->join('detail_kategoris as dk','dk.id','=','k.detail_kategori_id')
-
-            ->whereBetween('t.tanggal',[$start,$end])
-            ->where('t.status','Selesai')
-            ->where('dk.type','Aset')
-            ->where('k.name','!=','Penyesuaian Stok')
-
-            ->selectRaw("
-                k.name kategori,
-                SUM(
-                    CASE
-                        WHEN LOWER(t.type)='debit'
-                        THEN dt.sub_total
-                        ELSE -dt.sub_total
-                    END
-                ) total
-            ")
-            ->groupBy('k.name')
-            ->pluck('total','kategori')
+        $asetFlat = Transaksi::with('details.kategori.detailKategori')
+            ->whereBetween('tanggal', [$start, $end])
+            ->where('status', 'Selesai')
+            ->get()
+            ->flatMap->details->filter(fn($d) => $d->kategori->detailKategori?->type === 'Aset' && $d->kategori?->name !== 'Penyesuaian Stok')
+            ->groupBy(fn($d) => $d->kategori->name)
+            ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total'))
             ->toArray();
 
-        $liabilitasFlat = DB::table('detail_transaksis as dt')
-            ->join('transaksis as t','t.id','=','dt.transaksi_id')
-            ->join('kategoris as k','k.id','=','dt.kategori_id')
-            ->join('detail_kategoris as dk','dk.id','=','k.detail_kategori_id')
-
-            ->whereBetween('t.tanggal',[$start,$end])
-            ->where('t.status','Selesai')
-            ->where('dk.type','Liabilitas')
-
-            ->selectRaw("
-                k.name kategori,
-                SUM(
-                    CASE
-                        WHEN LOWER(t.type)='kredit'
-                        THEN dt.sub_total
-                        ELSE -dt.sub_total
-                    END
-                ) total
-            ")
-            ->groupBy('k.name')
-            ->pluck('total','kategori')
+        $liabilitasFlat = Transaksi::with('details.kategori.detailKategori')
+            ->whereBetween('tanggal', [$start, $end])
+            ->where('status', 'Selesai')
+            ->get()
+            ->flatMap->details->filter(fn($d) => $d->kategori->detailKategori?->type === 'Liabilitas')
+            ->groupBy(fn($d) => $d->kategori->name)
+            ->map(fn($g) => $g->where(fn($i) => strtolower($i->transaksi->type) === 'kredit')->sum('sub_total') - $g->where(fn($i) => strtolower($i->transaksi->type) === 'debit')->sum('sub_total'))
             ->toArray();
 
         /* =====================================================

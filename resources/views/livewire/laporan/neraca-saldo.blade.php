@@ -2,8 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Models\Transaksi;
-use App\Models\Kategori;
+use App\Services\Reports\NeracaReportService;
 use Livewire\Volt\Component;
 use App\Exports\NeracaSaldoExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -93,103 +92,13 @@ new class extends Component {
 
     public function generateNeraca()
     {
-        $firstTransaction = Transaksi::orderBy('tanggal', 'asc')->first();
-        $lastTransaction = Transaksi::orderBy('tanggal', 'desc')->first();
+        $report = app(NeracaReportService::class)->generate($this->startDate, $this->endDate, $this->mappingPendapatan, $this->mappingPengeluaran, $this->mappingAset, $this->mappingLiabilitas, $this->mappingEkuitas);
 
-        $start = $this->startDate ? Carbon::parse($this->startDate)->startOfDay() : Carbon::parse($firstTransaction->tanggal)->startOfDay();
-
-        $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($lastTransaction->tanggal)->endOfDay();
-
-        $this->neracaPendapatan = [];
-        $this->neracaPengeluaran = [];
-        $this->neracaAset = [];
-        $this->neracaLiabilitas = [];
-        $this->neracaEkuitas = [];
-
-        $transaksis = Transaksi::with(['details.kategori.detailKategori', 'details.barang.jenis'])
-            ->whereBetween('tanggal', [$start, $end])
-            ->where('status', 'Selesai')
-            ->whereHas('details', fn($q) => $q->where('sub_total', '>', 0))
-            ->get();
-
-        // 🔥 FLATTEN + SPLIT PENYESUAIAN
-        $details = $transaksis
-            ->flatMap(function ($trx) {
-                return $trx->details->map(function ($d) use ($trx) {
-                    return [
-                        'kategori' => $d->kategori?->name,
-                        'type_kategori' => $d->kategori?->detailKategori?->type,
-                        'type_transaksi' => strtolower($trx->type ?? ''),
-                        'sub_total' => $d->sub_total ?? 0,
-                    ];
-                });
-            })
-            ->filter(fn($d) => !empty($d['kategori']));
-
-        // 🔥 AMBIL SEMUA KATEGORI DARI DB
-        $allKategoris = Kategori::with('detailKategori')->get();
-
-        $allKategoris = $allKategoris->map(function ($k) {
-            return [
-                'kategori' => $k->name,
-                'type' => $k->detailKategori?->type,
-            ];
-        });
-
-        // 🔥 TAMBAHKAN KATEGORI HASIL SPLIT
-        $extraKategoris = collect([['kategori' => 'Stok Telur', 'type' => 'Aset'], ['kategori' => 'Stok Pakan', 'type' => 'Aset'], ['kategori' => 'Stok Obat-Obatan', 'type' => 'Aset'], ['kategori' => 'Stok Tray', 'type' => 'Aset']]);
-
-        // 🔥 HAPUS PENYESUAIAN STOK + GABUNG
-        // $allKategoris = $allKategoris->reject(fn($k) => $k['kategori'] === 'Penyesuaian Stok')->merge($extraKategoris)->unique('kategori')->values();
-
-        // 🔥 HITUNG DEBIT KREDIT
-        $complete = collect($allKategoris)->map(function ($kategori) use ($details) {
-            $nama = $kategori['kategori'];
-            $type = $kategori['type'];
-
-            return [
-                'kategori' => $nama,
-                'type' => $type,
-                'debit' => $details->where('kategori', $nama)->where('type_kategori', $type)->where('type_transaksi', 'debit')->sum('sub_total'),
-                'kredit' => $details->where('kategori', $nama)->where('type_kategori', $type)->where('type_transaksi', 'kredit')->sum('sub_total'),
-            ];
-        });
-
-        // 🔥 MAPPING KE HIERARKI
-        $mapHierarki = function ($mapping, $type) use ($complete) {
-            $result = [];
-
-            foreach ($mapping as $group => $categories) {
-                $sub = [];
-                $totalDebit = 0;
-                $totalKredit = 0;
-
-                foreach ($categories as $cat) {
-                    $row = $complete->first(fn($r) => $r['kategori'] == $cat && $r['type'] == $type);
-
-                    if ($row) {
-                        $sub[] = $row;
-                        $totalDebit += $row['debit'];
-                        $totalKredit += $row['kredit'];
-                    }
-                }
-
-                $result[] = [
-                    'group' => $group,
-                    'debit' => $totalDebit,
-                    'kredit' => $totalKredit,
-                    'details' => $sub,
-                ];
-            }
-
-            return $result;
-        };
-
-        $this->neracaPendapatan = $mapHierarki($this->mappingPendapatan, 'Pendapatan');
-        $this->neracaPengeluaran = $mapHierarki($this->mappingPengeluaran, 'Pengeluaran');
-        $this->neracaAset = $mapHierarki($this->mappingAset, 'Aset');
-        $this->neracaLiabilitas = $mapHierarki($this->mappingLiabilitas, 'Liabilitas');
-        $this->neracaEkuitas = $mapHierarki($this->mappingEkuitas, 'Ekuitas');
+        $this->neracaPendapatan = $report['pendapatan'];
+        $this->neracaPengeluaran = $report['pengeluaran'];
+        $this->neracaAset = $report['aset'];
+        $this->neracaLiabilitas = $report['liabilitas'];
+        $this->neracaEkuitas = $report['ekuitas'];
     }
 
     // Tambahkan ini di dalam class Livewire kamu
