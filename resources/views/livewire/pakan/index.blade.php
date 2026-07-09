@@ -36,22 +36,84 @@ new class extends Component {
     public function pembelianTelur(): LengthAwarePaginator
     {
         return DB::table('barangs as barang')
-            ->select('barang.id', 'barang.name as nama_barang', DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
             ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
 
-            ->when($this->filterType === 'Debit', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kategori.name', 'like', '%Stok Pakan%')->where('transaksi.type', 'Debit')->where('transaksi.invoice', 'like', '%-STR-%');
-                });
-            })
+            ->select(
+                'barang.id',
+                'barang.name as nama_barang',
 
-            ->when($this->filterType === 'Kredit', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kategori.name', 'like', '%Penjualan Pakan%')->where('transaksi.type', 'Kredit');
-                });
-            })
+                DB::raw("
+                SUM(
+                    CASE
+                        /* ================= PEMBELIAN ================= */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Pakan%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.invoice LIKE '%-STR-%'
+                        THEN detail_transaksis.kuantitas
+
+                        /* ============== RETUR PEMBELIAN ============== */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Pakan%'
+                            AND transaksi.type = 'Kredit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -detail_transaksis.kuantitas
+
+                        /* ================= PENJUALAN ================= */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Pakan%'
+                            AND transaksi.type = 'Kredit'
+                        THEN detail_transaksis.kuantitas
+
+                        /* ============== RETUR PENJUALAN ============== */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Pakan%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -detail_transaksis.kuantitas
+
+                        ELSE 0
+                    END
+                ) as total_jumlah
+            "),
+
+                DB::raw("
+                SUM(
+                    CASE
+                        /* ================= PEMBELIAN ================= */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Pakan%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.invoice LIKE '%-STR-%'
+                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+
+                        /* ============== RETUR PEMBELIAN ============== */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Pakan%'
+                            AND transaksi.type = 'Kredit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+
+                        /* ================= PENJUALAN ================= */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Pakan%'
+                            AND transaksi.type = 'Kredit'
+                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+
+                        /* ============== RETUR PENJUALAN ============== */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Pakan%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+
+                        ELSE 0
+                    END
+                ) as total_harga
+            "),
+            )
 
             ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
 
@@ -60,7 +122,7 @@ new class extends Component {
             ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
 
             ->groupBy('barang.id', 'barang.name')
-            ->orderBy('barang.name', 'asc')
+            ->orderBy('barang.name')
             ->paginate($this->perPage);
     }
 

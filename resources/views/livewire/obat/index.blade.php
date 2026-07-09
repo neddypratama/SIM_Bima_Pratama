@@ -36,29 +36,95 @@ new class extends Component {
     public function pembelianTelur(): LengthAwarePaginator
     {
         return DB::table('barangs as barang')
-            ->select('barang.name as nama_barang', DB::raw('COALESCE(SUM(detail_transaksis.kuantitas), 0) as total_jumlah'), DB::raw('COALESCE(SUM(detail_transaksis.kuantitas * detail_transaksis.value), 0) as total_harga'))
             ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
 
-            // 🔹 Logika otomatis tergantung filterType
-            ->when($this->filterType === 'Debit', function ($q) {
-                // Jika Pembelian (stok masuk)
-                $q->where('kategori.name', 'like', '%Stok Obat%')->where('transaksi.type', 'Debit')->where('transaksi.invoice', 'like', '%-OBT-%');
-            })
-            ->when($this->filterType === 'Kredit', function ($q) {
-                // Jika Penjualan (stok keluar)
-                $q->where('kategori.name', 'like', '%Penjualan Obat%');
-            })
+            ->select(
+                'barang.id',
+                'barang.name as nama_barang',
 
-            // 🔍 Filter tambahan
+                DB::raw("
+                SUM(
+                    CASE
+
+                        /* ================= PEMBELIAN OBAT ================= */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Obat%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.invoice LIKE '%-OBT-%'
+                        THEN detail_transaksis.kuantitas
+
+                        /* ============== RETUR PEMBELIAN OBAT ============== */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Obat%'
+                            AND transaksi.type = 'Kredit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -detail_transaksis.kuantitas
+
+                        /* ================= PENJUALAN OBAT ================= */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Obat%'
+                            AND transaksi.type = 'Kredit'
+                        THEN detail_transaksis.kuantitas
+
+                        /* ============== RETUR PENJUALAN OBAT ============== */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Obat%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -detail_transaksis.kuantitas
+
+                        ELSE 0
+                    END
+                ) as total_jumlah
+            "),
+
+                DB::raw("
+                SUM(
+                    CASE
+
+                        /* ================= PEMBELIAN OBAT ================= */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Obat%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.invoice LIKE '%-OBT-%'
+                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+
+                        /* ============== RETUR PEMBELIAN OBAT ============== */
+                        WHEN '{$this->filterType}' = 'Debit'
+                            AND kategori.name LIKE '%Stok Obat%'
+                            AND transaksi.type = 'Kredit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+
+                        /* ================= PENJUALAN OBAT ================= */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Obat%'
+                            AND transaksi.type = 'Kredit'
+                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+
+                        /* ============== RETUR PENJUALAN OBAT ============== */
+                        WHEN '{$this->filterType}' = 'Kredit'
+                            AND kategori.name LIKE '%Penjualan Obat%'
+                            AND transaksi.type = 'Debit'
+                            AND transaksi.name LIKE 'Retur dari%'
+                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+
+                        ELSE 0
+                    END
+                ) as total_harga
+            "),
+            )
+
             ->when($this->search, fn($q) => $q->where('barang.name', 'like', "%{$this->search}%"))
+
             ->when($this->startDate, fn($q) => $q->whereDate('transaksi.tanggal', '>=', $this->startDate))
+
             ->when($this->endDate, fn($q) => $q->whereDate('transaksi.tanggal', '<=', $this->endDate))
 
-            // 🔹 Group & Sort
             ->groupBy('barang.id', 'barang.name')
-            ->orderBy('barang.name', 'asc')
+            ->orderBy('barang.name')
             ->paginate($this->perPage);
     }
 
