@@ -36,9 +36,12 @@ new class extends Component {
     public function pembelianTelur(): LengthAwarePaginator
     {
         return DB::table('barangs as barang')
+            ->leftJoin('jenis_barangs as jenis', 'jenis.id', '=', 'barang.jenis_id')
             ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
+
+            ->where('jenis.name', 'like', 'Telur%')
 
             ->select(
                 'barang.id',
@@ -58,7 +61,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN TELUR ================= */
@@ -71,7 +74,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Debit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Penjualan dari%'
                         THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -92,8 +95,8 @@ new class extends Component {
                         /* ============== RETUR PEMBELIAN TELUR ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Telur%'
-                            AND transaksi.type = 'Kredit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.type = 'Kredit' 
+                            AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN TELUR ================= */
@@ -106,7 +109,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Debit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Penjualan dari%'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0

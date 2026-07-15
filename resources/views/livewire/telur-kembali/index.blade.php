@@ -103,7 +103,7 @@ new class extends Component {
 
             $detailRetur = $transaksi->details()->get();
 
-            $parentInvoice = str_replace('Retur dari ', '', $transaksi->name);
+            $parentInvoice = str_replace('Retur Pembelian dari ', '', $transaksi->name);
 
             $transaksiBeli = Transaksi::where('invoice', $parentInvoice)->firstOrFail();
 

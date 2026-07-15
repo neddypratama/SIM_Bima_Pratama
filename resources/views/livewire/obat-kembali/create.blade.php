@@ -63,7 +63,7 @@ new class extends Component {
         $this->transaksi = $transaksi;
         $this->user_id = auth()->id();
         $this->client_id = $transaksi->client_id;
-        $this->name = 'Retur dari ' . $transaksi->invoice;
+        $this->name = 'Retur Pembelian dari ' . $transaksi->invoice;
 
         // generate invoice baru
         $tanggal = now()->format('Ymd');

@@ -55,10 +55,10 @@ new class extends Component {
                         THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN ============== */
-                        WHEN '{$this->filterType}' = 'Debit'
+                        WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Stok Pakan%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN ================= */
@@ -68,10 +68,10 @@ new class extends Component {
                         THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN ============== */
-                        WHEN '{$this->filterType}' = 'Kredit'
+                        WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Penjualan Pakan%'
                             AND transaksi.type = 'Debit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Penjualan dari%'
                         THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -93,7 +93,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Pakan%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN ================= */
@@ -106,7 +106,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Pakan%'
                             AND transaksi.type = 'Debit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Penjualan dari%'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0

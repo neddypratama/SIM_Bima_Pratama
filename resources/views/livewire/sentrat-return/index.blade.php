@@ -140,7 +140,7 @@ new class extends Component {
                 // =============================
                 // AMBIL TRANSAKSI PENJUALAN
                 // =============================
-                $parentInvoice = str_replace('Retur dari ', '', $transaksi->name);
+                $parentInvoice = str_replace('Retur Penjualan dari ', '', $transaksi->name);
 
                 $transaksiJual = Transaksi::where('invoice', $parentInvoice)->firstOrFail();
 

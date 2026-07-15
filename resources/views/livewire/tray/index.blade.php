@@ -58,7 +58,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN TRAY ================= */
@@ -71,7 +71,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Debit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Penjualan dari%'
                         THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -93,7 +93,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN TRAY ================= */
@@ -106,7 +106,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Debit'
-                            AND transaksi.name LIKE 'Retur dari%'
+                            AND transaksi.name LIKE 'Retur Penjualan dari%'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0

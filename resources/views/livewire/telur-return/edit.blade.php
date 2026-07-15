@@ -34,7 +34,7 @@ new class extends Component {
     public function mount(Transaksi $transaksi): void
     {
         // 🔥 ambil invoice dari name
-        preg_match('/Retur dari (.+)/', $transaksi->name, $matches);
+        preg_match('/Retur Penjualan dari (.+)/', $transaksi->name, $matches);
 
         $parentInvoice = $matches[1] ?? null;
 
