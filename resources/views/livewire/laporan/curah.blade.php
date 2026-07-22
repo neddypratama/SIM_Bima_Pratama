@@ -70,18 +70,31 @@ new class extends Component {
 
         $end = $this->endDate ? Carbon::parse($this->endDate)->endOfDay() : Carbon::parse($last->tanggal)->endOfDay();
 
-        $stokCurah = Transaksi::with(['details.kategori', 'details.barang.jenis'])
+        $stokPakanCurah = Transaksi::with(['details.kategori.detailKategori', 'details.barang.jenis'])
+            ->whereHas('details.kategori.detailKategori', function ($q) {
+                // Mencari type di tabel detail_kategoris
+                $q->where('type', 'Aset');
+            })
+            ->whereHas('details.kategori', function ($q) {
+                // Mencari name di tabel kategoris
+                $q->where('name', 'Stok Pakan');
+            })
+            ->whereHas('details.barang.jenis', fn($q) => $q->where('name', 'Pakan Curah'))
             ->whereBetween('tanggal', [Carbon::parse('2025-10-31')->startOfDay(), $end])
             ->where('status', 'Selesai')
             ->get()
-            ->flatMap->details->filter(function ($d) {
-                return $d->kategori?->name === 'Stok Pakan' && ($d->barang->jenis->name ?? '') === 'Pakan Curah';
+            ->flatMap(fn($trx) => $trx->details)
+            // Filter manual untuk memastikan relasi tersedia
+            ->filter(fn($d) => $d->kategori && ($d->barang->jenis->name ?? '') === 'Pakan Curah')
+            ->groupBy(fn($d) => $d->kategori->name)
+            ->map(function ($group) {
+                $debit = $group->filter(fn($i) => strtolower($i->transaksi->type ?? '') === 'debit')->sum('sub_total');
+                $kredit = $group->filter(fn($i) => strtolower($i->transaksi->type ?? '') === 'kredit')->sum('sub_total');
+                return $debit - $kredit;
             })
-            ->sum(function ($d) {
-                return strtolower($d->transaksi->type) === 'debit' ? $d->sub_total : -$d->sub_total;
-            });
+            ->toArray();
 
-        $this->stokCurah = $stokCurah;
+        $this->stokCurah = $stokPakanCurah['Stok Pakan'];
 
         // ✅ Ambil semua nama barang curah dari master dan jadikan acuan urutan
         $barangCurahMaster = Barang::whereHas('jenis', fn($q) => $q->where('name', 'Pakan Curah'))->pluck('name')->toArray();
