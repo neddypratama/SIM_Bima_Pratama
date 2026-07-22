@@ -110,6 +110,7 @@ new class extends Component {
                 $q->where('name', 'Penjualan Pakan Curah');
             })
             ->whereBetween('tanggal', [$start, $end])
+            ->where('status', 'Selesai')
             ->get()
             ->flatMap(fn($trx) => $trx->details)
             ->groupBy(fn($d) => $d->barang->name)
@@ -146,6 +147,7 @@ new class extends Component {
             ->where('k.name', 'HPP')
             ->where('jb.name', 'Pakan Curah')
             ->whereBetween('t.tanggal', [$start, $end])
+            ->where('t.status', 'Selesai')
             ->whereIn('b.name', $barangCurahMaster)
             ->select('b.name as barang_name', DB::raw("SUM(CASE WHEN LOWER(t.type) = 'kredit' THEN td.sub_total ELSE 0 END) as total_kredit"), DB::raw("SUM(CASE WHEN LOWER(t.type) = 'debit'  THEN td.sub_total ELSE 0 END) as total_debit"))
             ->groupBy('b.name')
