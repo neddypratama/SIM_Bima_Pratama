@@ -52,6 +52,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Pakan%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-STR-%'
+                            AND transaksi.status = 'Selesai'
                         THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN ============== */
@@ -59,12 +60,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Pakan%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
+                            AND transaksi.status = 'Selesai'
                         THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Pakan%'
                             AND transaksi.type = 'Kredit'
+                            AND transaksi.status = 'Selesai'
                         THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN ============== */
@@ -72,6 +75,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan Pakan%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
+                            AND transaksi.status = 'Selesai'
                         THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -87,27 +91,31 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Pakan%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-STR-%'
-                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PEMBELIAN ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Pakan%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+                        AND transaksi.status = 'Selesai'
+                            THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Pakan%'
                             AND transaksi.type = 'Kredit'
-                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PENJUALAN ============== */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Pakan%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+                        AND transaksi.status = 'Selesai'
+                            THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0
                     END

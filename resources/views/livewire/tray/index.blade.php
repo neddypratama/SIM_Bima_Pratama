@@ -52,27 +52,31 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TRY-%'
-                        THEN detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN TRAY ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        THEN -detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN TRAY ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Kredit'
-                        THEN detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN TRAY ============== */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        THEN -detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN -detail_transaksis.kuantitas
 
                         ELSE 0
                     END
@@ -87,27 +91,31 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TRY-%'
-                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PEMBELIAN TRAY ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+                        AND transaksi.status = 'Selesai'
+                            THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN TRAY ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Kredit'
-                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PENJUALAN TRAY ============== */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+                        AND transaksi.status = 'Selesai'
+                            THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0
                     END

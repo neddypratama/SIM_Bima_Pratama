@@ -55,27 +55,31 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TLR-%'
-                        THEN detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN TELUR ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        THEN -detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN TELUR ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Kredit'
-                        THEN detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN TELUR ============== */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        THEN -detail_transaksis.kuantitas
+                        AND transaksi.status = 'Selesai'
+                            THEN -detail_transaksis.kuantitas
 
                         ELSE 0
                     END
@@ -90,27 +94,31 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TLR-%'
-                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PEMBELIAN TELUR ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Kredit' 
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+                        AND transaksi.status = 'Selesai'
+                            THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN TELUR ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Kredit'
-                        THEN detail_transaksis.kuantitas * detail_transaksis.value
+                        AND transaksi.status = 'Selesai'
+                            THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PENJUALAN TELUR ============== */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
+                        AND transaksi.status = 'Selesai'
+                            THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0
                     END
