@@ -278,6 +278,30 @@ class AssetReportService
             $liabilitasFlat[$akun] = $nilai;
         }
 
+        $stokPerJenis = DB::table('stok_batches as sb')
+            ->join('detail_transaksis as dt', 'dt.id', '=', 'sb.detail_transaksi_id')
+            ->join('barangs as b', 'b.id', '=', 'dt.barang_id')
+            ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
+            ->select(
+                'jb.name as jenis_barang',
+                DB::raw('SUM(sb.qty_sisa * sb.harga) as total')
+            )
+            ->where('sb.qty_sisa', '>', 0)
+            ->groupBy('jb.id', 'jb.name')
+            ->orderBy('jb.name')
+            ->pluck('total', 'jenis_barang')
+            ->toArray();
+
+        $asetData['Stok Detail'] = [
+            'detail' => [],
+            'total' => 0,
+        ];
+
+        foreach ($stokPerJenis as $jenis => $total) {
+            $asetData['Stok Detail']['detail'][$jenis] = $total;
+            $asetData['Stok Detail']['total'] += $total;
+        }
+
         /* =====================================================
         | BANGUN STRUKTUR ASET & LIABILITAS
         ===================================================== */
