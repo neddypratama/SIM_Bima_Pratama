@@ -54,7 +54,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TRY-%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN TRAY ============== */
@@ -62,14 +62,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN TRAY ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Kredit'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN TRAY ============== */
@@ -77,7 +77,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -93,7 +93,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TRY-%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PEMBELIAN TRAY ============== */
@@ -101,14 +101,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Tray%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN TRAY ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Kredit'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PENJUALAN TRAY ============== */
@@ -116,7 +116,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan EggTray%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0

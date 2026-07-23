@@ -55,7 +55,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TLR-%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN TELUR ============== */
@@ -63,14 +63,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -detail_transaksis.kuantitas
 
                         /* ================= PENJUALAN TELUR ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Kredit'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN TELUR ============== */
@@ -78,7 +78,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -94,7 +94,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-TLR-%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PEMBELIAN TELUR ============== */
@@ -102,14 +102,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Telur%'
                             AND transaksi.type = 'Kredit' 
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN TELUR ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Kredit'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PENJUALAN TELUR ============== */
@@ -117,7 +117,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan Telur%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                        AND transaksi.status = 'Selesai'
+                        AND transaksi.status != 'Batal'
                             THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0

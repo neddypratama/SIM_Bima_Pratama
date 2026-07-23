@@ -55,14 +55,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Obat%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-OBT-%'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PEMBELIAN OBAT ============== */
                         WHEN '{$this->filterType}' = 'Debit'
                             AND kategori.name LIKE '%Stok Obat%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
                         THEN -detail_transaksis.kuantitas
 
@@ -70,7 +70,7 @@ new class extends Component {
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Obat%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN detail_transaksis.kuantitas
 
                         /* ============== RETUR PENJUALAN OBAT ============== */
@@ -78,7 +78,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan Obat%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN -detail_transaksis.kuantitas
 
                         ELSE 0
@@ -95,7 +95,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Obat%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.invoice LIKE '%-OBT-%'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PEMBELIAN OBAT ============== */
@@ -103,14 +103,14 @@ new class extends Component {
                             AND kategori.name LIKE '%Stok Obat%'
                             AND transaksi.type = 'Kredit'
                             AND transaksi.name LIKE 'Retur Pembelian dari%'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         /* ================= PENJUALAN OBAT ================= */
                         WHEN '{$this->filterType}' = 'Kredit'
                             AND kategori.name LIKE '%Penjualan Obat%'
                             AND transaksi.type = 'Kredit'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN detail_transaksis.kuantitas * detail_transaksis.value
 
                         /* ============== RETUR PENJUALAN OBAT ============== */
@@ -118,7 +118,7 @@ new class extends Component {
                             AND kategori.name LIKE '%Penjualan Obat%'
                             AND transaksi.type = 'Debit'
                             AND transaksi.name LIKE 'Retur Penjualan dari%'
-                            AND transaksi.status = 'Selesai'
+                            AND transaksi.status != 'Batal'
                         THEN -(detail_transaksis.kuantitas * detail_transaksis.value)
 
                         ELSE 0
