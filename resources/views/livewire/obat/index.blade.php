@@ -36,10 +36,12 @@ new class extends Component {
     public function pembelianTelur(): LengthAwarePaginator
     {
         return DB::table('barangs as barang')
+            ->leftJoin('jenis_barangs as jenis', 'jenis.id', '=', 'barang.jenis_id')
             ->leftJoin('detail_transaksis', 'barang.id', '=', 'detail_transaksis.barang_id')
             ->leftJoin('transaksis as transaksi', 'detail_transaksis.transaksi_id', '=', 'transaksi.id')
             ->leftJoin('kategoris as kategori', 'kategori.id', '=', 'detail_transaksis.kategori_id')
 
+            ->where('jenis.name', 'like', 'Obat-Obatan%')
             ->select(
                 'barang.id',
                 'barang.name as nama_barang',
