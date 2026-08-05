@@ -51,7 +51,7 @@ new class extends Component {
                     });
                 })
                 ->get(),
-            'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
+            'kateBayar' => Kategori::where('name', 'like', '%Kas %')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
 
@@ -71,11 +71,15 @@ new class extends Component {
         $part = explode('-', $transaksi->invoice);
         $tanggal = $part[1];
 
-        // Cari transaksi pembayaran (Tunai / Transfer)
+        // Cari transaksi pembayaran (Tunai / Transfer / Kas Deby)
         $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$inv")->first();
 
         if (!$bayar) {
             $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TFR-$inv")->first();
+        }
+
+        if (!$bayar) {
+            $bayar = Transaksi::where('invoice', 'like', "%$tanggal-DBY-$inv")->first();
         }
 
         // Set jika ditemukan
@@ -114,6 +118,22 @@ new class extends Component {
             if ($kategoriBayar->name == 'Kas Tunai') {
                 $this->bayar->update([
                     'invoice' => 'INV-' . $tanggal . '-TNI-' . $inv,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'total' => $this->total,
+                ]);
+                $this->bayar->details()->delete();
+                DetailTransaksi::create([
+                    'transaksi_id' => $this->bayar->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else if ($kategoriBayar->name == 'Kas Deby') {
+                $this->bayar->update([
+                    'invoice' => 'INV-' . $tanggal . '-DBY-' . $inv,
                     'name' => $this->name,
                     'user_id' => $this->user_id,
                     'tanggal' => $this->tanggal,

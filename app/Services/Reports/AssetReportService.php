@@ -278,29 +278,42 @@ class AssetReportService
             $liabilitasFlat[$akun] = $nilai;
         }
 
-        $stokPerJenis = DB::table('stok_batches as sb')
-            ->join('detail_transaksis as dt', 'dt.id', '=', 'sb.detail_transaksi_id')
-            ->join('barangs as b', 'b.id', '=', 'dt.barang_id')
-            ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
-            ->select(
-                'jb.name as jenis_barang',
-                DB::raw('SUM(sb.qty_sisa * sb.harga) as total')
-            )
-            ->where('sb.qty_sisa', '>', 0)
-            ->groupBy('jb.id', 'jb.name')
-            ->orderBy('jb.name')
-            ->pluck('total', 'jenis_barang')
-            ->toArray();
+        // $stokDetail = DB::table('detail_transaksis as dt')
+        //     ->join('transaksis as t', 't.id', '=', 'dt.transaksi_id')
+        //     ->join('kategoris as k', 'k.id', '=', 'dt.kategori_id')
+        //     ->join('barangs as b', 'b.id', '=', 'dt.barang_id')
+        //     ->join('jenis_barangs as jb', 'jb.id', '=', 'b.jenis_id')
+        //     ->where('t.status', 'Selesai')
+        //     ->whereBetween('t.tanggal', [$start, $end])
+        //     ->whereIn('k.name', [
+        //         'Stok Telur',
+        //         'Stok Pakan',
+        //         'Stok Obat',
+        //         'Stok Tray',
+        //     ])
+        //     ->select(
+        //         'jb.name as jenis_barang',
+        //         DB::raw("
+        //             SUM(
+        //                 CASE
+        //                     WHEN LOWER(t.type) = 'debit'
+        //                         THEN dt.sub_total
+        //                     WHEN LOWER(t.type) = 'kredit'
+        //                         THEN -dt.sub_total
+        //                     ELSE 0
+        //                 END
+        //             ) as total
+        //         ")
+        //     )
+        //     ->groupBy('jb.name')
+        //     ->orderBy('jb.name')
+        //     ->pluck('total', 'jenis_barang')
+        //     ->toArray();
 
-        $asetData['Stok Detail'] = [
-            'detail' => [],
-            'total' => 0,
-        ];
-
-        foreach ($stokPerJenis as $jenis => $total) {
-            $asetData['Stok Detail']['detail'][$jenis] = $total;
-            $asetData['Stok Detail']['total'] += $total;
-        }
+        // $asetData['Stok Detail'] = [
+        //     'total'  => array_sum($stokDetail),
+        //     'detail' => $stokDetail,
+        // ];
 
         /* =====================================================
         | BANGUN STRUKTUR ASET & LIABILITAS

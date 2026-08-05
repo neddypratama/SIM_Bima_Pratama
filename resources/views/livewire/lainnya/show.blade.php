@@ -15,12 +15,16 @@ new class extends Component {
         $tanggal = $part[1];
         
         $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TNI-$suffix")->first();
-        if (isset($bayar)) {
-            $this->bayar = $bayar;
-        } else {
-            $this->bayar = Transaksi::where('invoice', 'like', "%$tanggal-TFR-$suffix")->first();
+
+        if (!$bayar) {
+            $bayar = Transaksi::where('invoice', 'like', "%$tanggal-TFR-$suffix")->first();
         }
-        $this->bayar = $this->bayar->load(['client', 'details.kategori', 'details.barang']);
+
+        if (!$bayar) {
+            $bayar = Transaksi::where('invoice', 'like', "%$tanggal-DBY-$suffix")->first();
+        }
+
+        $this->bayar = $bayar->load(['client', 'details.kategori', 'details.barang']);
     }
 };
 ?>

@@ -20,6 +20,7 @@ new class extends Component {
     public string $invoice = '';
     public string $invoice1 = '';
     public string $invoice2 = '';
+    public string $invoice3 = '';
 
     #[Rule('required')]
     public string $name = '';
@@ -64,7 +65,7 @@ new class extends Component {
                     });
                 })
                 ->get(),
-            'kateBayar' => Kategori::where('name', 'like', '%Kas Tunai%')->orWhere('name', 'like', 'Bank%')->get(),
+            'kateBayar' => Kategori::where('name', 'like', '%Kas %')->orWhere('name', 'like', 'Bank%')->get(),
         ];
     }
 
@@ -83,6 +84,7 @@ new class extends Component {
             $this->invoice = 'INV-' . $tanggal . '-LNY-' . $str;
             $this->invoice1 = 'INV-' . $tanggal . '-TNI-' . $str;
             $this->invoice2 = 'INV-' . $tanggal . '-TFR-' . $str;
+            $this->invoice3 = 'INV-' . $tanggal . '-DBY-' . $str;
         }
     }
 
@@ -122,6 +124,23 @@ new class extends Component {
 
                 DetailTransaksi::create([
                     'transaksi_id' => $tunai->id,
+                    'kategori_id' => $this->bayar_id,
+                    'value' => null,
+                    'kuantitas' => null,
+                    'sub_total' => $this->total,
+                ]);
+            } else if ($bayar->name == 'Kas Deby') {
+                $deby = Transaksi::create([
+                    'invoice' => $this->invoice3,
+                    'name' => $this->name,
+                    'user_id' => $this->user_id,
+                    'tanggal' => $this->tanggal,
+                    'type' => 'Debit',
+                    'total' => $this->total,
+                ]);
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $deby->id,
                     'kategori_id' => $this->bayar_id,
                     'value' => null,
                     'kuantitas' => null,
