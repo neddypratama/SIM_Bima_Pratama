@@ -154,16 +154,16 @@ new class extends Component {
             |--------------------------------------------------------------------------
             */
 
-                // $hutang = Transaksi::create([
-                //     'invoice' => $invoiceHutang,
-                //     'name' => $transaksi->name,
-                //     'user_id' => $transaksi->user_id,
-                //     'tanggal' => $transaksi->tanggal,
-                //     'client_id' => $transaksi->client_id,
-                //     'type' => 'Debit',
-                //     'total' => $transaksi->total,
-                //     'status' => 'Selesai',
-                // ]);
+                $hutang = Transaksi::create([
+                    'invoice' => $invoiceHutang,
+                    'name' => $transaksi->name,
+                    'user_id' => $transaksi->user_id,
+                    'tanggal' => $transaksi->tanggal,
+                    'client_id' => $transaksi->client_id,
+                    'type' => 'Debit',
+                    'total' => $transaksi->total,
+                    'status' => 'Selesai',
+                ]);
 
                 /*
             |--------------------------------------------------------------------------
@@ -172,14 +172,14 @@ new class extends Component {
             */
 
                 foreach ($detailRetur as $index => $retur) {
-                    // DetailTransaksi::create([
-                    //     'transaksi_id' => $hutang->id,
-                    //     'kategori_id' => $kategori->id,
-                    //     'barang_id' => $retur->barang_id,
-                    //     'value' => $retur->value,
-                    //     'kuantitas' => $retur->kuantitas,
-                    //     'sub_total' => $retur->value * $retur->kuantitas,
-                    // ]);
+                    DetailTransaksi::create([
+                        'transaksi_id' => $hutang->id,
+                        'kategori_id' => $kategori->id,
+                        'barang_id' => $retur->barang_id,
+                        'value' => $retur->value,
+                        'kuantitas' => $retur->kuantitas,
+                        'sub_total' => $retur->value * $retur->kuantitas,
+                    ]);
 
                     $detailBeli = $detailBelis[$index] ?? null;
 
@@ -188,7 +188,6 @@ new class extends Component {
                     }
 
                     $stokBatch = StokBatch::where('detail_transaksi_id', $detailBeli->id)->first();
-                    dd($stokBatch, $detailBelis[$index]->kuantitas, $retur->kuantitas);
 
                     if (!$stokBatch) {
                         continue;
