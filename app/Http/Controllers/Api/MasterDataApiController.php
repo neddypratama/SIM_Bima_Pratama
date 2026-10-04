@@ -12,7 +12,7 @@ class MasterDataApiController extends Controller
 {
     public function barang(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $search = $request->query('search');
 
         $query = Barang::with('jenis');
@@ -38,7 +38,7 @@ class MasterDataApiController extends Controller
 
     public function jenisBarang(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $search = $request->query('search');
 
         $query = JenisBarang::with('kategori');
@@ -64,7 +64,7 @@ class MasterDataApiController extends Controller
 
     public function client(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $type = $request->query('type');
         $search = $request->query('search');
 

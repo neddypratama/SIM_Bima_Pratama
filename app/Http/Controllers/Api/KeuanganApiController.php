@@ -10,7 +10,7 @@ class KeuanganApiController extends Controller
 {
     public function hutang(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
@@ -44,7 +44,7 @@ class KeuanganApiController extends Controller
 
     public function piutang(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
@@ -78,7 +78,7 @@ class KeuanganApiController extends Controller
 
     public function beban(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
@@ -112,7 +112,7 @@ class KeuanganApiController extends Controller
 
     public function pendapatanLainnya(Request $request)
     {
-        $limit = $request->query('limit', 50);
+        $limit = $request->query('limit', 500);
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
