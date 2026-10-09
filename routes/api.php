@@ -10,6 +10,8 @@ Route::middleware(['api_key'])->prefix('v1')->group(function () {
     Route::get('/barang', [MasterDataApiController::class, 'barang']);
     Route::get('/jenis-barang', [MasterDataApiController::class, 'jenisBarang']);
     Route::get('/client', [MasterDataApiController::class, 'client']);
+    Route::get('/akun', [MasterDataApiController::class, 'akun']);
+    Route::get('/kategori-akun', [MasterDataApiController::class, 'kategoriAkun']);
 
     // Transaksi Endpoints
     Route::get('/pembelian', [TransaksiApiController::class, 'pembelian']);
@@ -21,4 +23,5 @@ Route::middleware(['api_key'])->prefix('v1')->group(function () {
     Route::get('/piutang', [KeuanganApiController::class, 'piutang']);
     Route::get('/beban', [KeuanganApiController::class, 'beban']);
     Route::get('/pendapatan-lainnya', [KeuanganApiController::class, 'pendapatanLainnya']);
+    Route::get('/kas-bank', [KeuanganApiController::class, 'kasBank']);
 });

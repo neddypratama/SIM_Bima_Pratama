@@ -149,4 +149,48 @@ class KeuanganApiController extends Controller
             ]
         ]);
     }
+
+    public function kasBank(Request $request)
+    {
+        $limit = $request->query('limit', 500);
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $type = $request->query('type'); // kas, bank, or all
+
+        $query = Transaksi::with(['client', 'user', 'details.kategori'])
+            ->whereHas('details.kategori', function ($q) use ($type) {
+                if ($type === 'kas') {
+                    $q->where('name', 'like', 'Kas %');
+                } elseif ($type === 'bank') {
+                    $q->where('name', 'like', 'Bank %');
+                } else {
+                    $q->where(function ($sub) {
+                        $sub->where('name', 'like', 'Kas %')
+                            ->orWhere('name', 'like', 'Bank %');
+                    });
+                }
+            });
+
+        if ($startDate) {
+            $query->whereDate('tanggal', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('tanggal', '<=', $endDate);
+        }
+
+        $transaksi = $query->orderBy('tanggal', 'desc')->paginate($limit);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data Kas/Bank berhasil diambil',
+            'data' => $transaksi->items(),
+            'pagination' => [
+                'current_page' => $transaksi->currentPage(),
+                'last_page' => $transaksi->lastPage(),
+                'per_page' => $transaksi->perPage(),
+                'total' => $transaksi->total(),
+            ]
+        ]);
+    }
 }
