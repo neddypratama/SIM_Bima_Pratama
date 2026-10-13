@@ -19,26 +19,31 @@ class NeracaReportService
         array $mappingEkuitas
     ): array {
 
-        $firstTransaction = Transaksi::orderBy('tanggal')->first();
-        $lastTransaction  = Transaksi::orderByDesc('tanggal')->first();
+        if ($startDate && $endDate) {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end = Carbon::parse($endDate)->endOfDay();
+        } else {
+            $minDate = Transaksi::min('tanggal');
+            $maxDate = Transaksi::max('tanggal');
 
-        if (!$firstTransaction || !$lastTransaction) {
-            return [
-                'pendapatan' => [],
-                'pengeluaran' => [],
-                'aset' => [],
-                'liabilitas' => [],
-                'ekuitas' => [],
-            ];
+            if (!$minDate || !$maxDate) {
+                return [
+                    'pendapatan' => [],
+                    'pengeluaran' => [],
+                    'aset' => [],
+                    'liabilitas' => [],
+                    'ekuitas' => [],
+                ];
+            }
+
+            $start = $startDate
+                ? Carbon::parse($startDate)->startOfDay()
+                : Carbon::parse($minDate)->startOfDay();
+
+            $end = $endDate
+                ? Carbon::parse($endDate)->endOfDay()
+                : Carbon::parse($maxDate)->endOfDay();
         }
-
-        $start = $startDate
-            ? Carbon::parse($startDate)->startOfDay()
-            : Carbon::parse($firstTransaction->tanggal)->startOfDay();
-
-        $end = $endDate
-            ? Carbon::parse($endDate)->endOfDay()
-            : Carbon::parse($lastTransaction->tanggal)->endOfDay();
 
         /*
         |--------------------------------------------------------------------------

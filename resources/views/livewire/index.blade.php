@@ -36,18 +36,16 @@ new class extends Component {
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
         $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
-        $this->kategoriPendapatanList = Kategori::whereHas('detailKategori', function (Builder $q) {
-            $q->where(function ($q) {
+        $this->kategoriPendapatanList = Kategori::select(['id', 'name'])
+            ->whereHas('detailKategori', function (Builder $q) {
                 $q->where('type', 'like', '%Pendapatan%');
-            });
-        })
+            })
             ->get()
             ->toArray();
-        $this->kategoriPengeluaranList = Kategori::whereHas('detailKategori', function (Builder $q) {
-            $q->where(function ($q) {
+        $this->kategoriPengeluaranList = Kategori::select(['id', 'name'])
+            ->whereHas('detailKategori', function (Builder $q) {
                 $q->where('type', 'like', '%Pengeluaran%');
-            });
-        })
+            })
             ->get()
             ->toArray();
         $this->setDefaultDates();
@@ -92,10 +90,6 @@ new class extends Component {
         $this->setDefaultDates();
         $this->chartPendapatan();
         $this->chartPengeluaran();
-        $this->chartStokTelur();
-        $this->chartStokSentrat();
-        $this->chartStokTray();
-        $this->chartStokObat();
     }
 
     public function applyDateRange()
@@ -111,10 +105,6 @@ new class extends Component {
 
         $this->chartPendapatan();
         $this->chartPengeluaran();
-        $this->chartStokTelur();
-        $this->chartStokSentrat();
-        $this->chartStokTray();
-        $this->chartStokObat();
         $this->toast('Periode tanggal berhasil diperbarui', 'success');
     }
 
@@ -123,7 +113,8 @@ new class extends Component {
         $start = Carbon::parse($this->startDate);
         $end = Carbon::parse($this->endDate);
 
-        $query = Transaksi::with(['details.kategori'])
+        $query = Transaksi::query()
+            ->select(['id', 'tanggal', 'type', 'total'])
             ->where('status', 'Selesai')
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pendapatan'));
@@ -182,7 +173,8 @@ new class extends Component {
         $start = Carbon::parse($this->startDate);
         $end = Carbon::parse($this->endDate);
 
-        $query = Transaksi::with(['details.kategori'])
+        $query = Transaksi::query()
+            ->select(['id', 'tanggal', 'type', 'total'])
             ->where('status', 'Selesai')
             ->whereBetween('tanggal', [$start, $end])
             ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pengeluaran'));
@@ -413,56 +405,45 @@ new class extends Component {
         ];
     }
 
+    private function calculateCategoryTypeTotal(string $type, bool $kreditMinusDebit = true): int
+    {
+        $start = Carbon::parse($this->startDate)->startOfDay();
+        $end = Carbon::parse($this->endDate)->endOfDay();
+
+        $sums = Transaksi::query()
+            ->where('status', 'Selesai')
+            ->whereBetween('tanggal', [$start, $end])
+            ->whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', $type))
+            ->selectRaw("
+                COALESCE(SUM(CASE WHEN LOWER(type) = 'debit' THEN total ELSE 0 END), 0) as total_debit,
+                COALESCE(SUM(CASE WHEN LOWER(type) = 'kredit' THEN total ELSE 0 END), 0) as total_kredit
+            ")
+            ->first();
+
+        $debit = (float) ($sums->total_debit ?? 0);
+        $kredit = (float) ($sums->total_kredit ?? 0);
+
+        return (int) round($kreditMinusDebit ? ($kredit - $debit) : ($debit - $kredit));
+    }
+
     public function incomeTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pendapatan'))
-            ->where('status', 'Selesai')
-            ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->get();
-
-        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
-        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
-
-        return $totalKredit - $totalDebit;
+        return $this->calculateCategoryTypeTotal('Pendapatan', true);
     }
 
     public function expenseTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Pengeluaran'))
-            ->where('status', 'Selesai')
-            ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->get();
-
-        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
-        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
-
-        return $totalDebit - $totalKredit;
+        return $this->calculateCategoryTypeTotal('Pengeluaran', false);
     }
 
     public function assetTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Aset'))
-            ->where('status', 'Selesai')
-            ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->get();
-
-        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
-        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
-
-        return $totalDebit - $totalKredit;
+        return $this->calculateCategoryTypeTotal('Aset', false);
     }
 
     public function liabiliatsTotal(): int
     {
-        $transaksis = Transaksi::whereHas('details.kategori.detailKategori', fn($q) => $q->where('type', 'Liabilitas'))
-            ->where('status', 'Selesai')
-            ->whereBetween('tanggal', [Carbon::parse($this->startDate)->startOfDay(), Carbon::parse($this->endDate)->endOfDay()])
-            ->get();
-
-        $totalDebit = $transaksis->where('type', 'Debit')->sum('total');
-        $totalKredit = $transaksis->where('type', 'Kredit')->sum('total');
-
-        return $totalKredit - $totalDebit;
+        return $this->calculateCategoryTypeTotal('Liabilitas', true);
     }
 
     public function updatedSelectedKategoriPendapatan()

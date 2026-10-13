@@ -43,15 +43,20 @@ new class extends Component {
         $this->pengeluaranData = [];
         $this->expanded = [];
 
-        $first = Transaksi::orderBy('tanggal')->first();
-        $last = Transaksi::orderByDesc('tanggal')->first();
+        if ($this->startDate && $this->endDate) {
+            $start = Carbon::parse($this->startDate)->startOfDay();
+            $end = Carbon::parse($this->endDate)->endOfDay();
+        } else {
+            $minDate = Transaksi::min('tanggal');
+            $maxDate = Transaksi::max('tanggal');
 
-        if (!$first || !$last) {
-            return;
+            if (!$minDate || !$maxDate) {
+                return;
+            }
+
+            $start = Carbon::parse($this->startDate ?? $minDate)->startOfDay();
+            $end = Carbon::parse($this->endDate ?? $maxDate)->endOfDay();
         }
-
-        $start = Carbon::parse($this->startDate ?? $first->tanggal)->startOfDay();
-        $end = Carbon::parse($this->endDate ?? $last->tanggal)->endOfDay();
 
         /* =====================================================
             1. LAPORAN PENDAPATAN & PENGELUARAN (NON HPP)
