@@ -115,9 +115,10 @@ class LabaRugiExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSi
             ->join('transaksis as t', 't.id', '=', 'td.transaksi_id')
             ->select(
                 DB::raw("CONCAT('HPP ', jb.name) AS hpp_name"),
-                DB::raw('SUM(td.sub_total) AS total_hpp')
+                DB::raw("SUM(CASE WHEN LOWER(t.type) = 'debit' THEN td.sub_total WHEN LOWER(t.type) = 'kredit' THEN -td.sub_total ELSE 0 END) AS total_hpp")
             )
             ->where('k.name', 'HPP')
+            ->where('t.status', 'Selesai')
             ->whereBetween('t.tanggal', [$start, $end])
             ->groupBy('jb.name')
             ->get()
